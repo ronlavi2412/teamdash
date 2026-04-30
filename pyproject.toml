@@ -11,5 +11,8 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [project.scripts]
 teamdash = "teamdash.cli:main"

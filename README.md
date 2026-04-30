@@ -84,6 +84,13 @@ The generated HTML file includes:
 
 Fetched data is cached daily in `~/.cache/teamdash/`. Subsequent runs on the same day reuse cached data. Use `--no-cache` to force a fresh fetch.
 
+## Testing
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
 ## Project Structure
 
 ```
