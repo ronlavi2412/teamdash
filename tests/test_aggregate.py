@@ -54,6 +54,8 @@ class TestCollectAllData:
             patch("teamdash.aggregate.fetch_prs", return_value=10),
             patch("teamdash.aggregate.fetch_reviews", return_value=5),
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
+            patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0, 2.0]),
+            patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[3.0]),
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
@@ -66,13 +68,14 @@ class TestCollectAllData:
         assert alice.github_prs == 10
         assert alice.gitlab_mrs == 3
         assert alice.reviews == 5
+        assert alice.merge_time_days == 2.0
 
     def test_uses_cached_data(self, sample_config):
         quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
         cached = {
             "2025-Q1": {
-                "Alice": {"github_prs": 8, "gitlab_mrs": 4, "reviews": 6},
-                "Bob": {"github_prs": 2, "gitlab_mrs": 1, "reviews": 3},
+                "Alice": {"github_prs": 8, "gitlab_mrs": 4, "reviews": 6, "merge_time_days": 1.5},
+                "Bob": {"github_prs": 2, "gitlab_mrs": 1, "reviews": 3, "merge_time_days": 3.0},
             },
         }
         with (
@@ -80,6 +83,8 @@ class TestCollectAllData:
             patch("teamdash.aggregate.fetch_prs") as mock_prs,
             patch("teamdash.aggregate.fetch_reviews"),
             patch("teamdash.aggregate.fetch_mrs"),
+            patch("teamdash.aggregate.fetch_merge_times"),
+            patch("teamdash.aggregate.fetch_mr_merge_times"),
             patch("teamdash.aggregate._load_cache", return_value=cached),
             patch("teamdash.aggregate._save_cache"),
         ):
@@ -88,6 +93,7 @@ class TestCollectAllData:
         mock_prs.assert_not_called()
         alice = summaries[0].engineers[0]
         assert alice.github_prs == 8
+        assert alice.merge_time_days == 1.5
 
     def test_gitlab_auth_failure_skips_mrs(self, sample_config):
         quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
@@ -96,10 +102,14 @@ class TestCollectAllData:
             patch("teamdash.aggregate.fetch_prs", return_value=10),
             patch("teamdash.aggregate.fetch_reviews", return_value=5),
             patch("teamdash.aggregate.fetch_mrs") as mock_mrs,
+            patch("teamdash.aggregate.fetch_merge_times", return_value=[2.0]),
+            patch("teamdash.aggregate.fetch_mr_merge_times") as mock_gl_mt,
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
             summaries = collect_all_data(sample_config, quarters, use_cache=False)
 
         mock_mrs.assert_not_called()
+        mock_gl_mt.assert_not_called()
         assert summaries[0].engineers[0].gitlab_mrs == 0
+        assert summaries[0].engineers[0].merge_time_days == 2.0

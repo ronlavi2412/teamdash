@@ -52,6 +52,10 @@ class TestDeltaClass:
     def test_old_zero_new_zero(self):
         assert _delta_class(0, 0) == "flat"
 
+    def test_lower_is_better_inverts(self):
+        assert _delta_class(110, 100, lower_is_better=True) == "down"
+        assert _delta_class(90, 100, lower_is_better=True) == "up"
+
 
 class TestBuildDataBlock:
     def test_contains_js_const(self, two_quarter_summaries):
@@ -69,6 +73,7 @@ class TestBuildDataBlock:
         assert "gh_prs:" in result
         assert "gl_mrs:" in result
         assert "reviews:" in result
+        assert "merge_time:" in result
 
 
 class TestBuildSummaryCards:
@@ -78,6 +83,7 @@ class TestBuildSummaryCards:
         assert "GitHub PRs" in result
         assert "GitLab MRs" in result
         assert "Code Reviews" in result
+        assert "Avg Merge Time" in result
 
     def test_contains_values(self, two_quarter_summaries):
         result = _build_summary_cards(two_quarter_summaries)

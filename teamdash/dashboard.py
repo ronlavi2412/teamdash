@@ -12,27 +12,32 @@ COLORS = [
 ]
 
 
-def _pct(new: int, old: int) -> str:
+def _pct(new: float, old: float) -> str:
     if old == 0:
         return "+999%" if new > 0 else "0%"
     delta = round((new - old) / old * 100)
     return f"+{delta}%" if delta >= 0 else f"{delta}%"
 
 
-def _delta_class(new: int, old: int) -> str:
+def _delta_class(new: float, old: float, lower_is_better: bool = False) -> str:
     if old == 0:
-        return "up" if new > 0 else "flat"
-    delta = (new - old) / old
-    if delta > 0.01:
-        return "up"
-    if delta < -0.01:
-        return "down"
-    return "flat"
+        cls = "up" if new > 0 else "flat"
+    else:
+        delta = (new - old) / old
+        if delta > 0.01:
+            cls = "up"
+        elif delta < -0.01:
+            cls = "down"
+        else:
+            cls = "flat"
+    if lower_is_better and cls in ("up", "down"):
+        cls = "down" if cls == "up" else "up"
+    return cls
 
 
 def _build_data_block(summaries: list[QuarterSummary], names: list[str]) -> str:
-    def fmt(arr: list[int]) -> str:
-        return "[" + ", ".join(str(v) for v in arr) + "]"
+    def fmt(arr: list) -> str:
+        return "[" + ", ".join("null" if v is None else str(v) for v in arr) + "]"
 
     q_entries = []
     for s in summaries:
@@ -40,9 +45,11 @@ def _build_data_block(summaries: list[QuarterSummary], names: list[str]) -> str:
         gh = [by_name.get(n, _zero(n, s.quarter.label)).github_prs for n in names]
         gl = [by_name.get(n, _zero(n, s.quarter.label)).gitlab_mrs for n in names]
         rv = [by_name.get(n, _zero(n, s.quarter.label)).reviews for n in names]
+        mt = [by_name.get(n, _zero(n, s.quarter.label)).merge_time_days for n in names]
         q_entries.append(
             f'    {{ label: "{s.quarter.short_label}",'
-            f' gh_prs: {fmt(gh)}, gl_mrs: {fmt(gl)}, reviews: {fmt(rv)} }}'
+            f' gh_prs: {fmt(gh)}, gl_mrs: {fmt(gl)}, reviews: {fmt(rv)},'
+            f' merge_time: {fmt(mt)} }}'
         )
 
     return "const Q = [\n" + ",\n".join(q_entries) + "\n];"
@@ -73,6 +80,27 @@ def _build_summary_cards(summaries: list[QuarterSummary]) -> str:
                 <div class="label">{label}</div>
                 <div class="value">{cur_val}</div>
                 <div class="delta {cls}">{pct} from {prev_label} ({prev_val})</div>
+            </div>""")
+
+    cur_mt = cur.avg_merge_time_days
+    prev_mt = prev.avg_merge_time_days
+    if cur_mt is not None:
+        mt_display = f"{cur_mt} days"
+        if prev_mt is not None and prev != cur:
+            cls = _delta_class(cur_mt, prev_mt, lower_is_better=True)
+            pct = _pct(cur_mt, prev_mt)
+            delta_text = f'{pct} from {prev_label} ({prev_mt}d)'
+        else:
+            cls = "flat"
+            delta_text = "no prior data"
+    else:
+        mt_display = "-"
+        cls = "flat"
+        delta_text = "no data"
+    parts.append(f"""            <div class="summary-card">
+                <div class="label">Avg Merge Time</div>
+                <div class="value">{mt_display}</div>
+                <div class="delta {cls}">{delta_text}</div>
             </div>""")
 
     return '<div class="summary-grid">\n' + "\n".join(parts) + "\n        </div>"
@@ -113,6 +141,12 @@ def _build_table_rows(summaries: list[QuarterSummary], names: list[str]) -> str:
             eng = by_name.get(name)
             cells.append(f'<td class="num">{eng.reviews if eng else 0}</td>')
 
+        for s in summaries:
+            by_name = {e.name: e for e in s.engineers}
+            eng = by_name.get(name)
+            mt = eng.merge_time_days if eng else None
+            cells.append(f'<td class="num">{mt if mt is not None else "-"}</td>')
+
         rows.append("<tr>" + "".join(cells) + "</tr>")
 
     return "\n                            ".join(rows)
@@ -129,6 +163,8 @@ def _build_table_headers(summaries: list[QuarterSummary]) -> str:
         headers.append(f'<th data-type="num">GL MRs {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     for s in summaries:
         headers.append(f'<th data-type="num">Reviews {s.quarter.short_label} <span class="sort-arrow"></span></th>')
+    for s in summaries:
+        headers.append(f'<th data-type="num">Merge days {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     return "\n                                ".join(headers)
 
 
@@ -261,6 +297,12 @@ HTML_TEMPLATE = """\
                     <div class="chart-wrap"><canvas id="chart-reviews-trend"></canvas></div>
                 </div>
             </div>
+            <div class="chart-row">
+                <div class="chart-card full">
+                    <h3>Avg Merge Time per Quarter (days)</h3>
+                    <div class="chart-wrap"><canvas id="chart-merge-time-trend"></canvas></div>
+                </div>
+            </div>
         </div>
 
         <div id="tab-details" class="tab-content">
@@ -352,6 +394,30 @@ HTML_TEMPLATE = """\
                 maintainAspectRatio: false,
                 plugins: {{ legend: {{ position: 'bottom', labels: {{ usePointStyle: true }} }} }},
                 scales: {{ y: {{ beginAtZero: true, ticks: {{ stepSize: 5 }} }} }},
+            }},
+        }});
+
+        // Merge time trend
+        new Chart(document.getElementById('chart-merge-time-trend'), {{
+            type: 'line',
+            data: {{
+                labels: Q.map(q => q.label),
+                datasets: names.map((name, i) => ({{
+                    label: name,
+                    data: Q.map(q => q.merge_time[i]),
+                    borderColor: colors[i],
+                    backgroundColor: colors[i] + '20',
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 4,
+                    spanGaps: true,
+                }})),
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{ legend: {{ position: 'bottom', labels: {{ usePointStyle: true }} }} }},
+                scales: {{ y: {{ beginAtZero: true, max: 20, title: {{ display: true, text: 'Days' }} }} }},
             }},
         }});
 

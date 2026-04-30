@@ -22,6 +22,7 @@ class EngineerQuarterMetrics:
     github_prs: int = 0
     gitlab_mrs: int = 0
     reviews: int = 0
+    merge_time_days: float | None = None
 
     @property
     def total(self) -> int:
@@ -48,3 +49,8 @@ class QuarterSummary:
     @property
     def total_reviews(self) -> int:
         return sum(e.reviews for e in self.engineers)
+
+    @property
+    def avg_merge_time_days(self) -> float | None:
+        vals = [e.merge_time_days for e in self.engineers if e.merge_time_days is not None]
+        return round(sum(vals) / len(vals), 1) if vals else None

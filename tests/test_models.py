@@ -41,3 +41,27 @@ class TestQuarterSummary:
         s = QuarterSummary(quarter=sample_quarter)
         assert s.total_prs_mrs == 0
         assert s.total_reviews == 0
+
+    def test_avg_merge_time_days(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(name="A", quarter="Q1", merge_time_days=2.0),
+            EngineerQuarterMetrics(name="B", quarter="Q1", merge_time_days=4.0),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        assert s.avg_merge_time_days == 3.0
+
+    def test_avg_merge_time_days_skips_none(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(name="A", quarter="Q1", merge_time_days=6.0),
+            EngineerQuarterMetrics(name="B", quarter="Q1", merge_time_days=None),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        assert s.avg_merge_time_days == 6.0
+
+    def test_avg_merge_time_days_all_none(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(name="A", quarter="Q1"),
+            EngineerQuarterMetrics(name="B", quarter="Q1"),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        assert s.avg_merge_time_days is None

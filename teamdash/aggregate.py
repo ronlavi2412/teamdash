@@ -7,9 +7,9 @@ from datetime import date
 from pathlib import Path
 
 from teamdash.config import TeamConfig
-from teamdash.fetch_github import fetch_prs, fetch_reviews
+from teamdash.fetch_github import fetch_merge_times, fetch_prs, fetch_reviews
 from teamdash.fetch_gitlab import check_auth as check_gitlab_auth
-from teamdash.fetch_gitlab import fetch_mrs
+from teamdash.fetch_gitlab import fetch_mr_merge_times, fetch_mrs
 from teamdash.models import EngineerQuarterMetrics, Quarter, QuarterSummary
 
 CACHE_DIR = Path.home() / ".cache" / "teamdash"
@@ -73,6 +73,7 @@ def collect_all_data(
                     github_prs=cached_eng["github_prs"],
                     gitlab_mrs=cached_eng["gitlab_mrs"],
                     reviews=cached_eng["reviews"],
+                    merge_time_days=cached_eng.get("merge_time_days"),
                 ))
                 continue
 
@@ -81,13 +82,18 @@ def collect_all_data(
             gh_prs = 0
             gh_reviews = 0
             gl_mrs = 0
+            all_merge_times: list[float] = []
 
             if eng.github and config.github_orgs:
                 gh_prs = fetch_prs(eng.github, config.github_orgs, q.start, q.end)
                 gh_reviews = fetch_reviews(eng.github, config.github_orgs, q.start, q.end)
+                all_merge_times.extend(fetch_merge_times(eng.github, config.github_orgs, q.start, q.end))
 
             if eng.gitlab and config.gitlab_url and gitlab_ok:
                 gl_mrs = fetch_mrs(config.gitlab_url, eng.gitlab, q.start, q.end)
+                all_merge_times.extend(fetch_mr_merge_times(config.gitlab_url, eng.gitlab, q.start, q.end))
+
+            avg_mt = round(sum(all_merge_times) / len(all_merge_times), 1) if all_merge_times else None
 
             metrics = EngineerQuarterMetrics(
                 name=eng.name,
@@ -95,6 +101,7 @@ def collect_all_data(
                 github_prs=gh_prs,
                 gitlab_mrs=gl_mrs,
                 reviews=gh_reviews,
+                merge_time_days=avg_mt,
             )
             engineer_metrics.append(metrics)
 
@@ -102,6 +109,7 @@ def collect_all_data(
                 "github_prs": gh_prs,
                 "gitlab_mrs": gl_mrs,
                 "reviews": gh_reviews,
+                "merge_time_days": avg_mt,
             }
 
         summaries.append(QuarterSummary(quarter=q, engineers=engineer_metrics))
