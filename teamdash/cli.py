@@ -22,6 +22,8 @@ def main() -> None:
                         help="Number of quarters to include (default: 4)")
     parser.add_argument("--no-cache", action="store_true",
                         help="Skip cache and fetch fresh data from APIs")
+    parser.add_argument("--include-current", action="store_true",
+                        help="Include the current (in-progress) quarter")
 
     args = parser.parse_args()
 
@@ -31,7 +33,7 @@ def main() -> None:
         print("[ERROR] GitHub CLI not authenticated. Run: gh auth login", file=sys.stderr)
         sys.exit(1)
 
-    quarters = get_quarters(args.quarters)
+    quarters = get_quarters(args.quarters, include_current=args.include_current)
     print(f"Fetching data for {config.team_name} ({len(config.engineers)} engineers, "
           f"{len(quarters)} quarters)...", file=sys.stderr)
 
