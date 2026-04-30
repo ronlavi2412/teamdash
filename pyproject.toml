@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "teamdash"
+version = "0.1.0"
+description = "Generate interactive HTML dashboards of team engineering metrics from GitHub and GitLab"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+teamdash = "teamdash.cli:main"

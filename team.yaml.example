@@ -1,0 +1,24 @@
+team_name: "My Team"
+
+# Optional: self-hosted GitLab instance. Omit to skip GitLab fetching.
+gitlab:
+  url: "https://gitlab.example.com"
+
+# GitHub organizations to search for PRs and code reviews.
+github:
+  orgs:
+    - my-org
+    - another-org
+
+engineers:
+  - name: "Alice Johnson"
+    github: alicej
+    gitlab: ajohnson
+
+  - name: "Bob Chen"
+    github: bobchen
+    gitlab: bchen
+
+  - name: "Carol Martinez"
+    github: carolm
+    # gitlab is optional per engineer

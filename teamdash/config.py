@@ -1,0 +1,72 @@
+from __future__ import annotations
+
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import yaml
+
+
+@dataclass
+class EngineerConfig:
+    name: str
+    github: str | None = None
+    gitlab: str | None = None
+
+
+@dataclass
+class TeamConfig:
+    team_name: str
+    gitlab_url: str | None
+    github_orgs: list[str]
+    engineers: list[EngineerConfig] = field(default_factory=list)
+
+
+def load_config(path: str) -> TeamConfig:
+    p = Path(path)
+    if not p.exists():
+        print(f"[ERROR] Config file not found: {path}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        raw = yaml.safe_load(p.read_text())
+    except yaml.YAMLError as e:
+        print(f"[ERROR] Invalid YAML in {path}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if not isinstance(raw, dict):
+        print(f"[ERROR] Config must be a YAML mapping, got {type(raw).__name__}", file=sys.stderr)
+        sys.exit(1)
+
+    team_name = raw.get("team_name")
+    if not team_name:
+        print("[ERROR] Missing 'team_name' in config", file=sys.stderr)
+        sys.exit(1)
+
+    gitlab_url = (raw.get("gitlab") or {}).get("url")
+    github_orgs = (raw.get("github") or {}).get("orgs", [])
+
+    engineers_raw = raw.get("engineers", [])
+    if not engineers_raw:
+        print("[ERROR] No engineers defined in config", file=sys.stderr)
+        sys.exit(1)
+
+    engineers = []
+    for i, eng in enumerate(engineers_raw):
+        name = eng.get("name")
+        if not name:
+            print(f"[ERROR] Engineer #{i + 1} missing 'name'", file=sys.stderr)
+            sys.exit(1)
+        gh = eng.get("github")
+        gl = eng.get("gitlab")
+        if not gh and not gl:
+            print(f"[ERROR] Engineer '{name}' needs at least one of 'github' or 'gitlab'", file=sys.stderr)
+            sys.exit(1)
+        engineers.append(EngineerConfig(name=name, github=gh, gitlab=gl))
+
+    return TeamConfig(
+        team_name=team_name,
+        gitlab_url=gitlab_url,
+        github_orgs=github_orgs,
+        engineers=engineers,
+    )
