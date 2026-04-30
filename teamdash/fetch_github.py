@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 
@@ -80,39 +81,46 @@ def _gh_search_items(query: str) -> list[dict]:
     return items
 
 
-def fetch_merge_times(username: str, orgs: list[str], start: str, end: str) -> list[float]:
+def _fetch_merge_times_for_org(username: str, org: str, start: str, end: str) -> list[float]:
+    query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}+is:merged"
+    items = _gh_search_items(query)
     merge_times: list[float] = []
-    for org in orgs:
-        query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}+is:merged"
-        items = _gh_search_items(query)
-        for item in items:
-            created = item.get("created_at")
-            closed = item.get("closed_at")
-            if created and closed:
-                dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
-                days = (dt_closed - dt_created).total_seconds() / 86400
-                merge_times.append(round(days, 1))
-        time.sleep(2)
+    for item in items:
+        created = item.get("created_at")
+        closed = item.get("closed_at")
+        if created and closed:
+            dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
+            days = (dt_closed - dt_created).total_seconds() / 86400
+            merge_times.append(round(days, 1))
+    return merge_times
+
+
+def fetch_merge_times(username: str, orgs: list[str], start: str, end: str) -> list[float]:
+    with ThreadPoolExecutor(max_workers=len(orgs)) as pool:
+        futures = [pool.submit(_fetch_merge_times_for_org, username, org, start, end) for org in orgs]
+    merge_times: list[float] = []
+    for f in futures:
+        merge_times.extend(f.result())
     return merge_times
 
 
 def fetch_prs(username: str, orgs: list[str], start: str, end: str) -> int:
-    total = 0
-    for org in orgs:
+    def _fetch_org(org: str) -> int:
         query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}"
-        total += _gh_search_count(query)
-        time.sleep(2)
-    return total
+        return _gh_search_count(query)
+
+    with ThreadPoolExecutor(max_workers=len(orgs)) as pool:
+        return sum(pool.map(_fetch_org, orgs))
 
 
 def fetch_reviews(username: str, orgs: list[str], start: str, end: str) -> int:
-    total = 0
-    for org in orgs:
+    def _fetch_org(org: str) -> int:
         query = f"type:pr+reviewed-by:{username}+org:{org}+-author:{username}+created:{start}..{end}"
-        total += _gh_search_count(query)
-        time.sleep(2)
-    return total
+        return _gh_search_count(query)
+
+    with ThreadPoolExecutor(max_workers=len(orgs)) as pool:
+        return sum(pool.map(_fetch_org, orgs))
 
 
 def check_auth() -> bool:

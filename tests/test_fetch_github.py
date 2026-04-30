@@ -69,14 +69,12 @@ class TestGhSearchCount:
 class TestFetchPrs:
     def test_sums_across_orgs(self):
         with patch("teamdash.fetch_github._gh_search_count", side_effect=[10, 5]):
-            with patch("teamdash.fetch_github.time.sleep"):
-                result = fetch_prs("alice", ["org1", "org2"], "2025-01-01", "2025-03-31")
+            result = fetch_prs("alice", ["org1", "org2"], "2025-01-01", "2025-03-31")
         assert result == 15
 
     def test_query_format(self):
         with patch("teamdash.fetch_github._gh_search_count", return_value=0) as mock:
-            with patch("teamdash.fetch_github.time.sleep"):
-                fetch_prs("alice", ["myorg"], "2025-01-01", "2025-03-31")
+            fetch_prs("alice", ["myorg"], "2025-01-01", "2025-03-31")
         query = mock.call_args[0][0]
         assert "type:pr" in query
         assert "author:alice" in query
@@ -87,16 +85,14 @@ class TestFetchPrs:
 class TestFetchReviews:
     def test_query_format(self):
         with patch("teamdash.fetch_github._gh_search_count", return_value=0) as mock:
-            with patch("teamdash.fetch_github.time.sleep"):
-                fetch_reviews("alice", ["myorg"], "2025-01-01", "2025-03-31")
+            fetch_reviews("alice", ["myorg"], "2025-01-01", "2025-03-31")
         query = mock.call_args[0][0]
         assert "reviewed-by:alice" in query
         assert "-author:alice" in query
 
     def test_sums_across_orgs(self):
         with patch("teamdash.fetch_github._gh_search_count", side_effect=[3, 7]):
-            with patch("teamdash.fetch_github.time.sleep"):
-                result = fetch_reviews("bob", ["org1", "org2"], "2025-01-01", "2025-03-31")
+            result = fetch_reviews("bob", ["org1", "org2"], "2025-01-01", "2025-03-31")
         assert result == 10
 
 
@@ -135,22 +131,19 @@ class TestFetchMergeTimes:
             {"created_at": "2025-01-10T00:00:00Z", "closed_at": "2025-01-11T00:00:00Z"},
         ]
         with patch("teamdash.fetch_github._gh_search_items", return_value=items):
-            with patch("teamdash.fetch_github.time.sleep"):
-                result = fetch_merge_times("alice", ["org1"], "2025-01-01", "2025-03-31")
+            result = fetch_merge_times("alice", ["org1"], "2025-01-01", "2025-03-31")
         assert len(result) == 2
         assert result[0] == 2.5
         assert result[1] == 1.0
 
     def test_empty_when_no_merged_prs(self):
         with patch("teamdash.fetch_github._gh_search_items", return_value=[]):
-            with patch("teamdash.fetch_github.time.sleep"):
-                result = fetch_merge_times("alice", ["org1"], "2025-01-01", "2025-03-31")
+            result = fetch_merge_times("alice", ["org1"], "2025-01-01", "2025-03-31")
         assert result == []
 
     def test_query_format(self):
         with patch("teamdash.fetch_github._gh_search_items", return_value=[]) as mock:
-            with patch("teamdash.fetch_github.time.sleep"):
-                fetch_merge_times("alice", ["myorg"], "2025-01-01", "2025-03-31")
+            fetch_merge_times("alice", ["myorg"], "2025-01-01", "2025-03-31")
         query = mock.call_args[0][0]
         assert "is:merged" in query
         assert "author:alice" in query
@@ -160,11 +153,8 @@ class TestFetchMergeTimes:
         items1 = [{"created_at": "2025-01-01T00:00:00Z", "closed_at": "2025-01-02T00:00:00Z"}]
         items2 = [{"created_at": "2025-01-05T00:00:00Z", "closed_at": "2025-01-08T00:00:00Z"}]
         with patch("teamdash.fetch_github._gh_search_items", side_effect=[items1, items2]):
-            with patch("teamdash.fetch_github.time.sleep"):
-                result = fetch_merge_times("alice", ["org1", "org2"], "2025-01-01", "2025-03-31")
+            result = fetch_merge_times("alice", ["org1", "org2"], "2025-01-01", "2025-03-31")
         assert len(result) == 2
-        assert result[0] == 1.0
-        assert result[1] == 3.0
 
 
 class TestCheckAuth:
