@@ -7,6 +7,7 @@ from teamdash.dashboard import (
     _build_summary_cards,
     _build_table_headers,
     _build_table_rows,
+    _build_team_tab,
     _delta_class,
     _pct,
     generate_dashboard,
@@ -77,18 +78,9 @@ class TestBuildDataBlock:
 
 
 class TestBuildSummaryCards:
-    def test_contains_card_labels(self, two_quarter_summaries):
+    def test_returns_empty(self, two_quarter_summaries):
         result = _build_summary_cards(two_quarter_summaries)
-        assert "Total PRs + MRs" in result
-        assert "GitHub PRs" in result
-        assert "GitLab MRs" in result
-        assert "Code Reviews" in result
-        assert "Avg Merge Time" in result
-
-    def test_contains_values(self, two_quarter_summaries):
-        result = _build_summary_cards(two_quarter_summaries)
-        assert "20" in result  # cur total_prs_mrs
-        assert "12" in result  # cur reviews
+        assert result == ""
 
 
 class TestBuildTableHeaders:
@@ -134,6 +126,55 @@ class TestGenerateDashboard:
         content = open(out).read()
         assert "Alice" in content
         assert "Bob" in content
+
+
+class TestTeamTab:
+    def test_team_tab_present(self, tmp_path, two_quarter_summaries):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries, out)
+        content = open(out).read()
+        assert 'id="tab-team"' in content
+        assert "chart-team-prs" in content
+        assert "chart-team-reviews" in content
+        assert "chart-team-merge-time" in content
+
+    def test_team_tab_is_default(self, tmp_path, two_quarter_summaries):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries, out)
+        content = open(out).read()
+        assert 'id="tab-team" class="tab-content active"' in content
+        assert 'id="tab-overview" class="tab-content">' in content
+
+    def test_team_tab_nav(self, tmp_path, two_quarter_summaries):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries, out)
+        content = open(out).read()
+        assert "switchTab('team')" in content
+        assert "Overall Team View" in content
+
+    def test_team_sp_with_scoring(self, tmp_path, two_quarter_summaries_with_scoring):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        content = open(out).read()
+        assert "chart-team-sp" in content
+
+    def test_team_sp_without_scoring(self, tmp_path, two_quarter_summaries):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries, out)
+        content = open(out).read()
+        assert '<canvas id="chart-team-sp">' not in content
+
+    def test_build_team_tab_unit(self):
+        result = _build_team_tab(has_scoring=False)
+        assert "tab-team" in result
+        assert "chart-team-prs" in result
+        assert "chart-team-reviews" in result
+        assert "chart-team-merge-time" in result
+        assert "chart-team-sp" not in result
+
+    def test_build_team_tab_scoring_unit(self):
+        result = _build_team_tab(has_scoring=True)
+        assert "chart-team-sp" in result
 
 
 class TestScoringDashboard:

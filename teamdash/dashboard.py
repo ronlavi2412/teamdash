@@ -81,49 +81,7 @@ def _zero(name, quarter):
 
 
 def _build_summary_cards(summaries: list[QuarterSummary]) -> str:
-    cur = summaries[-1]
-    prev = summaries[-2] if len(summaries) >= 2 else cur
-
-    cards = [
-        ("Total PRs + MRs", cur.total_prs_mrs, prev.total_prs_mrs),
-        ("GitHub PRs", cur.total_github_prs, prev.total_github_prs),
-        ("GitLab MRs", cur.total_gitlab_mrs, prev.total_gitlab_mrs),
-        ("Code Reviews", cur.total_reviews, prev.total_reviews),
-    ]
-
-    prev_label = prev.quarter.label
-    parts = []
-    for label, cur_val, prev_val in cards:
-        cls = _delta_class(cur_val, prev_val)
-        pct = _pct(cur_val, prev_val)
-        parts.append(f"""            <div class="summary-card">
-                <div class="label">{label}</div>
-                <div class="value">{cur_val}</div>
-                <div class="delta {cls}">{pct} from {prev_label} ({prev_val})</div>
-            </div>""")
-
-    cur_mt = cur.avg_merge_time_days
-    prev_mt = prev.avg_merge_time_days
-    if cur_mt is not None:
-        mt_display = f"{cur_mt} days"
-        if prev_mt is not None and prev != cur:
-            cls = _delta_class(cur_mt, prev_mt, lower_is_better=True)
-            pct = _pct(cur_mt, prev_mt)
-            delta_text = f'{pct} from {prev_label} ({prev_mt}d)'
-        else:
-            cls = "flat"
-            delta_text = "no prior data"
-    else:
-        mt_display = "-"
-        cls = "flat"
-        delta_text = "no data"
-    parts.append(f"""            <div class="summary-card">
-                <div class="label">Avg Merge Time</div>
-                <div class="value">{mt_display}</div>
-                <div class="delta {cls}">{delta_text}</div>
-            </div>""")
-
-    return '<div class="summary-grid">\n' + "\n".join(parts) + "\n        </div>"
+    return ""
 
 
 def _build_table_rows(summaries: list[QuarterSummary], names: list[str], has_scoring: bool = False) -> str:
@@ -250,6 +208,36 @@ def _build_sp_tab(summaries: list[QuarterSummary], names: list[str]) -> str:
         </div>"""
 
 
+def _build_team_tab(has_scoring: bool) -> str:
+    sp_chart = ""
+    if has_scoring:
+        sp_chart = """
+                <div class="chart-card">
+                    <h3>Total Story Points per Quarter</h3>
+                    <div class="chart-wrap"><canvas id="chart-team-sp"></canvas></div>
+                </div>"""
+
+    return f"""
+        <div id="tab-team" class="tab-content active">
+            <div class="chart-row">
+                <div class="chart-card">
+                    <h3>Total PRs + MRs per Quarter</h3>
+                    <div class="chart-wrap"><canvas id="chart-team-prs"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Total Reviews per Quarter</h3>
+                    <div class="chart-wrap"><canvas id="chart-team-reviews"></canvas></div>
+                </div>
+            </div>
+            <div class="chart-row">{sp_chart}
+                <div class="chart-card">
+                    <h3>Avg Merge Time per Quarter (days)</h3>
+                    <div class="chart-wrap"><canvas id="chart-team-merge-time"></canvas></div>
+                </div>
+            </div>
+        </div>"""
+
+
 def generate_dashboard(
     team_name: str,
     summaries: list[QuarterSummary],
@@ -269,6 +257,7 @@ def generate_dashboard(
 
     data_block = _build_data_block(summaries, names)
     summary_cards = _build_summary_cards(summaries)
+    team_tab = _build_team_tab(has_scoring)
     table_headers = _build_table_headers(summaries, has_scoring=has_scoring)
     table_rows = _build_table_rows(summaries, names, has_scoring=has_scoring)
     html = HTML_TEMPLATE.format(
@@ -277,6 +266,7 @@ def generate_dashboard(
         generated=generated,
         data_block=data_block,
         summary_cards=summary_cards,
+        team_tab=team_tab,
         names_js=names_js,
         colors_js=colors_js,
         table_headers=table_headers,
@@ -365,12 +355,14 @@ HTML_TEMPLATE = """\
         {summary_cards}
 
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('overview')">Overview</div>
-            <div class="tab" onclick="switchTab('details')">Details</div>
+            <div class="tab active" onclick="switchTab('team')">Overall Team View</div>
+            <div class="tab" onclick="switchTab('overview')">Detailed View</div>
             <div class="tab" onclick="switchTab('table')">Full Table</div>
         </div>
 
-        <div id="tab-overview" class="tab-content active">
+        {team_tab}
+
+        <div id="tab-overview" class="tab-content">
             <div class="chart-row">
                 <div class="chart-card">
                     <h3>PRs + MRs per Quarter</h3>
@@ -389,19 +381,6 @@ HTML_TEMPLATE = """\
                 <div class="chart-card">
                     <h3>Avg Merge Time per Quarter (days)</h3>
                     <div class="chart-wrap"><canvas id="chart-merge-time-trend"></canvas></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-details" class="tab-content">
-            <div class="chart-row">
-                <div class="chart-card">
-                    <h3>GitHub PRs vs GitLab MRs (Latest Quarter)</h3>
-                    <div class="chart-wrap"><canvas id="chart-breakdown"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <h3>Review Share (Latest Quarter)</h3>
-                    <div class="chart-wrap"><canvas id="chart-review-share"></canvas></div>
                 </div>
             </div>
         </div>
@@ -535,48 +514,101 @@ HTML_TEMPLATE = """\
             }});
         }}
 
-        // GitHub vs GitLab breakdown (latest quarter)
-        new Chart(document.getElementById('chart-breakdown'), {{
+        // Team view: Total PRs + MRs
+        new Chart(document.getElementById('chart-team-prs'), {{
             type: 'bar',
             data: {{
-                labels: names,
-                datasets: [
-                    {{
-                        label: 'GitHub PRs',
-                        data: cur.gh_prs,
-                        backgroundColor: '#3b82f6',
-                    }},
-                    {{
-                        label: 'GitLab MRs',
-                        data: cur.gl_mrs,
-                        backgroundColor: '#f59e0b',
-                    }},
-                ],
-            }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {{ legend: {{ position: 'bottom' }} }},
-                scales: {{ y: {{ beginAtZero: true }} }},
-            }},
-        }});
-
-        // Review share pie
-        new Chart(document.getElementById('chart-review-share'), {{
-            type: 'doughnut',
-            data: {{
-                labels: names,
+                labels: Q.map(q => q.label),
                 datasets: [{{
-                    data: cur.reviews,
-                    backgroundColor: colors,
+                    label: 'Total PRs + MRs',
+                    data: Q.map(q => q.gh_prs.reduce((a, b) => a + b, 0) + q.gl_mrs.reduce((a, b) => a + b, 0)),
+                    backgroundColor: '#3b82f6',
+                    borderColor: '#2563eb',
+                    borderWidth: 1,
+                    borderRadius: 4,
                 }}],
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {{ legend: {{ position: 'bottom', labels: {{ usePointStyle: true }} }} }},
+                plugins: {{ legend: {{ display: false }} }},
+                scales: {{ y: {{ beginAtZero: true, ticks: {{ stepSize: 10 }} }} }},
             }},
         }});
+
+        // Team view: Total Reviews
+        new Chart(document.getElementById('chart-team-reviews'), {{
+            type: 'bar',
+            data: {{
+                labels: Q.map(q => q.label),
+                datasets: [{{
+                    label: 'Total Reviews',
+                    data: Q.map(q => q.reviews.reduce((a, b) => a + b, 0)),
+                    backgroundColor: '#8b5cf6',
+                    borderColor: '#7c3aed',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }}],
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{ legend: {{ display: false }} }},
+                scales: {{ y: {{ beginAtZero: true, ticks: {{ stepSize: 10 }} }} }},
+            }},
+        }});
+
+        // Team view: Avg Merge Time
+        new Chart(document.getElementById('chart-team-merge-time'), {{
+            type: 'line',
+            data: {{
+                labels: Q.map(q => q.label),
+                datasets: [{{
+                    label: 'Avg Merge Time (days)',
+                    data: Q.map(q => {{
+                        const vals = q.merge_time.filter(v => v !== null);
+                        return vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+                    }}),
+                    borderColor: '#ef4444',
+                    backgroundColor: '#ef444420',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#ef4444',
+                    spanGaps: true,
+                }}],
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{ legend: {{ display: false }} }},
+                scales: {{ y: {{ beginAtZero: true, max: 20, title: {{ display: true, text: 'Days' }} }} }},
+            }},
+        }});
+
+        // Team view: Total Story Points
+        if ({has_scoring}) {{
+            new Chart(document.getElementById('chart-team-sp'), {{
+                type: 'bar',
+                data: {{
+                    labels: Q.map(q => q.label),
+                    datasets: [{{
+                        label: 'Total Story Points',
+                        data: Q.map(q => q.sp_dev.reduce((a, b) => a + b, 0) + q.sp_qe.reduce((a, b) => a + b, 0)),
+                        backgroundColor: '#10b981',
+                        borderColor: '#059669',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }}],
+                }},
+                options: {{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {{ legend: {{ display: false }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                }},
+            }});
+        }}
 
         // Table sorting
         document.querySelectorAll('#main-table th').forEach((th, colIdx) => {{
