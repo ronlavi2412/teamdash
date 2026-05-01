@@ -63,12 +63,14 @@ def _build_data_block(summaries: list[QuarterSummary], names: list[str]) -> str:
         sp_dev = [by_name.get(n, _zero(n, s.quarter.label)).story_points_dev for n in names]
         sp_qe = [by_name.get(n, _zero(n, s.quarter.label)).story_points_qe for n in names]
         xl = [by_name.get(n, _zero(n, s.quarter.label)).xl_count for n in names]
+        review_sp = [by_name.get(n, _zero(n, s.quarter.label)).review_story_points for n in names]
         dists = [_size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names]
         q_entries.append(
             f'    {{ label: "{s.quarter.short_label}",'
             f' gh_prs: {fmt(gh)}, gl_mrs: {fmt(gl)}, reviews: {fmt(rv)},'
             f' merge_time: {fmt(mt)},'
             f' sp_dev: {fmt(sp_dev)}, sp_qe: {fmt(sp_qe)}, xl_count: {fmt(xl)},'
+            f' review_sp: {fmt(review_sp)},'
             f' size_dist: {fmt_dists(dists)} }}'
         )
 
@@ -210,11 +212,17 @@ def _build_sp_tab(summaries: list[QuarterSummary], names: list[str]) -> str:
 
 def _build_team_tab(has_scoring: bool) -> str:
     sp_chart = ""
+    review_sp_chart = ""
     if has_scoring:
         sp_chart = """
                 <div class="chart-card">
                     <h3>Total Story Points per Quarter</h3>
                     <div class="chart-wrap"><canvas id="chart-team-sp"></canvas></div>
+                </div>"""
+        review_sp_chart = """
+                <div class="chart-card">
+                    <h3>Total Reviews Complexity per Quarter</h3>
+                    <div class="chart-wrap"><canvas id="chart-team-review-sp"></canvas></div>
                 </div>"""
 
     return f"""
@@ -229,7 +237,7 @@ def _build_team_tab(has_scoring: bool) -> str:
                     <div class="chart-wrap"><canvas id="chart-team-reviews"></canvas></div>
                 </div>
             </div>
-            <div class="chart-row">{sp_chart}
+            <div class="chart-row">{sp_chart}{review_sp_chart}
                 <div class="chart-card">
                     <h3>Avg Merge Time per Quarter (days)</h3>
                     <div class="chart-wrap"><canvas id="chart-team-merge-time"></canvas></div>
@@ -378,6 +386,12 @@ HTML_TEMPLATE = """\
                     <h3>Total Complexity per Quarter (Story Points)</h3>
                     <div class="chart-wrap"><canvas id="chart-complexity-trend"></canvas></div>
                 </div>
+                <div class="chart-card" id="overview-review-complexity" style="display:none;">
+                    <h3>Reviews Complexity per Quarter (Story Points)</h3>
+                    <div class="chart-wrap"><canvas id="chart-review-complexity-trend"></canvas></div>
+                </div>
+            </div>
+            <div class="chart-row">
                 <div class="chart-card">
                     <h3>Avg Merge Time per Quarter (days)</h3>
                     <div class="chart-wrap"><canvas id="chart-merge-time-trend"></canvas></div>
@@ -512,6 +526,29 @@ HTML_TEMPLATE = """\
                     scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
                 }},
             }});
+
+            document.getElementById('overview-review-complexity').style.display = '';
+            new Chart(document.getElementById('chart-review-complexity-trend'), {{
+                type: 'line',
+                data: {{
+                    labels: Q.map(q => q.label),
+                    datasets: names.map((name, i) => ({{
+                        label: name,
+                        data: Q.map(q => q.review_sp[i]),
+                        borderColor: colors[i],
+                        backgroundColor: colors[i] + '20',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 4,
+                    }})),
+                }},
+                options: {{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {{ legend: {{ position: 'bottom', labels: {{ usePointStyle: true }} }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                }},
+            }});
         }}
 
         // Team view: Total PRs + MRs
@@ -597,6 +634,27 @@ HTML_TEMPLATE = """\
                         data: Q.map(q => q.sp_dev.reduce((a, b) => a + b, 0) + q.sp_qe.reduce((a, b) => a + b, 0)),
                         backgroundColor: '#10b981',
                         borderColor: '#059669',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }}],
+                }},
+                options: {{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {{ legend: {{ display: false }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                }},
+            }});
+
+            new Chart(document.getElementById('chart-team-review-sp'), {{
+                type: 'bar',
+                data: {{
+                    labels: Q.map(q => q.label),
+                    datasets: [{{
+                        label: 'Total Reviews Complexity',
+                        data: Q.map(q => q.review_sp.reduce((a, b) => a + b, 0)),
+                        backgroundColor: '#f59e0b',
+                        borderColor: '#d97706',
                         borderWidth: 1,
                         borderRadius: 4,
                     }}],

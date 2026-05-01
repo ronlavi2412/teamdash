@@ -158,10 +158,7 @@ def _parse_pr_url(html_url: str) -> tuple[str, str, str] | None:
         return None
 
 
-def _fetch_pr_details_for_org(
-    username: str, org: str, start: str, end: str,
-) -> list[PRDetail]:
-    query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}"
+def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
     items = _gh_search_items(query)
     details: list[PRDetail] = []
 
@@ -204,7 +201,7 @@ def _fetch_pr_details_for_org(
         details.append(PRDetail(
             url=html_url,
             source="github",
-            author=username,
+            author=author,
             additions=pr_data.get("additions", 0),
             deletions=pr_data.get("deletions", 0),
             changed_files=pr_data.get("changed_files", 0),
@@ -220,12 +217,35 @@ def _fetch_pr_details_for_org(
     return details
 
 
+def _fetch_pr_details_for_org(
+    username: str, org: str, start: str, end: str,
+) -> list[PRDetail]:
+    query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}"
+    return _fetch_details_for_query(query, author=username)
+
+
 def fetch_pr_details(
     username: str, orgs: list[str], start: str, end: str,
 ) -> list[PRDetail]:
     details: list[PRDetail] = []
     for org in orgs:
         details.extend(_fetch_pr_details_for_org(username, org, start, end))
+    return details
+
+
+def _fetch_reviewed_pr_details_for_org(
+    username: str, org: str, start: str, end: str,
+) -> list[PRDetail]:
+    query = f"type:pr+reviewed-by:{username}+-author:{username}+org:{org}+created:{start}..{end}"
+    return _fetch_details_for_query(query, author=username)
+
+
+def fetch_reviewed_pr_details(
+    username: str, orgs: list[str], start: str, end: str,
+) -> list[PRDetail]:
+    details: list[PRDetail] = []
+    for org in orgs:
+        details.extend(_fetch_reviewed_pr_details_for_org(username, org, start, end))
     return details
 
 

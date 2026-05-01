@@ -171,10 +171,12 @@ class TestTeamTab:
         assert "chart-team-reviews" in result
         assert "chart-team-merge-time" in result
         assert "chart-team-sp" not in result
+        assert "chart-team-review-sp" not in result
 
     def test_build_team_tab_scoring_unit(self):
         result = _build_team_tab(has_scoring=True)
         assert "chart-team-sp" in result
+        assert "chart-team-review-sp" in result
 
 
 class TestScoringDashboard:
@@ -197,6 +199,7 @@ class TestScoringDashboard:
         assert "sp_dev:" in result
         assert "sp_qe:" in result
         assert "xl_count:" in result
+        assert "review_sp:" in result
         assert "size_dist:" in result
 
     def test_scoring_table_headers(self, two_quarter_summaries_with_scoring):
@@ -210,3 +213,27 @@ class TestScoringDashboard:
         from teamdash.dashboard import _build_table_rows
         result = _build_table_rows(two_quarter_summaries_with_scoring, ["Alice", "Bob"], has_scoring=True)
         assert "Alice" in result
+
+    def test_review_complexity_chart_present(self, tmp_path, two_quarter_summaries_with_scoring):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        content = open(out).read()
+        assert "chart-review-complexity-trend" in content
+
+    def test_review_complexity_hidden_without_scoring(self, tmp_path, two_quarter_summaries):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries, out)
+        content = open(out).read()
+        assert 'id="overview-review-complexity" style="display:none;"' in content
+
+    def test_team_review_sp_with_scoring(self, tmp_path, two_quarter_summaries_with_scoring):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        content = open(out).read()
+        assert "chart-team-review-sp" in content
+
+    def test_team_review_sp_without_scoring(self, tmp_path, two_quarter_summaries):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries, out)
+        content = open(out).read()
+        assert '<canvas id="chart-team-review-sp">' not in content

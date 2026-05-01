@@ -12,6 +12,7 @@ from teamdash.fetch_github import (
     fetch_merge_times,
     fetch_pr_details,
     fetch_prs,
+    fetch_reviewed_pr_details,
     fetch_reviews,
 )
 from teamdash.fetch_gitlab import check_auth as check_gitlab_auth
@@ -118,6 +119,12 @@ def _fetch_engineer_data_scored(
         gl_details = fetch_mr_details(config.gitlab_url, eng.gitlab, q.start, q.end)
         all_details.extend(gl_details)
 
+    reviewed_details: list[PRDetail] = []
+    if eng.github and config.github_orgs:
+        reviewed_details = fetch_reviewed_pr_details(
+            eng.github, config.github_orgs, q.start, q.end,
+        )
+
     gh_prs = sum(1 for d in all_details if d.source == "github")
     gl_mrs = sum(1 for d in all_details if d.source == "gitlab")
 
@@ -128,6 +135,9 @@ def _fetch_engineer_data_scored(
     sp_dev = sum(s.points for s in scored if s.point_type == "dev")
     sp_qe = sum(s.points for s in scored if s.point_type == "qe")
     xl = sum(1 for s in scored if s.size == "XL")
+
+    scored_reviews = score_prs(reviewed_details, config.scoring)
+    review_sp = sum(s.points for s in scored_reviews)
 
     return EngineerQuarterMetrics(
         name=eng.name,
@@ -140,6 +150,8 @@ def _fetch_engineer_data_scored(
         story_points_qe=sp_qe,
         scored_prs=scored,
         xl_count=xl,
+        review_story_points=review_sp,
+        scored_reviews=scored_reviews,
     )
 
 
@@ -175,6 +187,7 @@ def collect_all_data(
                     story_points_dev=cached_eng.get("story_points_dev", 0),
                     story_points_qe=cached_eng.get("story_points_qe", 0),
                     xl_count=cached_eng.get("xl_count", 0),
+                    review_story_points=cached_eng.get("review_story_points", 0),
                 )
             else:
                 fetch_tasks.append((eng, q))
@@ -212,6 +225,7 @@ def collect_all_data(
                     cache_entry["story_points_dev"] = metrics.story_points_dev
                     cache_entry["story_points_qe"] = metrics.story_points_qe
                     cache_entry["xl_count"] = metrics.xl_count
+                    cache_entry["review_story_points"] = metrics.review_story_points
                     cache_entry["scored_prs_summary"] = [
                         {
                             "url": s.detail.url,

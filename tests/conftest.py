@@ -121,11 +121,13 @@ def two_quarter_summaries_with_scoring(sample_quarter, sample_quarter_prev):
                 name="Alice", quarter="2024-Q4",
                 github_prs=8, gitlab_mrs=4, reviews=6,
                 story_points_dev=30, story_points_qe=5, xl_count=0,
+                review_story_points=18,
             ),
             EngineerQuarterMetrics(
                 name="Bob", quarter="2024-Q4",
                 github_prs=2, gitlab_mrs=1, reviews=3,
                 story_points_dev=10, story_points_qe=0, xl_count=0,
+                review_story_points=10,
             ),
         ],
     )
@@ -137,11 +139,13 @@ def two_quarter_summaries_with_scoring(sample_quarter, sample_quarter_prev):
                 github_prs=10, gitlab_mrs=5, reviews=8,
                 story_points_dev=26, story_points_qe=8, xl_count=1,
                 scored_prs=[scored1, scored2],
+                review_story_points=21,
             ),
             EngineerQuarterMetrics(
                 name="Bob", quarter="2025-Q1",
                 github_prs=3, gitlab_mrs=2, reviews=4,
                 story_points_dev=16, story_points_qe=0, xl_count=0,
+                review_story_points=13,
             ),
         ],
     )

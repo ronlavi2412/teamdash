@@ -57,6 +57,8 @@ class EngineerQuarterMetrics:
     story_points_qe: int = 0
     scored_prs: list[ScoredPR] = field(default_factory=list)
     xl_count: int = 0
+    review_story_points: int = 0
+    scored_reviews: list[ScoredPR] = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -104,6 +106,10 @@ class QuarterSummary:
     @property
     def total_story_points_qe(self) -> int:
         return sum(e.story_points_qe for e in self.engineers)
+
+    @property
+    def total_review_story_points(self) -> int:
+        return sum(e.review_story_points for e in self.engineers)
 
     @property
     def total_xl_count(self) -> int:
