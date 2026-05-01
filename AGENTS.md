@@ -10,34 +10,52 @@ Single-package Python project (`teamdash/`) with no framework. The data flow is:
 
 ```
 team.yaml -> config.py -> aggregate.py -> dashboard.py -> HTML file
-                              |
-                    fetch_github.py (gh api subprocess)
-                    fetch_gitlab.py (glab api subprocess)
+                 |              |
+           scoring.py     fetch_github.py (gh api subprocess)
+           (ScoringConfig) fetch_gitlab.py (glab api subprocess)
+
+models.py   -- Quarter, PRDetail, ScoredPR, EngineerQuarterMetrics, QuarterSummary
+quarters.py -- date range calculation for N quarters
+scoring.py  -- story point estimation from PR metadata
 ```
 
 - **No web framework** -- generates static HTML, no server
 - **No ORM or database** -- data is fetched live from APIs and cached as JSON in `~/.cache/teamdash/`
 - **External CLIs** -- uses `gh` and `glab` subprocesses for API auth, not raw HTTP requests
 - **Chart.js v4** loaded from CDN in the generated HTML
+- **`publish.sh`** -- deploys dashboard HTML to GitHub Pages via `gh-pages` branch
 
 ## Key Patterns
 
 - API calls use subprocess to `gh api` / `glab api` rather than HTTP libraries, leveraging the user's existing CLI auth sessions
-- GitHub search API has a 30 req/min rate limit; `fetch_github.py` sleeps 2s between requests
-- Dashboard HTML is built with Python f-strings from a large template constant in `dashboard.py`
+- **Rate limit handling**: GitHub search API has a 30 req/min limit. On 403 or "rate limit" errors, `fetch_github.py` sleeps 60s then retries once. Individual PR detail fetches sleep 0.5s between requests
+- **Parallelization**: `aggregate.py` uses `ThreadPoolExecutor` with 4 workers for fetching across engineer/quarter combinations. Within each engineer fetch, a nested `ThreadPoolExecutor` with up to 5 workers parallelizes GitHub/GitLab API calls
+- Dashboard HTML is built with Python f-strings from a large template constant in `dashboard.py` (~700 lines)
 - All data is passed to the template as inline JavaScript arrays
-- Caching is daily and keyed by config hash; `--no-cache` skips reading the cache but still writes it
+- Caching is daily and keyed by config hash (MD5 of team name, orgs, engineers, and scoring config); `--no-cache` skips reading the cache but still writes it
+- **Scoring**: story point estimation uses 4 signals (diff size, files changed, review friction, merge time) to classify PRs as XS/S/M/L/XL. PR labels can override the heuristic. Scoring is enabled by default; `--no-scoring` skips it for faster runs
+- **Data models**: all structured data uses `dataclasses` in `models.py` (no Pydantic). Key classes: `PRDetail`, `ScoredPR`, `EngineerQuarterMetrics`, `QuarterSummary`
 
 ## Running
 
 ```bash
 pip install .
-teamdash team.yaml
+teamdash team.yaml                     # 4 quarters, output dashboard.html
+teamdash team.yaml -o report.html      # custom output path
+teamdash team.yaml -q 6               # last 6 quarters
+teamdash team.yaml --no-cache          # skip cache, fetch fresh data
+teamdash team.yaml --include-current   # include current (in-progress) quarter
+teamdash team.yaml --no-scoring        # skip story point estimation
 ```
 
 ## Testing
 
-No test suite yet. Verify changes by running against `team.yaml.example` and checking the generated HTML opens correctly in a browser with populated charts.
+```bash
+pip install -e ".[dev]"
+python -m pytest tests/ -x -q
+```
+
+212 tests across 8 test files covering all modules: scoring, dashboard, aggregate, config, fetch_github, fetch_gitlab, models, and quarters. Tests use `unittest.mock` to patch subprocess calls and avoid real API hits.
 
 ## Style
 

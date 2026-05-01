@@ -16,9 +16,7 @@ Takes a YAML config file with team members' GitHub/GitLab usernames, fetches PR/
 # Install
 pip install .
 
-# Copy and edit the team config
-cp team.yaml.example team.yaml
-# Edit team.yaml with your team's details
+# Create a team.yaml config (see Configuration section below)
 
 # Generate the dashboard
 teamdash team.yaml
@@ -33,6 +31,8 @@ teamdash team.yaml                     # 4 quarters, output dashboard.html
 teamdash team.yaml -o report.html      # custom output path
 teamdash team.yaml -q 6               # last 6 quarters
 teamdash team.yaml --no-cache          # skip cache, fetch fresh data
+teamdash team.yaml --include-current   # include the current (in-progress) quarter
+teamdash team.yaml --no-scoring        # skip story point estimation (faster)
 ```
 
 ## Configuration
@@ -71,14 +71,68 @@ engineers:
 
 Each engineer needs at least one of `github` or `gitlab`.
 
+### Scoring Configuration
+
+Story point estimation is enabled by default. Customize the scoring behavior by adding a `scoring` section to your config:
+
+```yaml
+scoring:
+  size_points:
+    XS: 2
+    S: 5
+    M: 8
+    L: 13
+    XL: 21
+  diff_thresholds: [50, 200, 500, 1200]          # lines changed -> XS/S/M/L/XL
+  file_thresholds: [3, 8, 15, 30]                 # files changed -> XS/S/M/L/XL
+  merge_time_thresholds: [0.5, 2.0, 5.0, 10.0]   # days to merge -> XS/S/M/L/XL
+  size_label_patterns:                            # PR labels that override heuristic sizing
+    XS: ["size/xs", "t-shirt/xs"]
+    S: ["size/s", "t-shirt/s"]
+    M: ["size/m", "t-shirt/m"]
+    L: ["size/l", "t-shirt/l"]
+    XL: ["size/xl", "t-shirt/xl"]
+  qe_labels: ["qe-task", "needs-qe-validation", "bug", "type/bug"]
+```
+
+All scoring fields are optional; omitted fields use the defaults shown above. Use `--no-scoring` to skip story point estimation entirely.
+
 ## Dashboard
 
 The generated HTML file includes:
 
 - **Summary cards** -- Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
-- **Overview tab** -- PRs+MRs trend and Code Reviews trend line charts per engineer
-- **Details tab** -- GitHub vs GitLab breakdown bar chart, review share doughnut chart
-- **Full Table tab** -- Sortable table with all metrics per engineer per quarter
+- **Overall Team View tab** -- Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter. When scoring is enabled, also shows total story points and review complexity per quarter
+- **Detailed View tab** -- Per-engineer line charts: PRs+MRs trend, code reviews trend, avg merge time. When scoring is enabled, also shows per-engineer complexity and review complexity trends
+- **Full Table tab** -- Sortable table with all metrics per engineer per quarter (includes story point columns when scoring is enabled)
+
+## Story Points
+
+By default, teamdash estimates story points for each PR/MR using a multi-signal heuristic:
+
+1. **Diff size** -- total lines added + deleted
+2. **Files changed** -- number of files modified
+3. **Review friction** -- changes-requested count and high comment volume
+4. **Merge time** -- days from creation to merge
+
+Each signal maps to a t-shirt size (XS/S/M/L/XL) via configurable thresholds. The final size is the maximum across all signals. If a PR carries a recognized size label (e.g., `size/m`), the label overrides the heuristic.
+
+Points are assigned per size: XS=2, S=5, M=8, L=13, XL=21 (Fibonacci-like, configurable).
+
+PRs with QE-related labels (e.g., `bug`, `qe-task`) are tracked as QE points separately from dev points. Review complexity scores the PRs reviewed by each engineer using the same sizing logic. XL PRs are flagged with "should-split" as a suggestion to break them into smaller changesets.
+
+Use `--no-scoring` to skip estimation for faster runs with fewer API calls.
+
+## Deployment
+
+Publish dashboards to GitHub Pages:
+
+```bash
+./publish.sh dashboard.html                                    # single dashboard
+./publish.sh dashboard-team1.html dashboard-team2.html         # multiple dashboards
+```
+
+This commits the HTML files to the `gh-pages` branch, generates an `index.html` listing all dashboards, and pushes to the remote.
 
 ## Caching
 
@@ -96,15 +150,28 @@ pytest
 ```
 teamdash/
   teamdash/
+    __init__.py         # Package version
+    __main__.py         # python -m teamdash entry point
     cli.py              # CLI entry point (argparse)
     config.py           # YAML config loading and validation
     quarters.py         # Quarter date range calculation
-    models.py           # Data classes
+    models.py           # Data classes (PRDetail, ScoredPR, EngineerQuarterMetrics, etc.)
+    scoring.py          # Story point estimation engine
     fetch_github.py     # GitHub data fetching via gh CLI
     fetch_gitlab.py     # GitLab data fetching via glab CLI
-    aggregate.py        # Orchestration and caching
+    aggregate.py        # Orchestration, caching, and parallelization
     dashboard.py        # HTML dashboard generation
-  team.yaml.example     # Example configuration
+  tests/
+    test_aggregate.py
+    test_config.py
+    test_dashboard.py
+    test_fetch_github.py
+    test_fetch_gitlab.py
+    test_models.py
+    test_quarters.py
+    test_scoring.py
+  config/               # Team YAML configs (git-ignored)
+  publish.sh            # GitHub Pages deployment script
   pyproject.toml        # Package configuration
   requirements.txt
 ```
