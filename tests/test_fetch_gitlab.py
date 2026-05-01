@@ -9,6 +9,7 @@ import pytest
 from teamdash.fetch_gitlab import (
     _extract_hostname,
     _glab_api_get,
+    _in_date_range,
     check_auth,
     fetch_mr_details,
     fetch_mr_merge_times,
@@ -34,7 +35,10 @@ class TestFetchMrs:
     def test_single_page(self):
         fake = subprocess.CompletedProcess(
             args=[], returncode=0,
-            stdout=json.dumps([{"id": 1}, {"id": 2}]),
+            stdout=json.dumps([
+                {"id": 1, "merged_at": "2025-02-01T10:00:00Z"},
+                {"id": 2, "merged_at": "2025-03-15T14:30:00Z"},
+            ]),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
             result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
@@ -43,11 +47,14 @@ class TestFetchMrs:
     def test_pagination(self):
         page1 = subprocess.CompletedProcess(
             args=[], returncode=0,
-            stdout=json.dumps([{"id": i} for i in range(100)]),
+            stdout=json.dumps([{"id": i, "merged_at": "2025-02-15T12:00:00Z"} for i in range(100)]),
         )
         page2 = subprocess.CompletedProcess(
             args=[], returncode=0,
-            stdout=json.dumps([{"id": 100}, {"id": 101}]),
+            stdout=json.dumps([
+                {"id": 100, "merged_at": "2025-02-16T12:00:00Z"},
+                {"id": 101, "merged_at": "2025-02-17T12:00:00Z"},
+            ]),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", side_effect=[page1, page2]):
             result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
@@ -61,7 +68,7 @@ class TestFetchMrs:
     def test_timeout_returns_partial(self):
         page1 = subprocess.CompletedProcess(
             args=[], returncode=0,
-            stdout=json.dumps([{"id": i} for i in range(100)]),
+            stdout=json.dumps([{"id": i, "merged_at": "2025-02-15T12:00:00Z"} for i in range(100)]),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", side_effect=[page1, subprocess.TimeoutExpired(cmd="glab", timeout=30)]):
             result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
@@ -176,6 +183,32 @@ class TestFetchMrDetails:
         with patch("teamdash.fetch_gitlab._fetch_mr_list", return_value=[]):
             result = fetch_mr_details("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
         assert result == []
+
+
+class TestInDateRange:
+    def test_z_suffix(self):
+        assert _in_date_range("2025-02-15T12:00:00Z", "2025-01-01", "2025-03-31") is True
+
+    def test_offset_suffix(self):
+        assert _in_date_range("2025-02-15T12:00:00+00:00", "2025-01-01", "2025-03-31") is True
+
+    def test_fractional_seconds(self):
+        assert _in_date_range("2025-02-15T12:00:00.123Z", "2025-01-01", "2025-03-31") is True
+
+    def test_before_range(self):
+        assert _in_date_range("2024-12-31T23:59:59Z", "2025-01-01", "2025-03-31") is False
+
+    def test_after_range(self):
+        assert _in_date_range("2025-04-01T00:00:00Z", "2025-01-01", "2025-03-31") is False
+
+    def test_at_start_boundary(self):
+        assert _in_date_range("2025-01-01T00:00:00Z", "2025-01-01", "2025-03-31") is True
+
+    def test_at_end_boundary(self):
+        assert _in_date_range("2025-03-31T23:59:59Z", "2025-01-01", "2025-03-31") is True
+
+    def test_end_boundary_fractional_seconds(self):
+        assert _in_date_range("2025-03-31T23:59:59.999Z", "2025-01-01", "2025-03-31") is True
 
 
 class TestCheckAuth:

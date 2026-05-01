@@ -142,7 +142,7 @@ def fetch_prs(username: str, orgs: list[str], start: str, end: str) -> int:
 
 def fetch_reviews(username: str, orgs: list[str], start: str, end: str) -> int:
     def _fetch_org(org: str) -> int:
-        query = f"type:pr+reviewed-by:{username}+org:{org}+-author:{username}+created:{start}..{end}"
+        query = f"type:pr+reviewed-by:{username}+org:{org}+-author:{username}+merged:{start}..{end}"
         return _gh_search_count(query)
 
     with ThreadPoolExecutor(max_workers=len(orgs)) as pool:
@@ -236,7 +236,7 @@ def fetch_pr_details(
 def _fetch_reviewed_pr_details_for_org(
     username: str, org: str, start: str, end: str,
 ) -> list[PRDetail]:
-    query = f"type:pr+reviewed-by:{username}+-author:{username}+org:{org}+created:{start}..{end}"
+    query = f"type:pr+reviewed-by:{username}+-author:{username}+org:{org}+merged:{start}..{end}"
     return _fetch_details_for_query(query, author=username)
 
 

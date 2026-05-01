@@ -4,9 +4,16 @@ import json
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from teamdash.models import PRDetail
+
+
+def _in_date_range(timestamp: str, start: str, end: str) -> bool:
+    dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    start_dt = datetime.fromisoformat(f"{start}T00:00:00+00:00")
+    end_dt = datetime.fromisoformat(f"{end}T00:00:00+00:00") + timedelta(days=1)
+    return start_dt <= dt < end_dt
 
 
 def _glab_api_get(
@@ -59,7 +66,7 @@ def fetch_mrs(gitlab_url: str, username: str, start: str, end: str) -> int:
                 return total
             for mr in data:
                 merged = mr.get("merged_at")
-                if merged and merged >= f"{start}T00:00:00" and merged <= f"{end}T23:59:59":
+                if merged and _in_date_range(merged, start, end):
                     total += 1
             if len(data) < 100:
                 break
@@ -105,7 +112,7 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
             for mr in data:
                 created = mr.get("created_at")
                 merged = mr.get("merged_at")
-                if created and merged and merged >= f"{start}T00:00:00" and merged <= f"{end}T23:59:59":
+                if created and merged and _in_date_range(merged, start, end):
                     dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
                     dt_merged = datetime.fromisoformat(merged.replace("Z", "+00:00"))
                     days = (dt_merged - dt_created).total_seconds() / 86400
@@ -151,7 +158,7 @@ def _fetch_mr_list(
                 return items
             for mr in data:
                 merged = mr.get("merged_at")
-                if merged and merged >= f"{start}T00:00:00" and merged <= f"{end}T23:59:59":
+                if merged and _in_date_range(merged, start, end):
                     items.append(mr)
             if len(data) < 100:
                 break

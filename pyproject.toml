@@ -16,3 +16,8 @@ dev = ["pytest"]
 
 [project.scripts]
 teamdash = "teamdash.cli:main"
+
+[tool.pytest.ini_options]
+markers = [
+    "e2e: end-to-end tests that call real GitHub/GitLab APIs (deselect with '-m \"not e2e\"')",
+]

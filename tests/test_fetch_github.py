@@ -82,7 +82,7 @@ class TestFetchPrs:
         assert "type:pr" in query
         assert "author:alice" in query
         assert "org:myorg" in query
-        assert "created:2025-01-01..2025-03-31" in query
+        assert "merged:2025-01-01..2025-03-31" in query
 
 
 class TestFetchReviews:
@@ -148,7 +148,7 @@ class TestFetchMergeTimes:
         with patch("teamdash.fetch_github._gh_search_items", return_value=[]) as mock:
             fetch_merge_times("alice", ["myorg"], "2025-01-01", "2025-03-31")
         query = mock.call_args[0][0]
-        assert "is:merged" in query
+        assert "merged:2025-01-01..2025-03-31" in query
         assert "author:alice" in query
         assert "org:myorg" in query
 
