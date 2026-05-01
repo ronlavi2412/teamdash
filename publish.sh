@@ -21,18 +21,29 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
     git stash push -q -m "publish.sh auto-stash"
 fi
 
+tmpdir=$(mktemp -d)
+for f in "$@"; do
+    cp "$f" "$tmpdir/"
+done
+# preserve git-ignored files/dirs that would be lost during branch switch
+backup_dir="$tmpdir/_backup"
+mkdir -p "$backup_dir"
+if [ -d config ]; then cp -a config "$backup_dir/"; fi
+for html in *.html; do [ -f "$html" ] && cp "$html" "$backup_dir/"; done 2>/dev/null || true
+
 cleanup() {
     git checkout -q "$orig_branch" 2>/dev/null || true
+    # restore git-ignored files
+    if [ -d "$backup_dir/config" ]; then
+        cp -a "$backup_dir/config" . 2>/dev/null || true
+    fi
+    cp "$backup_dir"/*.html . 2>/dev/null || true
+    rm -rf "$tmpdir"
     if [ "$stash_needed" = true ]; then
         git stash pop -q 2>/dev/null || true
     fi
 }
 trap cleanup EXIT
-
-tmpdir=$(mktemp -d)
-for f in "$@"; do
-    cp "$f" "$tmpdir/"
-done
 
 if git rev-parse --verify gh-pages >/dev/null 2>&1; then
     git checkout -q gh-pages
@@ -46,8 +57,6 @@ else
         cp "$tmpdir/$(basename "$f")" .
     done
 fi
-
-rm -rf "$tmpdir"
 
 # Build index.html listing all dashboards
 dashboards=$(find . -maxdepth 1 -name '*.html' ! -name 'index.html' -printf '%f\n' | sort)
