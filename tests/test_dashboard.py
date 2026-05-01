@@ -106,61 +106,61 @@ class TestBuildTableRows:
 
 
 class TestGenerateDashboard:
-    def test_writes_html_file(self, tmp_path, two_quarter_summaries):
+    def test_writes_html_file(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         assert os.path.exists(out)
         content = open(out).read()
         assert "<!DOCTYPE html>" in content
         assert "Test Team" in content
 
-    def test_contains_chart_js(self, tmp_path, two_quarter_summaries):
+    def test_contains_chart_js(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert "chart.js" in content
 
-    def test_contains_engineer_names(self, tmp_path, two_quarter_summaries):
+    def test_contains_engineer_names(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert "Alice" in content
         assert "Bob" in content
 
 
 class TestTeamTab:
-    def test_team_tab_present(self, tmp_path, two_quarter_summaries):
+    def test_team_tab_present(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert 'id="tab-team"' in content
         assert "chart-team-prs" in content
         assert "chart-team-reviews" in content
         assert "chart-team-merge-time" in content
 
-    def test_team_tab_is_default(self, tmp_path, two_quarter_summaries):
+    def test_team_tab_is_default(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert 'id="tab-team" class="tab-content active"' in content
         assert 'id="tab-overview" class="tab-content">' in content
 
-    def test_team_tab_nav(self, tmp_path, two_quarter_summaries):
+    def test_team_tab_nav(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert "switchTab('team')" in content
         assert "Overall Team View" in content
 
-    def test_team_sp_with_scoring(self, tmp_path, two_quarter_summaries_with_scoring):
+    def test_team_sp_with_scoring(self, tmp_path, two_quarter_summaries_with_scoring, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        generate_dashboard(sample_config, two_quarter_summaries_with_scoring, out)
         content = open(out).read()
         assert "chart-team-sp" in content
 
-    def test_team_sp_without_scoring(self, tmp_path, two_quarter_summaries):
+    def test_team_sp_without_scoring(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert '<canvas id="chart-team-sp">' not in content
 
@@ -180,15 +180,15 @@ class TestTeamTab:
 
 
 class TestScoringDashboard:
-    def test_complexity_chart_present(self, tmp_path, two_quarter_summaries_with_scoring):
+    def test_complexity_chart_present(self, tmp_path, two_quarter_summaries_with_scoring, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        generate_dashboard(sample_config, two_quarter_summaries_with_scoring, out)
         content = open(out).read()
         assert "chart-complexity-trend" in content
 
-    def test_no_scoring_hides_complexity(self, tmp_path, two_quarter_summaries):
+    def test_no_scoring_hides_complexity(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert "tab-storypoints" not in content
         assert '<div class="label">Dev Points</div>' not in content
@@ -214,26 +214,26 @@ class TestScoringDashboard:
         result = _build_table_rows(two_quarter_summaries_with_scoring, ["Alice", "Bob"], has_scoring=True)
         assert "Alice" in result
 
-    def test_review_complexity_chart_present(self, tmp_path, two_quarter_summaries_with_scoring):
+    def test_review_complexity_chart_present(self, tmp_path, two_quarter_summaries_with_scoring, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        generate_dashboard(sample_config, two_quarter_summaries_with_scoring, out)
         content = open(out).read()
         assert "chart-review-complexity-trend" in content
 
-    def test_review_complexity_hidden_without_scoring(self, tmp_path, two_quarter_summaries):
+    def test_review_complexity_hidden_without_scoring(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert 'id="overview-review-complexity" style="display:none;"' in content
 
-    def test_team_review_sp_with_scoring(self, tmp_path, two_quarter_summaries_with_scoring):
+    def test_team_review_sp_with_scoring(self, tmp_path, two_quarter_summaries_with_scoring, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        generate_dashboard(sample_config, two_quarter_summaries_with_scoring, out)
         content = open(out).read()
         assert "chart-team-review-sp" in content
 
-    def test_team_review_sp_without_scoring(self, tmp_path, two_quarter_summaries):
+    def test_team_review_sp_without_scoring(self, tmp_path, two_quarter_summaries, sample_config):
         out = str(tmp_path / "test.html")
-        generate_dashboard("Test Team", two_quarter_summaries, out)
+        generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert '<canvas id="chart-team-review-sp">' not in content

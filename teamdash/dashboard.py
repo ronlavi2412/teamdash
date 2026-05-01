@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from teamdash.config import TeamConfig
 from teamdash.models import EngineerQuarterMetrics, QuarterSummary
+from teamdash.scoring import ScoringConfig
 
 
 COLORS = [
@@ -246,11 +248,88 @@ def _build_team_tab(has_scoring: bool) -> str:
         </div>"""
 
 
+def _build_config_tab(config: TeamConfig, has_scoring: bool) -> str:
+    sources_rows = ""
+    if config.github_orgs:
+        orgs = ", ".join(config.github_orgs)
+        sources_rows += f'<tr><td><strong>GitHub Organizations</strong></td><td>{orgs}</td></tr>\n'
+    if config.gitlab_url:
+        sources_rows += f'<tr><td><strong>GitLab Instance</strong></td><td>{config.gitlab_url}</td></tr>\n'
+    if not sources_rows:
+        sources_rows = '<tr><td colspan="2">No data sources configured</td></tr>'
+
+    engineer_rows = ""
+    for eng in config.engineers:
+        gh = eng.github or "-"
+        gl = eng.gitlab or "-"
+        engineer_rows += f"<tr><td>{eng.name}</td><td>{gh}</td><td>{gl}</td></tr>\n"
+
+    scoring_html = ""
+    if has_scoring:
+        sc = config.scoring
+        sp_rows = "".join(
+            f"<tr><td>{size}</td><td>{sc.size_points.get(size, 0)}</td></tr>"
+            for size in ("XS", "S", "M", "L", "XL")
+        )
+        diff_th = ", ".join(str(t) for t in sc.diff_thresholds)
+        file_th = ", ".join(str(t) for t in sc.file_thresholds)
+        merge_th = ", ".join(str(t) for t in sc.merge_time_thresholds)
+        qe = ", ".join(sc.qe_labels)
+
+        scoring_html = f"""
+            <div class="chart-card full">
+                <h3>Scoring Configuration</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div>
+                        <h4 style="margin-bottom: 8px; font-size: 0.9rem; color: var(--text-muted);">Story Points per Size</h4>
+                        <table class="data-table">
+                            <thead><tr><th>Size</th><th>Points</th></tr></thead>
+                            <tbody>{sp_rows}</tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 8px; font-size: 0.9rem; color: var(--text-muted);">Classification Thresholds</h4>
+                        <table class="data-table">
+                            <thead><tr><th>Signal</th><th>Thresholds (XS/S/M/L boundary)</th></tr></thead>
+                            <tbody>
+                                <tr><td>Lines changed</td><td>{diff_th}</td></tr>
+                                <tr><td>Files changed</td><td>{file_th}</td></tr>
+                                <tr><td>Merge time (days)</td><td>{merge_th}</td></tr>
+                            </tbody>
+                        </table>
+                        <h4 style="margin: 16px 0 8px; font-size: 0.9rem; color: var(--text-muted);">QE Labels</h4>
+                        <p style="font-size: 0.875rem;">{qe}</p>
+                    </div>
+                </div>
+            </div>"""
+
+    return f"""
+        <div id="tab-config" class="tab-content">
+            <div class="chart-row">
+                <div class="chart-card">
+                    <h3>Data Sources</h3>
+                    <table class="data-table">
+                        <thead><tr><th>Source</th><th>Value</th></tr></thead>
+                        <tbody>{sources_rows}</tbody>
+                    </table>
+                </div>
+                <div class="chart-card">
+                    <h3>Team Members</h3>
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>GitHub</th><th>GitLab</th></tr></thead>
+                        <tbody>{engineer_rows}</tbody>
+                    </table>
+                </div>
+            </div>{scoring_html}
+        </div>"""
+
+
 def generate_dashboard(
-    team_name: str,
+    config: TeamConfig,
     summaries: list[QuarterSummary],
     output_path: str,
 ) -> None:
+    team_name = config.team_name
     names = [e.name for e in summaries[0].engineers]
     colors_js = "[" + ", ".join(f'"{COLORS[i % len(COLORS)]}"' for i in range(len(names))) + "]"
     names_js = "[" + ", ".join(f'"{n}"' for n in names) + "]"
@@ -266,6 +345,7 @@ def generate_dashboard(
     data_block = _build_data_block(summaries, names)
     summary_cards = _build_summary_cards(summaries)
     team_tab = _build_team_tab(has_scoring)
+    config_tab = _build_config_tab(config, has_scoring)
     table_headers = _build_table_headers(summaries, has_scoring=has_scoring)
     table_rows = _build_table_rows(summaries, names, has_scoring=has_scoring)
     html = HTML_TEMPLATE.format(
@@ -275,6 +355,7 @@ def generate_dashboard(
         data_block=data_block,
         summary_cards=summary_cards,
         team_tab=team_tab,
+        config_tab=config_tab,
         names_js=names_js,
         colors_js=colors_js,
         table_headers=table_headers,
@@ -366,6 +447,7 @@ HTML_TEMPLATE = """\
             <div class="tab active" onclick="switchTab('team')">Overall Team View</div>
             <div class="tab" onclick="switchTab('overview')">Detailed View</div>
             <div class="tab" onclick="switchTab('table')">Full Table</div>
+            <div class="tab" onclick="switchTab('config')">Configuration</div>
         </div>
 
         {team_tab}
@@ -415,6 +497,8 @@ HTML_TEMPLATE = """\
                 </div>
             </div>
         </div>
+
+        {config_tab}
     </div>
 
     <div class="footer">Generated by teamdash &middot; {generated}</div>

@@ -45,5 +45,5 @@ def main() -> None:
         enable_scoring=not args.no_scoring,
     )
 
-    generate_dashboard(config.team_name, summaries, args.output)
+    generate_dashboard(config, summaries, args.output)
     print(f"Dashboard written to {args.output}", file=sys.stderr)
