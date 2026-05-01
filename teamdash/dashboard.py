@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from teamdash.models import QuarterSummary
+from teamdash.models import EngineerQuarterMetrics, QuarterSummary
 
 
 COLORS = [
@@ -35,9 +35,23 @@ def _delta_class(new: float, old: float, lower_is_better: bool = False) -> str:
     return cls
 
 
+def _size_dist(eng: EngineerQuarterMetrics) -> dict[str, int]:
+    counts = {"XS": 0, "S": 0, "M": 0, "L": 0, "XL": 0}
+    for sp in eng.scored_prs:
+        if sp.size in counts:
+            counts[sp.size] += 1
+    return counts
+
+
 def _build_data_block(summaries: list[QuarterSummary], names: list[str]) -> str:
     def fmt(arr: list) -> str:
         return "[" + ", ".join("null" if v is None else str(v) for v in arr) + "]"
+
+    def fmt_dists(dists: list[dict[str, int]]) -> str:
+        parts = []
+        for d in dists:
+            parts.append("{" + ", ".join(f'{k}: {v}' for k, v in d.items()) + "}")
+        return "[" + ", ".join(parts) + "]"
 
     q_entries = []
     for s in summaries:
@@ -46,10 +60,16 @@ def _build_data_block(summaries: list[QuarterSummary], names: list[str]) -> str:
         gl = [by_name.get(n, _zero(n, s.quarter.label)).gitlab_mrs for n in names]
         rv = [by_name.get(n, _zero(n, s.quarter.label)).reviews for n in names]
         mt = [by_name.get(n, _zero(n, s.quarter.label)).merge_time_days for n in names]
+        sp_dev = [by_name.get(n, _zero(n, s.quarter.label)).story_points_dev for n in names]
+        sp_qe = [by_name.get(n, _zero(n, s.quarter.label)).story_points_qe for n in names]
+        xl = [by_name.get(n, _zero(n, s.quarter.label)).xl_count for n in names]
+        dists = [_size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names]
         q_entries.append(
             f'    {{ label: "{s.quarter.short_label}",'
             f' gh_prs: {fmt(gh)}, gl_mrs: {fmt(gl)}, reviews: {fmt(rv)},'
-            f' merge_time: {fmt(mt)} }}'
+            f' merge_time: {fmt(mt)},'
+            f' sp_dev: {fmt(sp_dev)}, sp_qe: {fmt(sp_qe)}, xl_count: {fmt(xl)},'
+            f' size_dist: {fmt_dists(dists)} }}'
         )
 
     return "const Q = [\n" + ",\n".join(q_entries) + "\n];"
@@ -106,7 +126,7 @@ def _build_summary_cards(summaries: list[QuarterSummary]) -> str:
     return '<div class="summary-grid">\n' + "\n".join(parts) + "\n        </div>"
 
 
-def _build_table_rows(summaries: list[QuarterSummary], names: list[str]) -> str:
+def _build_table_rows(summaries: list[QuarterSummary], names: list[str], has_scoring: bool = False) -> str:
     rows = []
     cur = summaries[-1]
     prev = summaries[-2] if len(summaries) >= 2 else cur
@@ -147,12 +167,26 @@ def _build_table_rows(summaries: list[QuarterSummary], names: list[str]) -> str:
             mt = eng.merge_time_days if eng else None
             cells.append(f'<td class="num">{mt if mt is not None else "-"}</td>')
 
+        if has_scoring:
+            for s in summaries:
+                by_name = {e.name: e for e in s.engineers}
+                eng = by_name.get(name)
+                cells.append(f'<td class="num">{eng.story_points_dev if eng else 0}</td>')
+            for s in summaries:
+                by_name = {e.name: e for e in s.engineers}
+                eng = by_name.get(name)
+                cells.append(f'<td class="num">{eng.story_points_qe if eng else 0}</td>')
+            for s in summaries:
+                by_name = {e.name: e for e in s.engineers}
+                eng = by_name.get(name)
+                cells.append(f'<td class="num">{eng.story_points_total if eng else 0}</td>')
+
         rows.append("<tr>" + "".join(cells) + "</tr>")
 
     return "\n                            ".join(rows)
 
 
-def _build_table_headers(summaries: list[QuarterSummary]) -> str:
+def _build_table_headers(summaries: list[QuarterSummary], has_scoring: bool = False) -> str:
     headers = ['<th>Engineer</th>']
     for s in summaries:
         headers.append(f'<th data-type="num">PRs+MRs {s.quarter.short_label} <span class="sort-arrow"></span></th>')
@@ -165,7 +199,55 @@ def _build_table_headers(summaries: list[QuarterSummary]) -> str:
         headers.append(f'<th data-type="num">Reviews {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     for s in summaries:
         headers.append(f'<th data-type="num">Merge days {s.quarter.short_label} <span class="sort-arrow"></span></th>')
+    if has_scoring:
+        for s in summaries:
+            headers.append(f'<th data-type="num">SP Dev {s.quarter.short_label} <span class="sort-arrow"></span></th>')
+        for s in summaries:
+            headers.append(f'<th data-type="num">SP QE {s.quarter.short_label} <span class="sort-arrow"></span></th>')
+        for s in summaries:
+            headers.append(f'<th data-type="num">SP Total {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     return "\n                                ".join(headers)
+
+
+def _build_sp_tab(summaries: list[QuarterSummary], names: list[str]) -> str:
+    xl_prs = []
+    if summaries:
+        latest = summaries[-1]
+        for eng in latest.engineers:
+            for sp in eng.scored_prs:
+                if sp.size == "XL":
+                    xl_prs.append((eng.name, sp.detail.url))
+
+    xl_html = ""
+    if xl_prs:
+        rows = "\n".join(
+            f'                        <tr><td>{name}</td><td><a href="{url}" target="_blank">{url}</a></td></tr>'
+            for name, url in xl_prs
+        )
+        xl_html = f"""
+            <div class="chart-card full">
+                <h3>XL PRs — Consider Splitting</h3>
+                <table class="data-table">
+                    <thead><tr><th>Engineer</th><th>PR URL</th></tr></thead>
+                    <tbody>
+                        {rows}
+                    </tbody>
+                </table>
+            </div>"""
+
+    return f"""
+        <div id="tab-storypoints" class="tab-content">
+            <div class="chart-row">
+                <div class="chart-card">
+                    <h3>Story Points Velocity per Quarter</h3>
+                    <div class="chart-wrap"><canvas id="chart-sp-velocity"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Size Distribution (Latest Quarter)</h3>
+                    <div class="chart-wrap"><canvas id="chart-size-dist"></canvas></div>
+                </div>
+            </div>{xl_html}
+        </div>"""
 
 
 def generate_dashboard(
@@ -183,11 +265,12 @@ def generate_dashboard(
     subtitle = f"{len(summaries)} quarters ({first_q.start} to {last_q.end})"
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
 
+    has_scoring = any(s.total_story_points > 0 for s in summaries)
+
     data_block = _build_data_block(summaries, names)
     summary_cards = _build_summary_cards(summaries)
-    table_headers = _build_table_headers(summaries)
-    table_rows = _build_table_rows(summaries, names)
-
+    table_headers = _build_table_headers(summaries, has_scoring=has_scoring)
+    table_rows = _build_table_rows(summaries, names, has_scoring=has_scoring)
     html = HTML_TEMPLATE.format(
         title=title,
         subtitle=subtitle,
@@ -199,6 +282,7 @@ def generate_dashboard(
         table_headers=table_headers,
         table_rows=table_rows,
         num_engineers=len(names),
+        has_scoring="true" if has_scoring else "false",
     )
 
     with open(output_path, "w") as f:
@@ -298,7 +382,11 @@ HTML_TEMPLATE = """\
                 </div>
             </div>
             <div class="chart-row">
-                <div class="chart-card full">
+                <div class="chart-card" id="overview-complexity" style="display:none;">
+                    <h3>Total Complexity per Quarter (Story Points)</h3>
+                    <div class="chart-wrap"><canvas id="chart-complexity-trend"></canvas></div>
+                </div>
+                <div class="chart-card">
                     <h3>Avg Merge Time per Quarter (days)</h3>
                     <div class="chart-wrap"><canvas id="chart-merge-time-trend"></canvas></div>
                 </div>
@@ -420,6 +508,32 @@ HTML_TEMPLATE = """\
                 scales: {{ y: {{ beginAtZero: true, max: 20, title: {{ display: true, text: 'Days' }} }} }},
             }},
         }});
+
+        // Total complexity per quarter (overview tab)
+        if ({has_scoring}) {{
+            document.getElementById('overview-complexity').style.display = '';
+            new Chart(document.getElementById('chart-complexity-trend'), {{
+                type: 'line',
+                data: {{
+                    labels: Q.map(q => q.label),
+                    datasets: names.map((name, i) => ({{
+                        label: name,
+                        data: Q.map(q => q.sp_dev[i] + q.sp_qe[i]),
+                        borderColor: colors[i],
+                        backgroundColor: colors[i] + '20',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 4,
+                    }})),
+                }},
+                options: {{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {{ legend: {{ position: 'bottom', labels: {{ usePointStyle: true }} }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                }},
+            }});
+        }}
 
         // GitHub vs GitLab breakdown (latest quarter)
         new Chart(document.getElementById('chart-breakdown'), {{

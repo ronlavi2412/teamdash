@@ -8,19 +8,35 @@ from datetime import date
 from pathlib import Path
 
 from teamdash.config import TeamConfig
-from teamdash.fetch_github import fetch_merge_times, fetch_prs, fetch_reviews
+from teamdash.fetch_github import (
+    fetch_merge_times,
+    fetch_pr_details,
+    fetch_prs,
+    fetch_reviews,
+)
 from teamdash.fetch_gitlab import check_auth as check_gitlab_auth
-from teamdash.fetch_gitlab import fetch_mr_merge_times, fetch_mrs
+from teamdash.fetch_gitlab import fetch_mr_details, fetch_mr_merge_times, fetch_mrs
 from teamdash.models import EngineerQuarterMetrics, Quarter, QuarterSummary
+from teamdash.scoring import ScoringConfig, score_prs
 
 CACHE_DIR = Path.home() / ".cache" / "teamdash"
 
 
 def _config_hash(config: TeamConfig) -> str:
+    scoring_key = None
+    if config.scoring:
+        scoring_key = {
+            "size_points": config.scoring.size_points,
+            "diff_thresholds": list(config.scoring.diff_thresholds),
+            "file_thresholds": list(config.scoring.file_thresholds),
+            "merge_time_thresholds": list(config.scoring.merge_time_thresholds),
+            "qe_labels": sorted(config.scoring.qe_labels),
+        }
     key = json.dumps({
         "team": config.team_name,
         "orgs": sorted(config.github_orgs),
         "engineers": [(e.name, e.github, e.gitlab) for e in config.engineers],
+        "scoring": scoring_key,
     }, sort_keys=True)
     return hashlib.md5(key.encode()).hexdigest()[:12]
 
@@ -48,8 +64,12 @@ def _save_cache(config: TeamConfig, quarters_data: dict) -> None:
 
 def _fetch_engineer_data(
     eng, config: TeamConfig, gitlab_ok: bool, q: Quarter,
+    enable_scoring: bool = False,
 ) -> EngineerQuarterMetrics:
     print(f"  Fetching {q.label} for {eng.name}...", file=sys.stderr)
+
+    if enable_scoring:
+        return _fetch_engineer_data_scored(eng, config, gitlab_ok, q)
 
     futures: dict[str, object] = {}
     with ThreadPoolExecutor(max_workers=5) as pool:
@@ -80,10 +100,54 @@ def _fetch_engineer_data(
     )
 
 
+def _fetch_engineer_data_scored(
+    eng, config: TeamConfig, gitlab_ok: bool, q: Quarter,
+) -> EngineerQuarterMetrics:
+    from teamdash.models import PRDetail
+
+    all_details: list[PRDetail] = []
+
+    gh_reviews = 0
+    if eng.github and config.github_orgs:
+        gh_details = fetch_pr_details(eng.github, config.github_orgs, q.start, q.end)
+        all_details.extend(gh_details)
+        gh_reviews = fetch_reviews(eng.github, config.github_orgs, q.start, q.end)
+
+    gl_details: list[PRDetail] = []
+    if eng.gitlab and config.gitlab_url and gitlab_ok:
+        gl_details = fetch_mr_details(config.gitlab_url, eng.gitlab, q.start, q.end)
+        all_details.extend(gl_details)
+
+    gh_prs = sum(1 for d in all_details if d.source == "github")
+    gl_mrs = sum(1 for d in all_details if d.source == "gitlab")
+
+    all_merge_times = [d.merge_time_days for d in all_details if d.merge_time_days is not None]
+    avg_mt = round(sum(all_merge_times) / len(all_merge_times), 1) if all_merge_times else None
+
+    scored = score_prs(all_details, config.scoring)
+    sp_dev = sum(s.points for s in scored if s.point_type == "dev")
+    sp_qe = sum(s.points for s in scored if s.point_type == "qe")
+    xl = sum(1 for s in scored if s.size == "XL")
+
+    return EngineerQuarterMetrics(
+        name=eng.name,
+        quarter=q.label,
+        github_prs=gh_prs,
+        gitlab_mrs=gl_mrs,
+        reviews=gh_reviews,
+        merge_time_days=avg_mt,
+        story_points_dev=sp_dev,
+        story_points_qe=sp_qe,
+        scored_prs=scored,
+        xl_count=xl,
+    )
+
+
 def collect_all_data(
     config: TeamConfig,
     quarters: list[Quarter],
     use_cache: bool = True,
+    enable_scoring: bool = True,
 ) -> list[QuarterSummary]:
     cache = _load_cache(config) if use_cache else {}
     gitlab_ok = False
@@ -108,6 +172,9 @@ def collect_all_data(
                     gitlab_mrs=cached_eng["gitlab_mrs"],
                     reviews=cached_eng["reviews"],
                     merge_time_days=cached_eng.get("merge_time_days"),
+                    story_points_dev=cached_eng.get("story_points_dev", 0),
+                    story_points_qe=cached_eng.get("story_points_qe", 0),
+                    xl_count=cached_eng.get("xl_count", 0),
                 )
             else:
                 fetch_tasks.append((eng, q))
@@ -115,7 +182,10 @@ def collect_all_data(
     fetched: dict[tuple[str, str], EngineerQuarterMetrics] = {}
     with ThreadPoolExecutor(max_workers=4) as pool:
         future_to_key = {
-            pool.submit(_fetch_engineer_data, eng, config, gitlab_ok, q): (q.label, eng.name)
+            pool.submit(
+                _fetch_engineer_data, eng, config, gitlab_ok, q,
+                enable_scoring=enable_scoring,
+            ): (q.label, eng.name)
             for eng, q in fetch_tasks
         }
         for future in future_to_key:
@@ -132,12 +202,27 @@ def collect_all_data(
             else:
                 metrics = fetched[(q.label, eng.name)]
                 engineer_metrics.append(metrics)
-                updated_cache.setdefault(q.label, {})[eng.name] = {
+                cache_entry: dict = {
                     "github_prs": metrics.github_prs,
                     "gitlab_mrs": metrics.gitlab_mrs,
                     "reviews": metrics.reviews,
                     "merge_time_days": metrics.merge_time_days,
                 }
+                if enable_scoring:
+                    cache_entry["story_points_dev"] = metrics.story_points_dev
+                    cache_entry["story_points_qe"] = metrics.story_points_qe
+                    cache_entry["xl_count"] = metrics.xl_count
+                    cache_entry["scored_prs_summary"] = [
+                        {
+                            "url": s.detail.url,
+                            "size": s.size,
+                            "points": s.points,
+                            "point_type": s.point_type,
+                            "flags": s.flags,
+                        }
+                        for s in metrics.scored_prs
+                    ]
+                updated_cache.setdefault(q.label, {})[eng.name] = cache_entry
         summaries.append(QuarterSummary(quarter=q, engineers=engineer_metrics))
 
     _save_cache(config, updated_cache)

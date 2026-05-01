@@ -7,10 +7,13 @@ from unittest.mock import patch
 import pytest
 
 from teamdash.fetch_github import (
+    _gh_api_get,
     _gh_search_count,
     _gh_search_items,
+    _parse_pr_url,
     check_auth,
     fetch_merge_times,
+    fetch_pr_details,
     fetch_prs,
     fetch_reviews,
 )
@@ -155,6 +158,93 @@ class TestFetchMergeTimes:
         with patch("teamdash.fetch_github._gh_search_items", side_effect=[items1, items2]):
             result = fetch_merge_times("alice", ["org1", "org2"], "2025-01-01", "2025-03-31")
         assert len(result) == 2
+
+
+class TestGhApiGet:
+    def test_success(self):
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout=json.dumps({"additions": 100, "deletions": 50}),
+        )
+        with patch("teamdash.fetch_github.subprocess.run", return_value=fake):
+            result = _gh_api_get("/repos/org/repo/pulls/1")
+        assert result == {"additions": 100, "deletions": 50}
+
+    def test_returns_none_on_error(self):
+        fake = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="not found")
+        with patch("teamdash.fetch_github.subprocess.run", return_value=fake):
+            assert _gh_api_get("/repos/org/repo/pulls/999") is None
+
+    def test_returns_none_on_timeout(self):
+        with patch("teamdash.fetch_github.subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="gh", timeout=30)):
+            assert _gh_api_get("/repos/org/repo/pulls/1") is None
+
+
+class TestParsePrUrl:
+    def test_standard_url(self):
+        assert _parse_pr_url("https://github.com/org/repo/pull/42") == ("org", "repo", "42")
+
+    def test_url_with_trailing_slash(self):
+        assert _parse_pr_url("https://github.com/org/repo/pull/42/") == ("org", "repo", "42")
+
+    def test_invalid_url(self):
+        assert _parse_pr_url("https://github.com/org/repo/issues/42") is None
+
+    def test_enterprise_url(self):
+        assert _parse_pr_url("https://github.example.com/org/repo/pull/1") == ("org", "repo", "1")
+
+
+class TestFetchPrDetails:
+    def test_returns_details(self):
+        search_items = [
+            {
+                "html_url": "https://github.com/org/repo/pull/1",
+                "created_at": "2025-01-01T00:00:00Z",
+                "closed_at": "2025-01-03T00:00:00Z",
+                "labels": [{"name": "feature"}],
+                "comments": 2,
+            },
+        ]
+        pr_data = {"additions": 100, "deletions": 50, "changed_files": 5}
+        reviews = [
+            {"state": "APPROVED"},
+            {"state": "CHANGES_REQUESTED"},
+        ]
+        with (
+            patch("teamdash.fetch_github._gh_search_items", return_value=search_items),
+            patch("teamdash.fetch_github._gh_api_get", side_effect=[pr_data, reviews]),
+            patch("teamdash.fetch_github.time.sleep"),
+        ):
+            result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
+
+        assert len(result) == 1
+        d = result[0]
+        assert d.additions == 100
+        assert d.deletions == 50
+        assert d.changed_files == 5
+        assert d.labels == ["feature"]
+        assert d.review_count == 2
+        assert d.changes_requested_count == 1
+        assert d.comments_count == 2
+        assert d.merge_time_days == 2.0
+        assert d.source == "github"
+
+    def test_skips_on_failed_detail_fetch(self):
+        search_items = [
+            {"html_url": "https://github.com/org/repo/pull/1", "labels": [], "comments": 0},
+        ]
+        with (
+            patch("teamdash.fetch_github._gh_search_items", return_value=search_items),
+            patch("teamdash.fetch_github._gh_api_get", return_value=None),
+            patch("teamdash.fetch_github.time.sleep"),
+        ):
+            result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
+        assert result == []
+
+    def test_empty_search_results(self):
+        with patch("teamdash.fetch_github._gh_search_items", return_value=[]):
+            result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
+        assert result == []
 
 
 class TestCheckAuth:

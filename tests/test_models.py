@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from teamdash.models import EngineerQuarterMetrics, Quarter, QuarterSummary
+from teamdash.models import EngineerQuarterMetrics, PRDetail, Quarter, QuarterSummary, ScoredPR
 
 
 class TestQuarter:
@@ -15,6 +15,24 @@ class TestQuarter:
         assert q.short_label == "badlabel"
 
 
+class TestPRDetail:
+    def test_total_lines(self):
+        d = PRDetail(url="", source="github", author="a", additions=100, deletions=50, changed_files=3)
+        assert d.total_lines == 150
+
+    def test_total_lines_zero(self):
+        d = PRDetail(url="", source="github", author="a", additions=0, deletions=0, changed_files=0)
+        assert d.total_lines == 0
+
+
+class TestScoredPR:
+    def test_defaults(self):
+        detail = PRDetail(url="", source="github", author="a", additions=0, deletions=0, changed_files=0)
+        sp = ScoredPR(detail=detail, size="M", points=8)
+        assert sp.point_type == "dev"
+        assert sp.flags == []
+
+
 class TestEngineerQuarterMetrics:
     def test_total(self, sample_metrics):
         assert sample_metrics.total == 15
@@ -22,6 +40,14 @@ class TestEngineerQuarterMetrics:
     def test_total_defaults_to_zero(self):
         m = EngineerQuarterMetrics(name="X", quarter="Q1")
         assert m.total == 0
+
+    def test_story_points_total(self):
+        m = EngineerQuarterMetrics(name="X", quarter="Q1", story_points_dev=10, story_points_qe=5)
+        assert m.story_points_total == 15
+
+    def test_story_points_default_zero(self):
+        m = EngineerQuarterMetrics(name="X", quarter="Q1")
+        assert m.story_points_total == 0
 
 
 class TestQuarterSummary:
@@ -65,3 +91,21 @@ class TestQuarterSummary:
         ]
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
         assert s.avg_merge_time_days is None
+
+    def test_total_story_points(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(name="A", quarter="Q1", story_points_dev=10, story_points_qe=5),
+            EngineerQuarterMetrics(name="B", quarter="Q1", story_points_dev=8, story_points_qe=0),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        assert s.total_story_points == 23
+        assert s.total_story_points_dev == 18
+        assert s.total_story_points_qe == 5
+
+    def test_total_xl_count(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(name="A", quarter="Q1", xl_count=2),
+            EngineerQuarterMetrics(name="B", quarter="Q1", xl_count=1),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        assert s.total_xl_count == 3

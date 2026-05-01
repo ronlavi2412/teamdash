@@ -24,6 +24,8 @@ def main() -> None:
                         help="Skip cache and fetch fresh data from APIs")
     parser.add_argument("--include-current", action="store_true",
                         help="Include the current (in-progress) quarter")
+    parser.add_argument("--no-scoring", action="store_true",
+                        help="Skip story point estimation (faster, fewer API calls)")
 
     args = parser.parse_args()
 
@@ -37,7 +39,11 @@ def main() -> None:
     print(f"Fetching data for {config.team_name} ({len(config.engineers)} engineers, "
           f"{len(quarters)} quarters)...", file=sys.stderr)
 
-    summaries = collect_all_data(config, quarters, use_cache=not args.no_cache)
+    summaries = collect_all_data(
+        config, quarters,
+        use_cache=not args.no_cache,
+        enable_scoring=not args.no_scoring,
+    )
 
     generate_dashboard(config.team_name, summaries, args.output)
     print(f"Dashboard written to {args.output}", file=sys.stderr)

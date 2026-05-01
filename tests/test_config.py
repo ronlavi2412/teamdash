@@ -91,3 +91,42 @@ engineers:
         f.write_text("team_name: Test\nengineers:\n  - name: Alice")
         with pytest.raises(SystemExit):
             load_config(str(f))
+
+    def test_default_scoring_config(self, tmp_path):
+        f = tmp_path / "team.yaml"
+        f.write_text(VALID_YAML)
+        config = load_config(str(f))
+        assert config.scoring is not None
+        assert config.scoring.size_points["XS"] == 2
+        assert config.scoring.diff_thresholds == (50, 200, 500, 1200)
+
+    def test_custom_scoring_config(self, tmp_path):
+        f = tmp_path / "team.yaml"
+        f.write_text(VALID_YAML + """
+scoring:
+  size_points:
+    XS: 1
+    S: 3
+    M: 5
+    L: 8
+    XL: 13
+  diff_thresholds: [30, 100, 300, 800]
+  qe_labels:
+    - bug
+""")
+        config = load_config(str(f))
+        assert config.scoring.size_points["XS"] == 1
+        assert config.scoring.diff_thresholds == (30, 100, 300, 800)
+        assert config.scoring.qe_labels == ["bug"]
+
+    def test_partial_scoring_uses_defaults(self, tmp_path):
+        f = tmp_path / "team.yaml"
+        f.write_text(VALID_YAML + """
+scoring:
+  qe_labels:
+    - custom-qe
+""")
+        config = load_config(str(f))
+        assert config.scoring.qe_labels == ["custom-qe"]
+        assert config.scoring.size_points["XL"] == 21
+        assert config.scoring.diff_thresholds == (50, 200, 500, 1200)

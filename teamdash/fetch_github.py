@@ -7,6 +7,32 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+from teamdash.models import PRDetail
+
+
+def _gh_api_get(endpoint: str) -> dict | list | None:
+    cmd = ["gh", "api", endpoint]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if "rate limit" in stderr.lower() or "403" in stderr:
+            print("[WARN] GitHub rate limit hit, waiting 60s...", file=sys.stderr)
+            time.sleep(60)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode != 0:
+                return None
+        else:
+            return None
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+
 
 def _gh_search_count(query: str) -> int:
     cmd = ["gh", "api", f"/search/issues?q={query}&per_page=1"]
@@ -121,6 +147,86 @@ def fetch_reviews(username: str, orgs: list[str], start: str, end: str) -> int:
 
     with ThreadPoolExecutor(max_workers=len(orgs)) as pool:
         return sum(pool.map(_fetch_org, orgs))
+
+
+def _parse_pr_url(html_url: str) -> tuple[str, str, str] | None:
+    parts = html_url.rstrip("/").split("/")
+    try:
+        idx = parts.index("pull")
+        return parts[idx - 2], parts[idx - 1], parts[idx + 1]
+    except (ValueError, IndexError):
+        return None
+
+
+def _fetch_pr_details_for_org(
+    username: str, org: str, start: str, end: str,
+) -> list[PRDetail]:
+    query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}"
+    items = _gh_search_items(query)
+    details: list[PRDetail] = []
+
+    for item in items:
+        html_url = item.get("html_url", "")
+        parsed = _parse_pr_url(html_url)
+        if not parsed:
+            continue
+        owner, repo, number = parsed
+
+        pr_data = _gh_api_get(f"/repos/{owner}/{repo}/pulls/{number}")
+        if not pr_data or not isinstance(pr_data, dict):
+            continue
+        time.sleep(0.5)
+
+        reviews_data = _gh_api_get(f"/repos/{owner}/{repo}/pulls/{number}/reviews")
+        time.sleep(0.5)
+
+        review_count = 0
+        changes_requested = 0
+        if isinstance(reviews_data, list):
+            review_count = len(reviews_data)
+            changes_requested = sum(
+                1 for r in reviews_data if r.get("state") == "CHANGES_REQUESTED"
+            )
+
+        labels = [l.get("name", "") for l in item.get("labels", [])]
+        comments_count = item.get("comments", 0)
+
+        created = item.get("created_at", "")
+        closed = item.get("closed_at")
+        merge_time = None
+        if created and closed:
+            dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
+            merge_time = round(
+                (dt_closed - dt_created).total_seconds() / 86400, 1
+            )
+
+        details.append(PRDetail(
+            url=html_url,
+            source="github",
+            author=username,
+            additions=pr_data.get("additions", 0),
+            deletions=pr_data.get("deletions", 0),
+            changed_files=pr_data.get("changed_files", 0),
+            labels=labels,
+            review_count=review_count,
+            changes_requested_count=changes_requested,
+            comments_count=comments_count,
+            merge_time_days=merge_time,
+            created_at=created,
+            closed_at=closed,
+        ))
+
+    return details
+
+
+def fetch_pr_details(
+    username: str, orgs: list[str], start: str, end: str,
+) -> list[PRDetail]:
+    details: list[PRDetail] = []
+    for org in orgs:
+        details.extend(_fetch_pr_details_for_org(username, org, start, end))
+    return details
 
 
 def check_auth() -> bool:

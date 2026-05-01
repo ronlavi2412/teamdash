@@ -6,6 +6,8 @@ from pathlib import Path
 
 import yaml
 
+from teamdash.scoring import ScoringConfig
+
 
 @dataclass
 class EngineerConfig:
@@ -20,6 +22,7 @@ class TeamConfig:
     gitlab_url: str | None
     github_orgs: list[str]
     engineers: list[EngineerConfig] = field(default_factory=list)
+    scoring: ScoringConfig = field(default_factory=ScoringConfig)
 
 
 def load_config(path: str) -> TeamConfig:
@@ -64,9 +67,26 @@ def load_config(path: str) -> TeamConfig:
             sys.exit(1)
         engineers.append(EngineerConfig(name=name, github=gh, gitlab=gl))
 
+    scoring_raw = raw.get("scoring", {}) or {}
+    scoring_kwargs: dict = {}
+    if "size_points" in scoring_raw:
+        scoring_kwargs["size_points"] = scoring_raw["size_points"]
+    if "diff_thresholds" in scoring_raw:
+        scoring_kwargs["diff_thresholds"] = tuple(scoring_raw["diff_thresholds"])
+    if "file_thresholds" in scoring_raw:
+        scoring_kwargs["file_thresholds"] = tuple(scoring_raw["file_thresholds"])
+    if "merge_time_thresholds" in scoring_raw:
+        scoring_kwargs["merge_time_thresholds"] = tuple(scoring_raw["merge_time_thresholds"])
+    if "size_label_patterns" in scoring_raw:
+        scoring_kwargs["size_label_patterns"] = scoring_raw["size_label_patterns"]
+    if "qe_labels" in scoring_raw:
+        scoring_kwargs["qe_labels"] = scoring_raw["qe_labels"]
+    scoring = ScoringConfig(**scoring_kwargs)
+
     return TeamConfig(
         team_name=team_name,
         gitlab_url=gitlab_url,
         github_orgs=github_orgs,
         engineers=engineers,
+        scoring=scoring,
     )

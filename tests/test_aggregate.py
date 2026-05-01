@@ -59,7 +59,7 @@ class TestCollectAllData:
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
-            summaries = collect_all_data(sample_config, quarters, use_cache=False)
+            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=False)
 
         assert len(summaries) == 1
         assert len(summaries[0].engineers) == 2
@@ -107,9 +107,63 @@ class TestCollectAllData:
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
-            summaries = collect_all_data(sample_config, quarters, use_cache=False)
+            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=False)
 
         mock_mrs.assert_not_called()
         mock_gl_mt.assert_not_called()
         assert summaries[0].engineers[0].gitlab_mrs == 0
         assert summaries[0].engineers[0].merge_time_days == 2.0
+
+    def test_scoring_enabled_uses_detail_fetchers(self, sample_config):
+        from teamdash.models import PRDetail
+
+        quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
+        gh_details = [
+            PRDetail(
+                url="https://github.com/org/repo/pull/1",
+                source="github", author="alice",
+                additions=100, deletions=20, changed_files=4,
+                merge_time_days=1.5,
+            ),
+        ]
+        gl_details = [
+            PRDetail(
+                url="https://gitlab.example.com/mr/1",
+                source="gitlab", author="alice_gl",
+                additions=50, deletions=10, changed_files=2,
+                merge_time_days=2.0,
+            ),
+        ]
+        with (
+            patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
+            patch("teamdash.aggregate.fetch_pr_details", return_value=gh_details),
+            patch("teamdash.aggregate.fetch_mr_details", return_value=gl_details),
+            patch("teamdash.aggregate.fetch_reviews", return_value=3),
+            patch("teamdash.aggregate._load_cache", return_value={}),
+            patch("teamdash.aggregate._save_cache"),
+        ):
+            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=True)
+
+        alice = summaries[0].engineers[0]
+        assert alice.github_prs == 1
+        assert alice.gitlab_mrs == 1
+        assert alice.story_points_dev > 0 or alice.story_points_qe > 0
+        assert len(alice.scored_prs) == 2
+
+    def test_no_scoring_skips_detail_fetchers(self, sample_config):
+        quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
+        with (
+            patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
+            patch("teamdash.aggregate.fetch_prs", return_value=5),
+            patch("teamdash.aggregate.fetch_reviews", return_value=2),
+            patch("teamdash.aggregate.fetch_mrs", return_value=3),
+            patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0]),
+            patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[2.0]),
+            patch("teamdash.aggregate.fetch_pr_details") as mock_details,
+            patch("teamdash.aggregate._load_cache", return_value={}),
+            patch("teamdash.aggregate._save_cache"),
+        ):
+            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=False)
+
+        mock_details.assert_not_called()
+        assert summaries[0].engineers[0].story_points_dev == 0

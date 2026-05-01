@@ -16,6 +16,36 @@ class Quarter:
 
 
 @dataclass
+class PRDetail:
+    url: str
+    source: str
+    author: str
+    additions: int
+    deletions: int
+    changed_files: int
+    labels: list[str] = field(default_factory=list)
+    review_count: int = 0
+    changes_requested_count: int = 0
+    comments_count: int = 0
+    merge_time_days: float | None = None
+    created_at: str = ""
+    closed_at: str | None = None
+
+    @property
+    def total_lines(self) -> int:
+        return self.additions + self.deletions
+
+
+@dataclass
+class ScoredPR:
+    detail: PRDetail
+    size: str
+    points: int
+    flags: list[str] = field(default_factory=list)
+    point_type: str = "dev"
+
+
+@dataclass
 class EngineerQuarterMetrics:
     name: str
     quarter: str
@@ -23,10 +53,18 @@ class EngineerQuarterMetrics:
     gitlab_mrs: int = 0
     reviews: int = 0
     merge_time_days: float | None = None
+    story_points_dev: int = 0
+    story_points_qe: int = 0
+    scored_prs: list[ScoredPR] = field(default_factory=list)
+    xl_count: int = 0
 
     @property
     def total(self) -> int:
         return self.github_prs + self.gitlab_mrs
+
+    @property
+    def story_points_total(self) -> int:
+        return self.story_points_dev + self.story_points_qe
 
 
 @dataclass
@@ -54,3 +92,19 @@ class QuarterSummary:
     def avg_merge_time_days(self) -> float | None:
         vals = [e.merge_time_days for e in self.engineers if e.merge_time_days is not None]
         return round(sum(vals) / len(vals), 1) if vals else None
+
+    @property
+    def total_story_points(self) -> int:
+        return sum(e.story_points_total for e in self.engineers)
+
+    @property
+    def total_story_points_dev(self) -> int:
+        return sum(e.story_points_dev for e in self.engineers)
+
+    @property
+    def total_story_points_qe(self) -> int:
+        return sum(e.story_points_qe for e in self.engineers)
+
+    @property
+    def total_xl_count(self) -> int:
+        return sum(e.xl_count for e in self.engineers)

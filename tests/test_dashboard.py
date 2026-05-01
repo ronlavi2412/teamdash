@@ -134,3 +134,38 @@ class TestGenerateDashboard:
         content = open(out).read()
         assert "Alice" in content
         assert "Bob" in content
+
+
+class TestScoringDashboard:
+    def test_complexity_chart_present(self, tmp_path, two_quarter_summaries_with_scoring):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries_with_scoring, out)
+        content = open(out).read()
+        assert "chart-complexity-trend" in content
+
+    def test_no_scoring_hides_complexity(self, tmp_path, two_quarter_summaries):
+        out = str(tmp_path / "test.html")
+        generate_dashboard("Test Team", two_quarter_summaries, out)
+        content = open(out).read()
+        assert "tab-storypoints" not in content
+        assert '<div class="label">Dev Points</div>' not in content
+
+    def test_scoring_data_block(self, two_quarter_summaries_with_scoring):
+        from teamdash.dashboard import _build_data_block
+        result = _build_data_block(two_quarter_summaries_with_scoring, ["Alice", "Bob"])
+        assert "sp_dev:" in result
+        assert "sp_qe:" in result
+        assert "xl_count:" in result
+        assert "size_dist:" in result
+
+    def test_scoring_table_headers(self, two_quarter_summaries_with_scoring):
+        from teamdash.dashboard import _build_table_headers
+        result = _build_table_headers(two_quarter_summaries_with_scoring, has_scoring=True)
+        assert "SP Dev" in result
+        assert "SP QE" in result
+        assert "SP Total" in result
+
+    def test_scoring_table_rows(self, two_quarter_summaries_with_scoring):
+        from teamdash.dashboard import _build_table_rows
+        result = _build_table_rows(two_quarter_summaries_with_scoring, ["Alice", "Bob"], has_scoring=True)
+        assert "Alice" in result

@@ -6,7 +6,14 @@ from unittest.mock import patch
 
 import pytest
 
-from teamdash.fetch_gitlab import _extract_hostname, check_auth, fetch_mr_merge_times, fetch_mrs
+from teamdash.fetch_gitlab import (
+    _extract_hostname,
+    _glab_api_get,
+    check_auth,
+    fetch_mr_details,
+    fetch_mr_merge_times,
+    fetch_mrs,
+)
 
 
 class TestExtractHostname:
@@ -110,6 +117,65 @@ class TestFetchMrMergeTimes:
             result = fetch_mr_merge_times("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
         assert len(result) == 1
         assert result[0] == 1.0
+
+
+class TestGlabApiGet:
+    def test_success(self):
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout=json.dumps({"changes_count": "5"}),
+        )
+        with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
+            result = _glab_api_get("https://gitlab.example.com", "/api/v4/projects/1/merge_requests/1")
+        assert result == {"changes_count": "5"}
+
+    def test_returns_none_on_error(self):
+        fake = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="error")
+        with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
+            assert _glab_api_get("https://gitlab.example.com", "/endpoint") is None
+
+
+class TestFetchMrDetails:
+    def test_returns_details(self):
+        mr_list = [
+            {
+                "project_id": 42,
+                "iid": 1,
+                "web_url": "https://gitlab.example.com/org/repo/-/merge_requests/1",
+                "created_at": "2025-01-01T00:00:00Z",
+                "merged_at": "2025-01-03T00:00:00Z",
+                "closed_at": "2025-01-03T00:00:00Z",
+                "labels": ["bug"],
+                "author": {"username": "alice"},
+            },
+        ]
+        mr_detail = {"changes_count": "4", "additions": 80, "deletions": 20}
+        notes = [
+            {"author": {"username": "bob"}, "system": False, "body": "looks good"},
+            {"author": {"username": "alice"}, "system": False, "body": "thanks"},
+            {"author": {"username": "system"}, "system": True, "body": "merged"},
+        ]
+        with (
+            patch("teamdash.fetch_gitlab._fetch_mr_list", return_value=mr_list),
+            patch("teamdash.fetch_gitlab._glab_api_get", side_effect=[mr_detail, notes]),
+            patch("teamdash.fetch_gitlab.time.sleep"),
+        ):
+            result = fetch_mr_details("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+
+        assert len(result) == 1
+        d = result[0]
+        assert d.additions == 80
+        assert d.deletions == 20
+        assert d.changed_files == 4
+        assert d.labels == ["bug"]
+        assert d.review_count == 1
+        assert d.merge_time_days == 2.0
+        assert d.source == "gitlab"
+
+    def test_empty_mr_list(self):
+        with patch("teamdash.fetch_gitlab._fetch_mr_list", return_value=[]):
+            result = fetch_mr_details("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+        assert result == []
 
 
 class TestCheckAuth:
