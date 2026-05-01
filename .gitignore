@@ -7,5 +7,4 @@ build/
 venv/
 *.html
 *.csv
-team.yaml
-!team.yaml.example
+config/
