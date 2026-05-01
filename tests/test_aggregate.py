@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from teamdash.aggregate import _config_hash, _load_cache, _save_cache, collect_all_data
+from teamdash.aggregate import _config_hash, _is_quarter_cache_fresh, _load_cache, _save_cache, collect_all_data
 from teamdash.config import EngineerConfig, TeamConfig
 from teamdash.models import Quarter
 
@@ -29,7 +29,7 @@ class TestConfigHash:
 
 class TestCache:
     def test_save_and_load(self, tmp_path, sample_config):
-        data = {"2025-Q1": {"Alice": {"github_prs": 5, "gitlab_mrs": 3, "reviews": 2}}}
+        data = {"2025-Q1": {"_meta": {"fetched_date": "2026-05-01"}, "Alice": {"github_prs": 5, "gitlab_mrs": 3, "reviews": 2}}}
         with patch("teamdash.aggregate.CACHE_DIR", tmp_path):
             _save_cache(sample_config, data)
             loaded = _load_cache(sample_config)
@@ -39,11 +39,32 @@ class TestCache:
         with patch("teamdash.aggregate.CACHE_DIR", tmp_path):
             assert _load_cache(sample_config) == {}
 
-    def test_stale_cache_returns_empty(self, tmp_path, sample_config):
+    def test_load_returns_quarters_regardless_of_date(self, tmp_path, sample_config):
         cache_file = tmp_path / f"{_config_hash(sample_config)}.json"
-        cache_file.write_text(json.dumps({"date": "2020-01-01", "quarters": {"data": 1}}))
+        cache_file.write_text(json.dumps({"quarters": {"2025-Q1": {"_meta": {"fetched_date": "2020-01-01"}}}}))
         with patch("teamdash.aggregate.CACHE_DIR", tmp_path):
-            assert _load_cache(sample_config) == {}
+            loaded = _load_cache(sample_config)
+        assert "2025-Q1" in loaded
+
+
+class TestIsQuarterCacheFresh:
+    def test_completed_quarter_always_fresh(self):
+        data = {"_meta": {"fetched_date": "2020-01-01"}, "Alice": {"github_prs": 5}}
+        assert _is_quarter_cache_fresh(data, "2024-12-31") is True
+
+    def test_current_quarter_fresh_if_fetched_today(self):
+        from datetime import date
+        today = date.today().isoformat()
+        data = {"_meta": {"fetched_date": today}}
+        assert _is_quarter_cache_fresh(data, "2099-12-31") is True
+
+    def test_current_quarter_stale_if_fetched_yesterday(self):
+        data = {"_meta": {"fetched_date": "2020-01-01"}}
+        assert _is_quarter_cache_fresh(data, "2099-12-31") is False
+
+    def test_no_meta_is_stale(self):
+        data = {"Alice": {"github_prs": 5}}
+        assert _is_quarter_cache_fresh(data, "2024-12-31") is False
 
 
 class TestCollectAllData:
@@ -74,6 +95,7 @@ class TestCollectAllData:
         quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
         cached = {
             "2025-Q1": {
+                "_meta": {"fetched_date": "2025-04-01"},
                 "Alice": {"github_prs": 8, "gitlab_mrs": 4, "reviews": 6, "merge_time_days": 1.5},
                 "Bob": {"github_prs": 2, "gitlab_mrs": 1, "reviews": 3, "merge_time_days": 3.0},
             },

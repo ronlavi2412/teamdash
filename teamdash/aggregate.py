@@ -46,19 +46,25 @@ def _load_cache(config: TeamConfig) -> dict:
     cache_file = CACHE_DIR / f"{_config_hash(config)}.json"
     if cache_file.exists():
         try:
-            data = json.loads(cache_file.read_text())
-            if data.get("date") == date.today().isoformat():
-                return data.get("quarters", {})
+            return json.loads(cache_file.read_text()).get("quarters", {})
         except (json.JSONDecodeError, KeyError):
             pass
     return {}
+
+
+def _is_quarter_cache_fresh(quarter_data: dict, quarter_end: str) -> bool:
+    fetched = quarter_data.get("_meta", {}).get("fetched_date")
+    if not fetched:
+        return False
+    if quarter_end < date.today().isoformat():
+        return True
+    return fetched == date.today().isoformat()
 
 
 def _save_cache(config: TeamConfig, quarters_data: dict) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_file = CACHE_DIR / f"{_config_hash(config)}.json"
     cache_file.write_text(json.dumps({
-        "date": date.today().isoformat(),
         "quarters": quarters_data,
     }, indent=2))
 
@@ -173,27 +179,33 @@ def collect_all_data(
 
     for q in quarters:
         cached_quarter = cache.get(q.label, {})
+        quarter_fresh = _is_quarter_cache_fresh(cached_quarter, q.end)
         quarter_cached[q.label] = {}
-        for eng in config.engineers:
-            cached_eng = cached_quarter.get(eng.name)
-            if cached_eng:
-                quarter_cached[q.label][eng.name] = EngineerQuarterMetrics(
-                    name=eng.name,
-                    quarter=q.label,
-                    github_prs=cached_eng["github_prs"],
-                    gitlab_mrs=cached_eng["gitlab_mrs"],
-                    reviews=cached_eng["reviews"],
-                    merge_time_days=cached_eng.get("merge_time_days"),
-                    story_points_dev=cached_eng.get("story_points_dev", 0),
-                    story_points_qe=cached_eng.get("story_points_qe", 0),
-                    xl_count=cached_eng.get("xl_count", 0),
-                    review_story_points=cached_eng.get("review_story_points", 0),
-                )
-            else:
+
+        if quarter_fresh:
+            for eng in config.engineers:
+                cached_eng = cached_quarter.get(eng.name)
+                if cached_eng:
+                    quarter_cached[q.label][eng.name] = EngineerQuarterMetrics(
+                        name=eng.name,
+                        quarter=q.label,
+                        github_prs=cached_eng["github_prs"],
+                        gitlab_mrs=cached_eng["gitlab_mrs"],
+                        reviews=cached_eng["reviews"],
+                        merge_time_days=cached_eng.get("merge_time_days"),
+                        story_points_dev=cached_eng.get("story_points_dev", 0),
+                        story_points_qe=cached_eng.get("story_points_qe", 0),
+                        xl_count=cached_eng.get("xl_count", 0),
+                        review_story_points=cached_eng.get("review_story_points", 0),
+                    )
+                else:
+                    fetch_tasks.append((eng, q))
+        else:
+            for eng in config.engineers:
                 fetch_tasks.append((eng, q))
 
     fetched: dict[tuple[str, str], EngineerQuarterMetrics] = {}
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=2) as pool:
         future_to_key = {
             pool.submit(
                 _fetch_engineer_data, eng, config, gitlab_ok, q,
@@ -236,7 +248,11 @@ def collect_all_data(
                         }
                         for s in metrics.scored_prs
                     ]
-                updated_cache.setdefault(q.label, {})[eng.name] = cache_entry
+                q_cache = updated_cache.setdefault(q.label, {})
+                q_cache[eng.name] = cache_entry
+                q_cache["_meta"] = {"fetched_date": date.today().isoformat()}
+        if q.label in updated_cache and "_meta" not in updated_cache[q.label]:
+            updated_cache[q.label]["_meta"] = {"fetched_date": date.today().isoformat()}
         summaries.append(QuarterSummary(quarter=q, engineers=engineer_metrics))
 
     _save_cache(config, updated_cache)
