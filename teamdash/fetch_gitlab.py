@@ -29,7 +29,11 @@ def _glab_api_get(
 def fetch_mrs(gitlab_url: str, username: str, start: str, end: str) -> int:
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
-    base = f"{host}/api/v4/merge_requests?author_username={username}&created_after={start}T00:00:00Z&created_before={end}T23:59:59Z&scope=all&per_page=100"
+    base = (
+        f"{host}/api/v4/merge_requests?author_username={username}"
+        f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
+        f"&scope=all&per_page=100"
+    )
 
     total = 0
     page = 1
@@ -53,7 +57,10 @@ def fetch_mrs(gitlab_url: str, username: str, start: str, end: str) -> int:
             data = json.loads(result.stdout)
             if not isinstance(data, list):
                 return total
-            total += len(data)
+            for mr in data:
+                merged = mr.get("merged_at")
+                if merged and merged >= f"{start}T00:00:00" and merged <= f"{end}T23:59:59":
+                    total += 1
             if len(data) < 100:
                 break
             page += 1
@@ -69,8 +76,8 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
     hostname = _extract_hostname(host)
     base = (
         f"{host}/api/v4/merge_requests?author_username={username}"
-        f"&created_after={start}T00:00:00Z&created_before={end}T23:59:59Z"
-        f"&state=merged&scope=all&per_page=100"
+        f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
+        f"&scope=all&per_page=100"
     )
 
     merge_times: list[float] = []
@@ -98,7 +105,7 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
             for mr in data:
                 created = mr.get("created_at")
                 merged = mr.get("merged_at")
-                if created and merged:
+                if created and merged and merged >= f"{start}T00:00:00" and merged <= f"{end}T23:59:59":
                     dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
                     dt_merged = datetime.fromisoformat(merged.replace("Z", "+00:00"))
                     days = (dt_merged - dt_created).total_seconds() / 86400
@@ -124,7 +131,7 @@ def _fetch_mr_list(
     hostname = _extract_hostname(host)
     base = (
         f"{host}/api/v4/merge_requests?author_username={username}"
-        f"&created_after={start}T00:00:00Z&created_before={end}T23:59:59Z"
+        f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
         f"&scope=all&per_page=100"
     )
     items: list[dict] = []
@@ -142,7 +149,10 @@ def _fetch_mr_list(
             data = json.loads(result.stdout)
             if not isinstance(data, list):
                 return items
-            items.extend(data)
+            for mr in data:
+                merged = mr.get("merged_at")
+                if merged and merged >= f"{start}T00:00:00" and merged <= f"{end}T23:59:59":
+                    items.append(mr)
             if len(data) < 100:
                 break
             page += 1

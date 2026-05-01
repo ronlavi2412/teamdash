@@ -108,7 +108,7 @@ def _gh_search_items(query: str) -> list[dict]:
 
 
 def _fetch_merge_times_for_org(username: str, org: str, start: str, end: str) -> list[float]:
-    query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}+is:merged"
+    query = f"type:pr+author:{username}+org:{org}+merged:{start}..{end}"
     items = _gh_search_items(query)
     merge_times: list[float] = []
     for item in items:
@@ -133,7 +133,7 @@ def fetch_merge_times(username: str, orgs: list[str], start: str, end: str) -> l
 
 def fetch_prs(username: str, orgs: list[str], start: str, end: str) -> int:
     def _fetch_org(org: str) -> int:
-        query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}"
+        query = f"type:pr+author:{username}+org:{org}+merged:{start}..{end}"
         return _gh_search_count(query)
 
     with ThreadPoolExecutor(max_workers=len(orgs)) as pool:
@@ -220,7 +220,7 @@ def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
 def _fetch_pr_details_for_org(
     username: str, org: str, start: str, end: str,
 ) -> list[PRDetail]:
-    query = f"type:pr+author:{username}+org:{org}+created:{start}..{end}"
+    query = f"type:pr+author:{username}+org:{org}+merged:{start}..{end}"
     return _fetch_details_for_query(query, author=username)
 
 
