@@ -94,7 +94,10 @@ cat >> index.html <<'FOOTER'
 </html>
 FOOTER
 
-git add -A
+git add index.html
+for f in "$@"; do
+    git add "$(basename "$f")"
+done
 git commit -q -m "Publish dashboards: $(echo "$@" | xargs -n1 basename | tr '\n' ' ')"
 git push -u origin gh-pages
 
