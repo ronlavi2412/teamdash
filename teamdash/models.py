@@ -59,6 +59,8 @@ class EngineerQuarterMetrics:
     xl_count: int = 0
     review_story_points: int = 0
     scored_reviews: list[ScoredPR] = field(default_factory=list)
+    github_merge_times: list[float] = field(default_factory=list)
+    gitlab_merge_times: list[float] = field(default_factory=list)
 
     @property
     def total(self) -> int:

@@ -26,12 +26,14 @@ def main() -> None:
                         help="Include the current (in-progress) quarter")
     parser.add_argument("--no-scoring", action="store_true",
                         help="Skip story point estimation (faster, fewer API calls)")
+    parser.add_argument("--refresh-gitlab", action="store_true",
+                        help="Re-fetch only GitLab data, keep cached GitHub data")
 
     args = parser.parse_args()
 
     config = load_config(args.config)
 
-    if config.github_orgs and not check_auth():
+    if not args.refresh_gitlab and config.github_orgs and not check_auth():
         print("[ERROR] GitHub CLI not authenticated. Run: gh auth login", file=sys.stderr)
         sys.exit(1)
 
@@ -43,6 +45,7 @@ def main() -> None:
         config, quarters,
         use_cache=not args.no_cache,
         enable_scoring=not args.no_scoring,
+        refresh_gitlab=args.refresh_gitlab,
     )
 
     generate_dashboard(config, summaries, args.output)
