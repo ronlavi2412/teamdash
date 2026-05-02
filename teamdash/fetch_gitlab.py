@@ -67,6 +67,8 @@ def fetch_mrs(gitlab_url: str, username: str, start: str, end: str) -> int:
             for mr in data:
                 merged = mr.get("merged_at")
                 if merged and _in_date_range(merged, start, end):
+                    if _is_own_namespace(mr.get("web_url", ""), host, username):
+                        continue
                     total += 1
             if len(data) < 100:
                 break
@@ -113,6 +115,8 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
                 created = mr.get("created_at")
                 merged = mr.get("merged_at")
                 if created and merged and _in_date_range(merged, start, end):
+                    if _is_own_namespace(mr.get("web_url", ""), host, username):
+                        continue
                     dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
                     dt_merged = datetime.fromisoformat(merged.replace("Z", "+00:00"))
                     days = (dt_merged - dt_created).total_seconds() / 86400
@@ -129,6 +133,16 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
 
 def _extract_hostname(url: str) -> str:
     return url.split("://", 1)[-1].split("/", 1)[0]
+
+
+def _is_own_namespace(web_url: str, gitlab_url: str, username: str) -> bool:
+    host = gitlab_url.rstrip("/")
+    if not web_url.startswith(host):
+        return False
+    path = web_url[len(host):].lstrip("/")
+    if not path:
+        return False
+    return path.split("/")[0].lower() == username.lower()
 
 
 def _fetch_mr_list(
@@ -159,6 +173,8 @@ def _fetch_mr_list(
             for mr in data:
                 merged = mr.get("merged_at")
                 if merged and _in_date_range(merged, start, end):
+                    if _is_own_namespace(mr.get("web_url", ""), host, username):
+                        continue
                     items.append(mr)
             if len(data) < 100:
                 break
