@@ -88,9 +88,13 @@ class QuarterSummary:
         return sum(e.reviews for e in self.engineers)
 
     @property
-    def avg_merge_time_days(self) -> float | None:
-        vals = [e.merge_time_days for e in self.engineers if e.merge_time_days is not None]
-        return round(sum(vals) / len(vals), 1) if vals else None
+    def median_merge_time_days(self) -> float | None:
+        vals = sorted(e.merge_time_days for e in self.engineers if e.merge_time_days is not None)
+        if not vals:
+            return None
+        n = len(vals)
+        mid = n // 2
+        return round((vals[mid] if n % 2 else (vals[mid - 1] + vals[mid]) / 2), 1)
 
     @property
     def total_story_points(self) -> int:

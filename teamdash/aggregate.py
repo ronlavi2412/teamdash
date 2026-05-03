@@ -24,6 +24,15 @@ from teamdash.scoring import ScoringConfig, score_prs
 CACHE_DIR = Path.home() / ".cache" / "teamdash"
 
 
+def _median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    s = sorted(values)
+    n = len(s)
+    mid = n // 2
+    return round((s[mid] if n % 2 else (s[mid - 1] + s[mid]) / 2), 1)
+
+
 def _config_hash(config: TeamConfig) -> str:
     scoring_key = None
     if config.scoring:
@@ -97,7 +106,6 @@ def _fetch_engineer_data(
     gl_mt = futures["gl_mt"].result() if "gl_mt" in futures else []
 
     all_merge_times = gh_mt + gl_mt
-    avg_mt = round(sum(all_merge_times) / len(all_merge_times), 1) if all_merge_times else None
 
     return EngineerQuarterMetrics(
         name=eng.name,
@@ -105,7 +113,7 @@ def _fetch_engineer_data(
         github_prs=gh_prs,
         gitlab_mrs=gl_mrs,
         reviews=gh_reviews + gl_reviews,
-        merge_time_days=avg_mt,
+        merge_time_days=_median(all_merge_times),
         github_merge_times=gh_mt,
         gitlab_merge_times=gl_mt,
     )
@@ -143,7 +151,6 @@ def _fetch_engineer_data_scored(
     gh_mt = [d.merge_time_days for d in all_details if d.source == "github" and d.merge_time_days is not None]
     gl_mt = [d.merge_time_days for d in all_details if d.source == "gitlab" and d.merge_time_days is not None]
     all_merge_times = gh_mt + gl_mt
-    avg_mt = round(sum(all_merge_times) / len(all_merge_times), 1) if all_merge_times else None
 
     scored = score_prs(all_details, config.scoring)
     sp = sum(s.points for s in scored)
@@ -158,7 +165,7 @@ def _fetch_engineer_data_scored(
         github_prs=gh_prs,
         gitlab_mrs=gl_mrs,
         reviews=gh_reviews + gl_reviews,
-        merge_time_days=avg_mt,
+        merge_time_days=_median(all_merge_times),
         story_points=sp,
         scored_prs=scored,
         xl_count=xl,
@@ -207,7 +214,6 @@ def _refresh_engineer_gitlab(
             gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
 
         all_mt = gh_mt + gl_mt
-        avg_mt = round(sum(all_mt) / len(all_mt), 1) if all_mt else cached_eng.get("merge_time_days")
 
         return EngineerQuarterMetrics(
             name=eng.name,
@@ -215,7 +221,7 @@ def _refresh_engineer_gitlab(
             github_prs=gh_prs,
             gitlab_mrs=gl_mrs,
             reviews=gh_reviews + gl_reviews,
-            merge_time_days=avg_mt,
+            merge_time_days=_median(all_mt) if all_mt else cached_eng.get("merge_time_days"),
             github_merge_times=gh_mt,
             gitlab_merge_times=gl_mt,
         )
@@ -242,7 +248,6 @@ def _refresh_engineer_gitlab(
     gl_mt_scored = [d.merge_time_days for d in gl_details if d.merge_time_days is not None]
 
     all_mt = gh_mt + gl_mt_scored
-    avg_mt = round(sum(all_mt) / len(all_mt), 1) if all_mt else cached_eng.get("merge_time_days")
 
     return EngineerQuarterMetrics(
         name=eng.name,
@@ -250,7 +255,7 @@ def _refresh_engineer_gitlab(
         github_prs=gh_prs,
         gitlab_mrs=len(gl_details),
         reviews=gh_reviews + gl_reviews,
-        merge_time_days=avg_mt,
+        merge_time_days=_median(all_mt) if all_mt else cached_eng.get("merge_time_days"),
         story_points=gh_sp + gl_sp,
         scored_prs=gl_scored,
         xl_count=gh_xl + gl_xl,

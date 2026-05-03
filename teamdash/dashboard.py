@@ -228,7 +228,7 @@ def _build_team_tab(has_scoring: bool) -> str:
             </div>
             <div class="chart-row">{sp_chart}{review_sp_chart}
                 <div class="chart-card">
-                    <h3>Avg Merge Time per Quarter (days) <span class="chart-info" data-tooltip="Average days from PR/MR creation to merge across all team members for the quarter.">i</span></h3>
+                    <h3>Median Merge Time per Quarter (days) <span class="chart-info" data-tooltip="Median days from PR/MR creation to merge across all team members for the quarter.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-team-merge-time"></canvas></div>
                 </div>
             </div>
@@ -463,7 +463,7 @@ HTML_TEMPLATE = """\
             </div>
             <div class="chart-row">
                 <div class="chart-card">
-                    <h3>Avg Merge Time per Quarter (days) <span class="chart-info" data-tooltip="Average days from PR/MR creation to merge per engineer for the quarter.">i</span></h3>
+                    <h3>Median Merge Time per Quarter (days) <span class="chart-info" data-tooltip="Median days from PR/MR creation to merge per engineer for the quarter.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-merge-time-trend"></canvas></div>
                 </div>
             </div>
@@ -673,10 +673,12 @@ HTML_TEMPLATE = """\
             data: {{
                 labels: Q.map(q => q.label),
                 datasets: [{{
-                    label: 'Avg Merge Time (days)',
+                    label: 'Median Merge Time (days)',
                     data: Q.map(q => {{
-                        const vals = q.merge_time.filter(v => v !== null);
-                        return vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : null;
+                        const vals = q.merge_time.filter(v => v !== null).sort((a, b) => a - b);
+                        if (!vals.length) return null;
+                        const mid = Math.floor(vals.length / 2);
+                        return +(vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2).toFixed(1);
                     }}),
                     borderColor: '#ef4444',
                     backgroundColor: '#ef444420',
