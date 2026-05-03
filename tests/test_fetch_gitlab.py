@@ -15,6 +15,7 @@ from teamdash.fetch_gitlab import (
     fetch_mr_details,
     fetch_mr_merge_times,
     fetch_mrs,
+    fetch_reviews,
 )
 
 
@@ -142,6 +143,67 @@ class TestFetchMrs:
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
             result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
         assert result == 1
+
+
+class TestFetchReviews:
+    def test_counts_reviewed_mrs(self):
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout=json.dumps([
+                {"id": 1, "merged_at": "2025-02-01T10:00:00Z",
+                 "author": {"username": "bob"},
+                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/1"},
+                {"id": 2, "merged_at": "2025-03-15T14:30:00Z",
+                 "author": {"username": "carol"},
+                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
+            ]),
+        )
+        with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
+            result = fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+        assert result == 2
+
+    def test_excludes_self_authored(self):
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout=json.dumps([
+                {"id": 1, "merged_at": "2025-02-01T10:00:00Z",
+                 "author": {"username": "alice"},
+                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/1"},
+                {"id": 2, "merged_at": "2025-03-15T14:30:00Z",
+                 "author": {"username": "bob"},
+                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
+            ]),
+        )
+        with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
+            result = fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+        assert result == 1
+
+    def test_excludes_own_namespace(self):
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout=json.dumps([
+                {"id": 1, "merged_at": "2025-02-01T10:00:00Z",
+                 "author": {"username": "bob"},
+                 "web_url": "https://gitlab.example.com/alice/personal/-/merge_requests/1"},
+                {"id": 2, "merged_at": "2025-03-15T14:30:00Z",
+                 "author": {"username": "bob"},
+                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
+            ]),
+        )
+        with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
+            result = fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+        assert result == 1
+
+    def test_uses_reviewer_username_param(self):
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout=json.dumps([]),
+        )
+        with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake) as mock:
+            fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+        cmd = mock.call_args[0][0]
+        endpoint = cmd[2]
+        assert "reviewer_username=alice" in endpoint
+        assert "author_username" not in endpoint
 
 
 class TestFetchMrMergeTimes:

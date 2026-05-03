@@ -77,6 +77,7 @@ class TestCollectAllData:
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
             patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0, 2.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[3.0]),
+            patch("teamdash.aggregate.fetch_gitlab_reviews", return_value=2),
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
@@ -88,7 +89,7 @@ class TestCollectAllData:
         assert alice.name == "Alice"
         assert alice.github_prs == 10
         assert alice.gitlab_mrs == 3
-        assert alice.reviews == 5
+        assert alice.reviews == 7
         assert alice.merge_time_days == 2.0
 
     def test_uses_cached_data(self, sample_config):
@@ -126,6 +127,7 @@ class TestCollectAllData:
             patch("teamdash.aggregate.fetch_mrs") as mock_mrs,
             patch("teamdash.aggregate.fetch_merge_times", return_value=[2.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times") as mock_gl_mt,
+            patch("teamdash.aggregate.fetch_gitlab_reviews") as mock_gl_reviews,
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
@@ -133,6 +135,7 @@ class TestCollectAllData:
 
         mock_mrs.assert_not_called()
         mock_gl_mt.assert_not_called()
+        mock_gl_reviews.assert_not_called()
         assert summaries[0].engineers[0].gitlab_mrs == 0
         assert summaries[0].engineers[0].merge_time_days == 2.0
 
@@ -161,6 +164,7 @@ class TestCollectAllData:
             patch("teamdash.aggregate.fetch_pr_details", return_value=gh_details),
             patch("teamdash.aggregate.fetch_mr_details", return_value=gl_details),
             patch("teamdash.aggregate.fetch_reviews", return_value=3),
+            patch("teamdash.aggregate.fetch_gitlab_reviews", return_value=4),
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
@@ -181,6 +185,7 @@ class TestCollectAllData:
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
             patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[2.0]),
+            patch("teamdash.aggregate.fetch_gitlab_reviews", return_value=0),
             patch("teamdash.aggregate.fetch_pr_details") as mock_details,
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),

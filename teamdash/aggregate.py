@@ -17,6 +17,7 @@ from teamdash.fetch_github import (
 )
 from teamdash.fetch_gitlab import check_auth as check_gitlab_auth
 from teamdash.fetch_gitlab import fetch_mr_details, fetch_mr_merge_times, fetch_mrs
+from teamdash.fetch_gitlab import fetch_reviews as fetch_gitlab_reviews
 from teamdash.models import EngineerQuarterMetrics, Quarter, QuarterSummary
 from teamdash.scoring import ScoringConfig, score_prs
 
@@ -86,9 +87,11 @@ def _fetch_engineer_data(
         if eng.gitlab and config.gitlab_url and gitlab_ok:
             futures["mrs"] = pool.submit(fetch_mrs, config.gitlab_url, eng.gitlab, q.start, q.end)
             futures["gl_mt"] = pool.submit(fetch_mr_merge_times, config.gitlab_url, eng.gitlab, q.start, q.end)
+            futures["gl_reviews"] = pool.submit(fetch_gitlab_reviews, config.gitlab_url, eng.gitlab, q.start, q.end)
 
     gh_prs = futures["prs"].result() if "prs" in futures else 0
     gh_reviews = futures["reviews"].result() if "reviews" in futures else 0
+    gl_reviews = futures["gl_reviews"].result() if "gl_reviews" in futures else 0
     gh_mt = futures["gh_mt"].result() if "gh_mt" in futures else []
     gl_mrs = futures["mrs"].result() if "mrs" in futures else 0
     gl_mt = futures["gl_mt"].result() if "gl_mt" in futures else []
@@ -101,7 +104,7 @@ def _fetch_engineer_data(
         quarter=q.label,
         github_prs=gh_prs,
         gitlab_mrs=gl_mrs,
-        reviews=gh_reviews,
+        reviews=gh_reviews + gl_reviews,
         merge_time_days=avg_mt,
         github_merge_times=gh_mt,
         gitlab_merge_times=gl_mt,
@@ -122,9 +125,11 @@ def _fetch_engineer_data_scored(
         gh_reviews = fetch_reviews(eng.github, config.github_orgs, q.start, q.end)
 
     gl_details: list[PRDetail] = []
+    gl_reviews = 0
     if eng.gitlab and config.gitlab_url and gitlab_ok:
         gl_details = fetch_mr_details(config.gitlab_url, eng.gitlab, q.start, q.end)
         all_details.extend(gl_details)
+        gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
 
     reviewed_details: list[PRDetail] = []
     if eng.github and config.github_orgs:
@@ -152,7 +157,7 @@ def _fetch_engineer_data_scored(
         quarter=q.label,
         github_prs=gh_prs,
         gitlab_mrs=gl_mrs,
-        reviews=gh_reviews,
+        reviews=gh_reviews + gl_reviews,
         merge_time_days=avg_mt,
         story_points=sp,
         scored_prs=scored,
@@ -189,15 +194,17 @@ def _refresh_engineer_gitlab(
     print(f"  Refreshing GitLab {q.label} for {eng.name}...", file=sys.stderr)
 
     gh_prs = cached_eng["github_prs"]
-    gh_reviews = cached_eng["reviews"]
+    gh_reviews = cached_eng.get("_github_reviews", cached_eng.get("reviews", 0))
     gh_mt = cached_eng.get("_github_merge_times", [])
 
     if not enable_scoring:
         gl_mrs = 0
         gl_mt: list[float] = []
+        gl_reviews = 0
         if eng.gitlab and config.gitlab_url and gitlab_ok:
             gl_mrs = fetch_mrs(config.gitlab_url, eng.gitlab, q.start, q.end)
             gl_mt = fetch_mr_merge_times(config.gitlab_url, eng.gitlab, q.start, q.end)
+            gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
 
         all_mt = gh_mt + gl_mt
         avg_mt = round(sum(all_mt) / len(all_mt), 1) if all_mt else cached_eng.get("merge_time_days")
@@ -207,7 +214,7 @@ def _refresh_engineer_gitlab(
             quarter=q.label,
             github_prs=gh_prs,
             gitlab_mrs=gl_mrs,
-            reviews=gh_reviews,
+            reviews=gh_reviews + gl_reviews,
             merge_time_days=avg_mt,
             github_merge_times=gh_mt,
             gitlab_merge_times=gl_mt,
@@ -224,8 +231,10 @@ def _refresh_engineer_gitlab(
     gh_review_sp = cached_eng.get("review_story_points", 0)
 
     gl_details: list[PRDetail] = []
+    gl_reviews = 0
     if eng.gitlab and config.gitlab_url and gitlab_ok:
         gl_details = fetch_mr_details(config.gitlab_url, eng.gitlab, q.start, q.end)
+        gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
 
     gl_scored = score_prs(gl_details, config.scoring)
     gl_sp = sum(s.points for s in gl_scored)
@@ -240,7 +249,7 @@ def _refresh_engineer_gitlab(
         quarter=q.label,
         github_prs=gh_prs,
         gitlab_mrs=len(gl_details),
-        reviews=gh_reviews,
+        reviews=gh_reviews + gl_reviews,
         merge_time_days=avg_mt,
         story_points=gh_sp + gl_sp,
         scored_prs=gl_scored,
