@@ -204,7 +204,7 @@ class TestScoringDashboard:
     def test_scoring_table_headers(self, two_quarter_summaries_with_scoring):
         from teamdash.dashboard import _build_table_headers
         result = _build_table_headers(two_quarter_summaries_with_scoring, has_scoring=True)
-        assert "SP " in result
+        assert "Complexity " in result
 
     def test_scoring_table_rows(self, two_quarter_summaries_with_scoring):
         from teamdash.dashboard import _build_table_rows

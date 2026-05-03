@@ -154,7 +154,7 @@ def _build_table_headers(summaries: list[QuarterSummary], has_scoring: bool = Fa
         headers.append(f'<th data-type="num">Merge days {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     if has_scoring:
         for s in summaries:
-            headers.append(f'<th data-type="num">SP {s.quarter.short_label} <span class="sort-arrow"></span></th>')
+            headers.append(f'<th data-type="num">Complexity {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     return "\n                                ".join(headers)
 
 
@@ -188,7 +188,7 @@ def _build_sp_tab(summaries: list[QuarterSummary], names: list[str]) -> str:
         <div id="tab-storypoints" class="tab-content">
             <div class="chart-row">
                 <div class="chart-card">
-                    <h3>Story Points Velocity per Quarter</h3>
+                    <h3>Complexity Velocity per Quarter</h3>
                     <div class="chart-wrap"><canvas id="chart-sp-velocity"></canvas></div>
                 </div>
                 <div class="chart-card">
@@ -205,12 +205,12 @@ def _build_team_tab(has_scoring: bool) -> str:
     if has_scoring:
         sp_chart = """
                 <div class="chart-card">
-                    <h3>Total Story Points per Quarter</h3>
+                    <h3>Total Complexity per Quarter <span class="chart-info" data-tooltip="Sum of complexity scores across all team members. Each merged PR is sized XS–XL based on diff size, files changed, review friction, and merge time, then mapped to points (XS=2, S=5, M=8, L=13, XL=21).">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-team-sp"></canvas></div>
                 </div>"""
         review_sp_chart = """
                 <div class="chart-card">
-                    <h3>Total Reviews Complexity per Quarter</h3>
+                    <h3>Total Review Complexity per Quarter <span class="chart-info" data-tooltip="Sum of complexity scores for merged PRs reviewed by team members, scored the same way as authored PRs.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-team-review-sp"></canvas></div>
                 </div>"""
 
@@ -218,17 +218,17 @@ def _build_team_tab(has_scoring: bool) -> str:
         <div id="tab-team" class="tab-content active">
             <div class="chart-row">
                 <div class="chart-card">
-                    <h3>Total PRs + MRs per Quarter</h3>
+                    <h3>Total PRs + MRs per Quarter <span class="chart-info" data-tooltip="Sum of GitHub PRs and GitLab MRs merged during the quarter across all team members.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-team-prs"></canvas></div>
                 </div>
                 <div class="chart-card">
-                    <h3>Total Reviews per Quarter</h3>
+                    <h3>Total Reviews per Quarter <span class="chart-info" data-tooltip="Total merged PRs reviewed by team members during the quarter. Excludes self-reviews.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-team-reviews"></canvas></div>
                 </div>
             </div>
             <div class="chart-row">{sp_chart}{review_sp_chart}
                 <div class="chart-card">
-                    <h3>Avg Merge Time per Quarter (days)</h3>
+                    <h3>Avg Merge Time per Quarter (days) <span class="chart-info" data-tooltip="Average days from PR/MR creation to merge across all team members for the quarter.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-team-merge-time"></canvas></div>
                 </div>
             </div>
@@ -267,7 +267,7 @@ def _build_config_tab(config: TeamConfig, has_scoring: bool) -> str:
                 <h3>Scoring Configuration</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
                     <div>
-                        <h4 style="margin-bottom: 8px; font-size: 0.9rem; color: var(--text-muted);">Story Points per Size</h4>
+                        <h4 style="margin-bottom: 8px; font-size: 0.9rem; color: var(--text-muted);">Complexity Points per Size</h4>
                         <table class="data-table">
                             <thead><tr><th>Size</th><th>Points</th></tr></thead>
                             <tbody>{sp_rows}</tbody>
@@ -410,6 +410,10 @@ HTML_TEMPLATE = """\
         .data-table td.num {{ text-align: right; font-variant-numeric: tabular-nums; }}
         .data-table tbody tr:hover {{ background: #f8fafc; }}
 
+        .chart-info {{ display: inline-block; position: relative; margin-left: 6px; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: var(--border); color: var(--text-muted); font-size: 0.7rem; font-weight: 700; font-style: normal; cursor: help; vertical-align: middle; }}
+        .chart-info::after {{ content: attr(data-tooltip); position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 8px; background: var(--text); color: #fff; font-size: 0.8rem; font-weight: 400; line-height: 1.4; padding: 8px 12px; border-radius: 6px; white-space: normal; width: 280px; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100; }}
+        .chart-info:hover::after {{ opacity: 1; }}
+
         .footer {{ text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.8rem; }}
 
         @media (max-width: 768px) {{
@@ -439,27 +443,27 @@ HTML_TEMPLATE = """\
         <div id="tab-overview" class="tab-content">
             <div class="chart-row">
                 <div class="chart-card">
-                    <h3>PRs + MRs per Quarter</h3>
+                    <h3>PRs + MRs per Quarter <span class="chart-info" data-tooltip="GitHub PRs and GitLab MRs merged per engineer during the quarter.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-prs-trend"></canvas></div>
                 </div>
                 <div class="chart-card">
-                    <h3>Code Reviews per Quarter</h3>
+                    <h3>Code Reviews per Quarter <span class="chart-info" data-tooltip="Merged PRs reviewed per engineer during the quarter. Excludes self-reviews.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-reviews-trend"></canvas></div>
                 </div>
             </div>
             <div class="chart-row">
                 <div class="chart-card" id="overview-complexity" style="display:none;">
-                    <h3>Total Complexity per Quarter (Story Points)</h3>
+                    <h3>Complexity per Quarter <span class="chart-info" data-tooltip="Complexity score per engineer. Each merged PR is sized XS–XL by taking the max of: diff size, files changed, review friction, and merge time signals. Size labels on PRs override the calculation.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-complexity-trend"></canvas></div>
                 </div>
                 <div class="chart-card" id="overview-review-complexity" style="display:none;">
-                    <h3>Reviews Complexity per Quarter (Story Points)</h3>
+                    <h3>Review Complexity per Quarter <span class="chart-info" data-tooltip="Complexity of merged PRs reviewed per engineer, scored identically to authored PRs.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-review-complexity-trend"></canvas></div>
                 </div>
             </div>
             <div class="chart-row">
                 <div class="chart-card">
-                    <h3>Avg Merge Time per Quarter (days)</h3>
+                    <h3>Avg Merge Time per Quarter (days) <span class="chart-info" data-tooltip="Average days from PR/MR creation to merge per engineer for the quarter.">i</span></h3>
                     <div class="chart-wrap"><canvas id="chart-merge-time-trend"></canvas></div>
                 </div>
             </div>
@@ -591,7 +595,7 @@ HTML_TEMPLATE = """\
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {{ legend: {{ position: 'bottom', labels: {{ usePointStyle: true }} }} }},
-                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Complexity Points' }} }} }},
                 }},
             }});
 
@@ -614,7 +618,7 @@ HTML_TEMPLATE = """\
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {{ legend: {{ position: 'bottom', labels: {{ usePointStyle: true }} }} }},
-                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Complexity Points' }} }} }},
                 }},
             }});
         }}
@@ -691,14 +695,14 @@ HTML_TEMPLATE = """\
             }},
         }});
 
-        // Team view: Total Story Points
+        // Team view: Total Complexity
         if ({has_scoring}) {{
             new Chart(document.getElementById('chart-team-sp'), {{
                 type: 'bar',
                 data: {{
                     labels: Q.map(q => q.label),
                     datasets: [{{
-                        label: 'Total Story Points',
+                        label: 'Total Complexity',
                         data: Q.map(q => q.sp.reduce((a, b) => a + b, 0)),
                         backgroundColor: '#10b981',
                         borderColor: '#059669',
@@ -710,7 +714,7 @@ HTML_TEMPLATE = """\
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {{ legend: {{ display: false }} }},
-                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Complexity Points' }} }} }},
                 }},
             }});
 
@@ -731,7 +735,7 @@ HTML_TEMPLATE = """\
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {{ legend: {{ display: false }} }},
-                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Story Points' }} }} }},
+                    scales: {{ y: {{ beginAtZero: true, title: {{ display: true, text: 'Complexity Points' }} }} }},
                 }},
             }});
         }}
