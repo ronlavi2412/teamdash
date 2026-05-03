@@ -111,22 +111,17 @@ scoring:
     L: 8
     XL: 13
   diff_thresholds: [30, 100, 300, 800]
-  qe_labels:
-    - bug
 """)
         config = load_config(str(f))
         assert config.scoring.size_points["XS"] == 1
         assert config.scoring.diff_thresholds == (30, 100, 300, 800)
-        assert config.scoring.qe_labels == ["bug"]
 
     def test_partial_scoring_uses_defaults(self, tmp_path):
         f = tmp_path / "team.yaml"
         f.write_text(VALID_YAML + """
 scoring:
-  qe_labels:
-    - custom-qe
+  diff_thresholds: [10, 50, 100, 200]
 """)
         config = load_config(str(f))
-        assert config.scoring.qe_labels == ["custom-qe"]
+        assert config.scoring.diff_thresholds == (10, 50, 100, 200)
         assert config.scoring.size_points["XL"] == 21
-        assert config.scoring.diff_thresholds == (50, 200, 500, 1200)

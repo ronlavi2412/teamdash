@@ -31,7 +31,6 @@ def _config_hash(config: TeamConfig) -> str:
             "diff_thresholds": list(config.scoring.diff_thresholds),
             "file_thresholds": list(config.scoring.file_thresholds),
             "merge_time_thresholds": list(config.scoring.merge_time_thresholds),
-            "qe_labels": sorted(config.scoring.qe_labels),
         }
     key = json.dumps({
         "team": config.team_name,
@@ -142,8 +141,7 @@ def _fetch_engineer_data_scored(
     avg_mt = round(sum(all_merge_times) / len(all_merge_times), 1) if all_merge_times else None
 
     scored = score_prs(all_details, config.scoring)
-    sp_dev = sum(s.points for s in scored if s.point_type == "dev")
-    sp_qe = sum(s.points for s in scored if s.point_type == "qe")
+    sp = sum(s.points for s in scored)
     xl = sum(1 for s in scored if s.size == "XL")
 
     scored_reviews = score_prs(reviewed_details, config.scoring)
@@ -156,8 +154,7 @@ def _fetch_engineer_data_scored(
         gitlab_mrs=gl_mrs,
         reviews=gh_reviews,
         merge_time_days=avg_mt,
-        story_points_dev=sp_dev,
-        story_points_qe=sp_qe,
+        story_points=sp,
         scored_prs=scored,
         xl_count=xl,
         review_story_points=review_sp,
@@ -177,8 +174,7 @@ def _metrics_from_cache(
         gitlab_mrs=cached_eng["gitlab_mrs"],
         reviews=cached_eng["reviews"],
         merge_time_days=cached_eng.get("merge_time_days"),
-        story_points_dev=cached_eng.get("story_points_dev", 0),
-        story_points_qe=cached_eng.get("story_points_qe", 0),
+        story_points=cached_eng.get("story_points", 0),
         xl_count=cached_eng.get("xl_count", 0),
         review_story_points=cached_eng.get("review_story_points", 0),
         github_merge_times=cached_eng.get("_github_merge_times", []),
@@ -223,8 +219,7 @@ def _refresh_engineer_gitlab(
         s for s in cached_eng.get("scored_prs_summary", [])
         if "github.com" in s.get("url", "")
     ]
-    gh_sp_dev = sum(s["points"] for s in gh_scored_summary if s.get("point_type") == "dev")
-    gh_sp_qe = sum(s["points"] for s in gh_scored_summary if s.get("point_type") == "qe")
+    gh_sp = sum(s["points"] for s in gh_scored_summary)
     gh_xl = sum(1 for s in gh_scored_summary if s.get("size") == "XL")
     gh_review_sp = cached_eng.get("review_story_points", 0)
 
@@ -233,8 +228,7 @@ def _refresh_engineer_gitlab(
         gl_details = fetch_mr_details(config.gitlab_url, eng.gitlab, q.start, q.end)
 
     gl_scored = score_prs(gl_details, config.scoring)
-    gl_sp_dev = sum(s.points for s in gl_scored if s.point_type == "dev")
-    gl_sp_qe = sum(s.points for s in gl_scored if s.point_type == "qe")
+    gl_sp = sum(s.points for s in gl_scored)
     gl_xl = sum(1 for s in gl_scored if s.size == "XL")
     gl_mt_scored = [d.merge_time_days for d in gl_details if d.merge_time_days is not None]
 
@@ -248,8 +242,7 @@ def _refresh_engineer_gitlab(
         gitlab_mrs=len(gl_details),
         reviews=gh_reviews,
         merge_time_days=avg_mt,
-        story_points_dev=gh_sp_dev + gl_sp_dev,
-        story_points_qe=gh_sp_qe + gl_sp_qe,
+        story_points=gh_sp + gl_sp,
         scored_prs=gl_scored,
         xl_count=gh_xl + gl_xl,
         review_story_points=gh_review_sp,
@@ -271,8 +264,7 @@ def _build_cache_entry(
         "_gitlab_merge_times": metrics.gitlab_merge_times,
     }
     if enable_scoring:
-        entry["story_points_dev"] = metrics.story_points_dev
-        entry["story_points_qe"] = metrics.story_points_qe
+        entry["story_points"] = metrics.story_points
         entry["xl_count"] = metrics.xl_count
         entry["review_story_points"] = metrics.review_story_points
         summary = [
@@ -280,7 +272,6 @@ def _build_cache_entry(
                 "url": s.detail.url,
                 "size": s.size,
                 "points": s.points,
-                "point_type": s.point_type,
                 "flags": s.flags,
             }
             for s in metrics.scored_prs

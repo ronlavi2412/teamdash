@@ -159,7 +159,7 @@ class TestScoringConsistency:
         for s in scored:
             assert s.size in valid_sizes, f"Invalid size: {s.size}"
             assert s.points == default_points[s.size]
-            assert s.point_type in ("dev", "qe")
+            assert s.points > 0
 
     def test_xl_prs_flagged_should_split(self, github_orgs, github_authenticated):
         if not github_authenticated:
@@ -187,7 +187,7 @@ class TestFullPipeline:
         assert metrics.gitlab_mrs >= 0
         assert metrics.reviews >= 0
         assert metrics.merge_time_days is None or metrics.merge_time_days > 0
-        assert metrics.story_points_total == metrics.story_points_dev + metrics.story_points_qe
+        assert metrics.story_points >= 0
         assert metrics.xl_count >= 0
         assert metrics.review_story_points >= 0
 

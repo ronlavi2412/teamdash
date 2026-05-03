@@ -29,7 +29,6 @@ class TestScoredPR:
     def test_defaults(self):
         detail = PRDetail(url="", source="github", author="a", additions=0, deletions=0, changed_files=0)
         sp = ScoredPR(detail=detail, size="M", points=8)
-        assert sp.point_type == "dev"
         assert sp.flags == []
 
 
@@ -41,13 +40,13 @@ class TestEngineerQuarterMetrics:
         m = EngineerQuarterMetrics(name="X", quarter="Q1")
         assert m.total == 0
 
-    def test_story_points_total(self):
-        m = EngineerQuarterMetrics(name="X", quarter="Q1", story_points_dev=10, story_points_qe=5)
-        assert m.story_points_total == 15
+    def test_story_points(self):
+        m = EngineerQuarterMetrics(name="X", quarter="Q1", story_points=15)
+        assert m.story_points == 15
 
     def test_story_points_default_zero(self):
         m = EngineerQuarterMetrics(name="X", quarter="Q1")
-        assert m.story_points_total == 0
+        assert m.story_points == 0
 
 
 class TestQuarterSummary:
@@ -94,13 +93,11 @@ class TestQuarterSummary:
 
     def test_total_story_points(self, sample_quarter):
         engineers = [
-            EngineerQuarterMetrics(name="A", quarter="Q1", story_points_dev=10, story_points_qe=5),
-            EngineerQuarterMetrics(name="B", quarter="Q1", story_points_dev=8, story_points_qe=0),
+            EngineerQuarterMetrics(name="A", quarter="Q1", story_points=15),
+            EngineerQuarterMetrics(name="B", quarter="Q1", story_points=8),
         ]
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
         assert s.total_story_points == 23
-        assert s.total_story_points_dev == 18
-        assert s.total_story_points_qe == 5
 
     def test_total_xl_count(self, sample_quarter):
         engineers = [

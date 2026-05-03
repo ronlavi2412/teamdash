@@ -42,7 +42,6 @@ class ScoredPR:
     size: str
     points: int
     flags: list[str] = field(default_factory=list)
-    point_type: str = "dev"
 
 
 @dataclass
@@ -53,8 +52,7 @@ class EngineerQuarterMetrics:
     gitlab_mrs: int = 0
     reviews: int = 0
     merge_time_days: float | None = None
-    story_points_dev: int = 0
-    story_points_qe: int = 0
+    story_points: int = 0
     scored_prs: list[ScoredPR] = field(default_factory=list)
     xl_count: int = 0
     review_story_points: int = 0
@@ -66,9 +64,6 @@ class EngineerQuarterMetrics:
     def total(self) -> int:
         return self.github_prs + self.gitlab_mrs
 
-    @property
-    def story_points_total(self) -> int:
-        return self.story_points_dev + self.story_points_qe
 
 
 @dataclass
@@ -99,15 +94,7 @@ class QuarterSummary:
 
     @property
     def total_story_points(self) -> int:
-        return sum(e.story_points_total for e in self.engineers)
-
-    @property
-    def total_story_points_dev(self) -> int:
-        return sum(e.story_points_dev for e in self.engineers)
-
-    @property
-    def total_story_points_qe(self) -> int:
-        return sum(e.story_points_qe for e in self.engineers)
+        return sum(e.story_points for e in self.engineers)
 
     @property
     def total_review_story_points(self) -> int:

@@ -62,8 +62,7 @@ def _build_data_block(summaries: list[QuarterSummary], names: list[str]) -> str:
         gl = [by_name.get(n, _zero(n, s.quarter.label)).gitlab_mrs for n in names]
         rv = [by_name.get(n, _zero(n, s.quarter.label)).reviews for n in names]
         mt = [by_name.get(n, _zero(n, s.quarter.label)).merge_time_days for n in names]
-        sp_dev = [by_name.get(n, _zero(n, s.quarter.label)).story_points_dev for n in names]
-        sp_qe = [by_name.get(n, _zero(n, s.quarter.label)).story_points_qe for n in names]
+        sp = [by_name.get(n, _zero(n, s.quarter.label)).story_points for n in names]
         xl = [by_name.get(n, _zero(n, s.quarter.label)).xl_count for n in names]
         review_sp = [by_name.get(n, _zero(n, s.quarter.label)).review_story_points for n in names]
         dists = [_size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names]
@@ -71,7 +70,7 @@ def _build_data_block(summaries: list[QuarterSummary], names: list[str]) -> str:
             f'    {{ label: "{s.quarter.short_label}",'
             f' gh_prs: {fmt(gh)}, gl_mrs: {fmt(gl)}, reviews: {fmt(rv)},'
             f' merge_time: {fmt(mt)},'
-            f' sp_dev: {fmt(sp_dev)}, sp_qe: {fmt(sp_qe)}, xl_count: {fmt(xl)},'
+            f' sp: {fmt(sp)}, xl_count: {fmt(xl)},'
             f' review_sp: {fmt(review_sp)},'
             f' size_dist: {fmt_dists(dists)} }}'
         )
@@ -133,15 +132,7 @@ def _build_table_rows(summaries: list[QuarterSummary], names: list[str], has_sco
             for s in summaries:
                 by_name = {e.name: e for e in s.engineers}
                 eng = by_name.get(name)
-                cells.append(f'<td class="num">{eng.story_points_dev if eng else 0}</td>')
-            for s in summaries:
-                by_name = {e.name: e for e in s.engineers}
-                eng = by_name.get(name)
-                cells.append(f'<td class="num">{eng.story_points_qe if eng else 0}</td>')
-            for s in summaries:
-                by_name = {e.name: e for e in s.engineers}
-                eng = by_name.get(name)
-                cells.append(f'<td class="num">{eng.story_points_total if eng else 0}</td>')
+                cells.append(f'<td class="num">{eng.story_points if eng else 0}</td>')
 
         rows.append("<tr>" + "".join(cells) + "</tr>")
 
@@ -163,11 +154,7 @@ def _build_table_headers(summaries: list[QuarterSummary], has_scoring: bool = Fa
         headers.append(f'<th data-type="num">Merge days {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     if has_scoring:
         for s in summaries:
-            headers.append(f'<th data-type="num">SP Dev {s.quarter.short_label} <span class="sort-arrow"></span></th>')
-        for s in summaries:
-            headers.append(f'<th data-type="num">SP QE {s.quarter.short_label} <span class="sort-arrow"></span></th>')
-        for s in summaries:
-            headers.append(f'<th data-type="num">SP Total {s.quarter.short_label} <span class="sort-arrow"></span></th>')
+            headers.append(f'<th data-type="num">SP {s.quarter.short_label} <span class="sort-arrow"></span></th>')
     return "\n                                ".join(headers)
 
 
@@ -274,7 +261,6 @@ def _build_config_tab(config: TeamConfig, has_scoring: bool) -> str:
         diff_th = ", ".join(str(t) for t in sc.diff_thresholds)
         file_th = ", ".join(str(t) for t in sc.file_thresholds)
         merge_th = ", ".join(str(t) for t in sc.merge_time_thresholds)
-        qe = ", ".join(sc.qe_labels)
 
         scoring_html = f"""
             <div class="chart-card full">
@@ -297,8 +283,6 @@ def _build_config_tab(config: TeamConfig, has_scoring: bool) -> str:
                                 <tr><td>Merge time (days)</td><td>{merge_th}</td></tr>
                             </tbody>
                         </table>
-                        <h4 style="margin: 16px 0 8px; font-size: 0.9rem; color: var(--text-muted);">QE Labels</h4>
-                        <p style="font-size: 0.875rem;">{qe}</p>
                     </div>
                 </div>
             </div>"""
@@ -595,7 +579,7 @@ HTML_TEMPLATE = """\
                     labels: Q.map(q => q.label),
                     datasets: names.map((name, i) => ({{
                         label: name,
-                        data: Q.map(q => q.sp_dev[i] + q.sp_qe[i]),
+                        data: Q.map(q => q.sp[i]),
                         borderColor: colors[i],
                         backgroundColor: colors[i] + '20',
                         tension: 0.3,
@@ -715,7 +699,7 @@ HTML_TEMPLATE = """\
                     labels: Q.map(q => q.label),
                     datasets: [{{
                         label: 'Total Story Points',
-                        data: Q.map(q => q.sp_dev.reduce((a, b) => a + b, 0) + q.sp_qe.reduce((a, b) => a + b, 0)),
+                        data: Q.map(q => q.sp.reduce((a, b) => a + b, 0)),
                         backgroundColor: '#10b981',
                         borderColor: '#059669',
                         borderWidth: 1,

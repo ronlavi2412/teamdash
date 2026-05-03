@@ -79,8 +79,6 @@ def load_config(path: str) -> TeamConfig:
         scoring_kwargs["merge_time_thresholds"] = tuple(scoring_raw["merge_time_thresholds"])
     if "size_label_patterns" in scoring_raw:
         scoring_kwargs["size_label_patterns"] = scoring_raw["size_label_patterns"]
-    if "qe_labels" in scoring_raw:
-        scoring_kwargs["qe_labels"] = scoring_raw["qe_labels"]
     scoring = ScoringConfig(**scoring_kwargs)
 
     return TeamConfig(

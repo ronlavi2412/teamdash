@@ -7,7 +7,6 @@ from teamdash.scoring import (
     ScoringConfig,
     _classify,
     _detect_label_size,
-    _is_qe_pr,
     _max_size,
     _signal_diff_size,
     _signal_files_changed,
@@ -125,20 +124,6 @@ class TestDetectLabelSize:
         assert _detect_label_size([], patterns) is None
 
 
-class TestIsQePr:
-    def test_qe_label_present(self):
-        assert _is_qe_pr(["qe-task", "other"], ["qe-task"]) is True
-
-    def test_no_qe_label(self):
-        assert _is_qe_pr(["feature", "other"], ["qe-task"]) is False
-
-    def test_case_insensitive(self):
-        assert _is_qe_pr(["QE-TASK"], ["qe-task"]) is True
-
-    def test_empty_labels(self):
-        assert _is_qe_pr([], ["qe-task"]) is False
-
-
 class TestMaxSize:
     def test_single(self):
         assert _max_size("M") == "M"
@@ -179,16 +164,6 @@ class TestScorePr:
         result = score_pr(detail, config)
         assert result.size == "XS"
         assert result.points == 2
-
-    def test_qe_label_sets_point_type(self, config):
-        detail = _make_detail(additions=10, deletions=5, labels=["qe-task"])
-        result = score_pr(detail, config)
-        assert result.point_type == "qe"
-
-    def test_no_qe_label_defaults_dev(self, config):
-        detail = _make_detail(additions=10, deletions=5, labels=["feature"])
-        result = score_pr(detail, config)
-        assert result.point_type == "dev"
 
     def test_review_friction_elevates_size(self, config):
         detail = _make_detail(

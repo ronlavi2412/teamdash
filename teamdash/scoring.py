@@ -22,9 +22,6 @@ class ScoringConfig:
         "L": ["size/l", "t-shirt/l"],
         "XL": ["size/xl", "t-shirt/xl"],
     })
-    qe_labels: list[str] = field(default_factory=lambda: [
-        "qe-task", "needs-qe-validation", "bug", "type/bug",
-    ])
 
 
 def _classify(value: int | float, thresholds: tuple[int | float, ...]) -> str:
@@ -70,11 +67,6 @@ def _detect_label_size(
     return None
 
 
-def _is_qe_pr(labels: list[str], qe_patterns: list[str]) -> bool:
-    lower_labels = {l.lower() for l in labels}
-    return any(p.lower() in lower_labels for p in qe_patterns)
-
-
 def _max_size(*sizes: str) -> str:
     indices = [SIZES.index(s) for s in sizes if s in SIZES]
     return SIZES[max(indices)] if indices else "XS"
@@ -100,14 +92,11 @@ def score_pr(detail: PRDetail, config: ScoringConfig) -> ScoredPR:
     if size == "XL":
         flags.append("should-split")
 
-    point_type = "qe" if _is_qe_pr(detail.labels, config.qe_labels) else "dev"
-
     return ScoredPR(
         detail=detail,
         size=size,
         points=points,
         flags=flags,
-        point_type=point_type,
     )
 
 

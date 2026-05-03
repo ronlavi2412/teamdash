@@ -169,7 +169,7 @@ class TestCollectAllData:
         alice = summaries[0].engineers[0]
         assert alice.github_prs == 1
         assert alice.gitlab_mrs == 1
-        assert alice.story_points_dev > 0 or alice.story_points_qe > 0
+        assert alice.story_points > 0
         assert len(alice.scored_prs) == 2
 
     def test_no_scoring_skips_detail_fetchers(self, sample_config):
@@ -188,4 +188,4 @@ class TestCollectAllData:
             summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=False)
 
         mock_details.assert_not_called()
-        assert summaries[0].engineers[0].story_points_dev == 0
+        assert summaries[0].engineers[0].story_points == 0

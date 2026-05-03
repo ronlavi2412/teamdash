@@ -196,8 +196,7 @@ class TestScoringDashboard:
     def test_scoring_data_block(self, two_quarter_summaries_with_scoring):
         from teamdash.dashboard import _build_data_block
         result = _build_data_block(two_quarter_summaries_with_scoring, ["Alice", "Bob"])
-        assert "sp_dev:" in result
-        assert "sp_qe:" in result
+        assert "sp:" in result
         assert "xl_count:" in result
         assert "review_sp:" in result
         assert "size_dist:" in result
@@ -205,9 +204,7 @@ class TestScoringDashboard:
     def test_scoring_table_headers(self, two_quarter_summaries_with_scoring):
         from teamdash.dashboard import _build_table_headers
         result = _build_table_headers(two_quarter_summaries_with_scoring, has_scoring=True)
-        assert "SP Dev" in result
-        assert "SP QE" in result
-        assert "SP Total" in result
+        assert "SP " in result
 
     def test_scoring_table_rows(self, two_quarter_summaries_with_scoring):
         from teamdash.dashboard import _build_table_rows
