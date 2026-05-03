@@ -16,7 +16,12 @@ from teamdash.fetch_github import (
     fetch_reviews,
 )
 from teamdash.fetch_gitlab import check_auth as check_gitlab_auth
-from teamdash.fetch_gitlab import fetch_mr_details, fetch_mr_merge_times, fetch_mrs
+from teamdash.fetch_gitlab import (
+    fetch_mr_details,
+    fetch_mr_merge_times,
+    fetch_mrs,
+    fetch_reviewed_mr_details as fetch_reviewed_gl_details,
+)
 from teamdash.fetch_gitlab import fetch_reviews as fetch_gitlab_reviews
 from teamdash.models import EngineerQuarterMetrics, Quarter, QuarterSummary
 from teamdash.scoring import ScoringConfig, score_prs
@@ -143,6 +148,10 @@ def _fetch_engineer_data_scored(
     if eng.github and config.github_orgs:
         reviewed_details = fetch_reviewed_pr_details(
             eng.github, config.github_orgs, q.start, q.end,
+        )
+    if eng.gitlab and config.gitlab_url and gitlab_ok:
+        reviewed_details.extend(
+            fetch_reviewed_gl_details(config.gitlab_url, eng.gitlab, q.start, q.end),
         )
 
     gh_prs = sum(1 for d in all_details if d.source == "github")
