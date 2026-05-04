@@ -326,6 +326,18 @@ def generate_dashboard(
 
     has_scoring = any(s.total_story_points > 0 for s in summaries)
 
+    # Detect if last quarter is current (in-progress)
+    from datetime import date
+    today = date.today()
+    is_current_quarter = date.fromisoformat(last_q.end) >= today
+    current_quarter_index = len(summaries) - 1 if is_current_quarter else -1
+
+    in_progress_note = (
+        '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">'
+        '<em>* Striped bars and dashed lines indicate in-progress quarter with incomplete data</em></p>'
+        if is_current_quarter else ""
+    )
+
     data_block = _build_data_block(summaries, names)
     summary_cards = _build_summary_cards(summaries)
     team_tab = _build_team_tab(has_scoring)
@@ -346,6 +358,9 @@ def generate_dashboard(
         table_rows=table_rows,
         num_engineers=len(names),
         has_scoring="true" if has_scoring else "false",
+        current_quarter_index=current_quarter_index,
+        is_current_quarter="true" if is_current_quarter else "false",
+        in_progress_note=in_progress_note,
     )
 
     with open(output_path, "w") as f:
@@ -427,6 +442,7 @@ HTML_TEMPLATE = """\
     <div class="header">
         <h1>{title}</h1>
         <p>{subtitle} &middot; Generated {generated}</p>
+        {in_progress_note}
     </div>
     <div class="container">
         {summary_cards}
@@ -496,6 +512,33 @@ HTML_TEMPLATE = """\
         const colors = {colors_js};
         {data_block}
         const cur = Q[Q.length - 1];
+        const currentQuarterIndex = {current_quarter_index};
+        const isCurrentQuarter = {is_current_quarter};
+
+        function createStripePattern(baseColor) {{
+            const canvas = document.createElement('canvas');
+            canvas.width = 8;
+            canvas.height = 8;
+            const ctx = canvas.getContext('2d');
+
+            // Background (lighter version of base color)
+            ctx.fillStyle = baseColor + '40'; // 25% opacity
+            ctx.fillRect(0, 0, 8, 8);
+
+            // Diagonal stripes
+            ctx.strokeStyle = baseColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 8);
+            ctx.lineTo(8, 0);
+            ctx.moveTo(-2, 2);
+            ctx.lineTo(2, -2);
+            ctx.moveTo(6, 10);
+            ctx.lineTo(10, 6);
+            ctx.stroke();
+
+            return ctx.createPattern(canvas, 'repeat');
+        }}
 
         function switchTab(id) {{
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -508,7 +551,7 @@ HTML_TEMPLATE = """\
         new Chart(document.getElementById('chart-prs-trend'), {{
             type: 'line',
             data: {{
-                labels: Q.map(q => q.label),
+                labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                 datasets: names.map((name, i) => ({{
                     label: name,
                     data: Q.map(q => q.gh_prs[i] + q.gl_mrs[i]),
@@ -517,6 +560,14 @@ HTML_TEMPLATE = """\
                     tension: 0.3,
                     fill: false,
                     pointRadius: 4,
+                    segment: {{
+                        borderDash: ctx => {{
+                            if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                return [5, 5];
+                            }}
+                            return [];
+                        }}
+                    }}
                 }})),
             }},
             options: {{
@@ -531,7 +582,7 @@ HTML_TEMPLATE = """\
         new Chart(document.getElementById('chart-reviews-trend'), {{
             type: 'line',
             data: {{
-                labels: Q.map(q => q.label),
+                labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                 datasets: names.map((name, i) => ({{
                     label: name,
                     data: Q.map(q => q.reviews[i]),
@@ -540,6 +591,14 @@ HTML_TEMPLATE = """\
                     tension: 0.3,
                     fill: false,
                     pointRadius: 4,
+                    segment: {{
+                        borderDash: ctx => {{
+                            if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                return [5, 5];
+                            }}
+                            return [];
+                        }}
+                    }}
                 }})),
             }},
             options: {{
@@ -554,7 +613,7 @@ HTML_TEMPLATE = """\
         new Chart(document.getElementById('chart-merge-time-trend'), {{
             type: 'line',
             data: {{
-                labels: Q.map(q => q.label),
+                labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                 datasets: names.map((name, i) => ({{
                     label: name,
                     data: Q.map(q => q.merge_time[i]),
@@ -564,6 +623,14 @@ HTML_TEMPLATE = """\
                     fill: false,
                     pointRadius: 4,
                     spanGaps: true,
+                    segment: {{
+                        borderDash: ctx => {{
+                            if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                return [5, 5];
+                            }}
+                            return [];
+                        }}
+                    }}
                 }})),
             }},
             options: {{
@@ -580,7 +647,7 @@ HTML_TEMPLATE = """\
             new Chart(document.getElementById('chart-complexity-trend'), {{
                 type: 'line',
                 data: {{
-                    labels: Q.map(q => q.label),
+                    labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                     datasets: names.map((name, i) => ({{
                         label: name,
                         data: Q.map(q => q.sp[i]),
@@ -589,6 +656,14 @@ HTML_TEMPLATE = """\
                         tension: 0.3,
                         fill: false,
                         pointRadius: 4,
+                        segment: {{
+                            borderDash: ctx => {{
+                                if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                    return [5, 5];
+                                }}
+                                return [];
+                            }}
+                        }}
                     }})),
                 }},
                 options: {{
@@ -603,7 +678,7 @@ HTML_TEMPLATE = """\
             new Chart(document.getElementById('chart-review-complexity-trend'), {{
                 type: 'line',
                 data: {{
-                    labels: Q.map(q => q.label),
+                    labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                     datasets: names.map((name, i) => ({{
                         label: name,
                         data: Q.map(q => q.review_sp[i]),
@@ -612,6 +687,14 @@ HTML_TEMPLATE = """\
                         tension: 0.3,
                         fill: false,
                         pointRadius: 4,
+                        segment: {{
+                            borderDash: ctx => {{
+                                if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                    return [5, 5];
+                                }}
+                                return [];
+                            }}
+                        }}
                     }})),
                 }},
                 options: {{
@@ -627,11 +710,15 @@ HTML_TEMPLATE = """\
         new Chart(document.getElementById('chart-team-prs'), {{
             type: 'bar',
             data: {{
-                labels: Q.map(q => q.label),
+                labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                 datasets: [{{
                     label: 'Total PRs + MRs',
                     data: Q.map(q => q.gh_prs.reduce((a, b) => a + b, 0) + q.gl_mrs.reduce((a, b) => a + b, 0)),
-                    backgroundColor: '#3b82f6',
+                    backgroundColor: Q.map((q, idx) =>
+                        idx === currentQuarterIndex && isCurrentQuarter
+                            ? createStripePattern('#3b82f6')
+                            : '#3b82f6'
+                    ),
                     borderColor: '#2563eb',
                     borderWidth: 1,
                     borderRadius: 4,
@@ -649,11 +736,15 @@ HTML_TEMPLATE = """\
         new Chart(document.getElementById('chart-team-reviews'), {{
             type: 'bar',
             data: {{
-                labels: Q.map(q => q.label),
+                labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                 datasets: [{{
                     label: 'Total Reviews',
                     data: Q.map(q => q.reviews.reduce((a, b) => a + b, 0)),
-                    backgroundColor: '#8b5cf6',
+                    backgroundColor: Q.map((q, idx) =>
+                        idx === currentQuarterIndex && isCurrentQuarter
+                            ? createStripePattern('#8b5cf6')
+                            : '#8b5cf6'
+                    ),
                     borderColor: '#7c3aed',
                     borderWidth: 1,
                     borderRadius: 4,
@@ -671,7 +762,7 @@ HTML_TEMPLATE = """\
         new Chart(document.getElementById('chart-team-merge-time'), {{
             type: 'line',
             data: {{
-                labels: Q.map(q => q.label),
+                labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                 datasets: [{{
                     label: 'Median Merge Time (days)',
                     data: Q.map(q => {{
@@ -687,6 +778,14 @@ HTML_TEMPLATE = """\
                     pointRadius: 5,
                     pointBackgroundColor: '#ef4444',
                     spanGaps: true,
+                    segment: {{
+                        borderDash: ctx => {{
+                            if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                return [5, 5];
+                            }}
+                            return [];
+                        }}
+                    }}
                 }}],
             }},
             options: {{
@@ -702,11 +801,15 @@ HTML_TEMPLATE = """\
             new Chart(document.getElementById('chart-team-sp'), {{
                 type: 'bar',
                 data: {{
-                    labels: Q.map(q => q.label),
+                    labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                     datasets: [{{
                         label: 'Total Complexity',
                         data: Q.map(q => q.sp.reduce((a, b) => a + b, 0)),
-                        backgroundColor: '#10b981',
+                        backgroundColor: Q.map((q, idx) =>
+                            idx === currentQuarterIndex && isCurrentQuarter
+                                ? createStripePattern('#10b981')
+                                : '#10b981'
+                        ),
                         borderColor: '#059669',
                         borderWidth: 1,
                         borderRadius: 4,
@@ -723,11 +826,15 @@ HTML_TEMPLATE = """\
             new Chart(document.getElementById('chart-team-review-sp'), {{
                 type: 'bar',
                 data: {{
-                    labels: Q.map(q => q.label),
+                    labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
                     datasets: [{{
                         label: 'Total Reviews Complexity',
                         data: Q.map(q => q.review_sp.reduce((a, b) => a + b, 0)),
-                        backgroundColor: '#f59e0b',
+                        backgroundColor: Q.map((q, idx) =>
+                            idx === currentQuarterIndex && isCurrentQuarter
+                                ? createStripePattern('#f59e0b')
+                                : '#f59e0b'
+                        ),
                         borderColor: '#d97706',
                         borderWidth: 1,
                         borderRadius: 4,
