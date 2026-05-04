@@ -118,6 +118,7 @@ def _fetch_engineer_data(
         github_prs=gh_prs,
         gitlab_mrs=gl_mrs,
         reviews=gh_reviews + gl_reviews,
+        github_reviews=gh_reviews,
         merge_time_days=_median(all_merge_times),
         github_merge_times=gh_mt,
         gitlab_merge_times=gl_mt,
@@ -174,6 +175,7 @@ def _fetch_engineer_data_scored(
         github_prs=gh_prs,
         gitlab_mrs=gl_mrs,
         reviews=gh_reviews + gl_reviews,
+        github_reviews=gh_reviews,
         merge_time_days=_median(all_merge_times),
         story_points=sp,
         scored_prs=scored,
@@ -194,6 +196,7 @@ def _metrics_from_cache(
         github_prs=cached_eng["github_prs"],
         gitlab_mrs=cached_eng["gitlab_mrs"],
         reviews=cached_eng["reviews"],
+        github_reviews=cached_eng.get("_github_reviews", 0),
         merge_time_days=cached_eng.get("merge_time_days"),
         story_points=cached_eng.get("story_points", 0),
         xl_count=cached_eng.get("xl_count", 0),
@@ -210,7 +213,7 @@ def _refresh_engineer_gitlab(
     print(f"  Refreshing GitLab {q.label} for {eng.name}...", file=sys.stderr)
 
     gh_prs = cached_eng["github_prs"]
-    gh_reviews = cached_eng.get("_github_reviews", cached_eng.get("reviews", 0))
+    gh_reviews = cached_eng.get("_github_reviews", 0)
     gh_mt = cached_eng.get("_github_merge_times", [])
 
     if not enable_scoring:
@@ -230,6 +233,7 @@ def _refresh_engineer_gitlab(
             github_prs=gh_prs,
             gitlab_mrs=gl_mrs,
             reviews=gh_reviews + gl_reviews,
+            github_reviews=gh_reviews,
             merge_time_days=_median(all_mt) if all_mt else cached_eng.get("merge_time_days"),
             github_merge_times=gh_mt,
             gitlab_merge_times=gl_mt,
@@ -264,6 +268,7 @@ def _refresh_engineer_gitlab(
         github_prs=gh_prs,
         gitlab_mrs=len(gl_details),
         reviews=gh_reviews + gl_reviews,
+        github_reviews=gh_reviews,
         merge_time_days=_median(all_mt) if all_mt else cached_eng.get("merge_time_days"),
         story_points=gh_sp + gl_sp,
         scored_prs=gl_scored,
@@ -282,6 +287,7 @@ def _build_cache_entry(
         "github_prs": metrics.github_prs,
         "gitlab_mrs": metrics.gitlab_mrs,
         "reviews": metrics.reviews,
+        "_github_reviews": metrics.github_reviews,
         "merge_time_days": metrics.merge_time_days,
         "_github_merge_times": metrics.github_merge_times,
         "_gitlab_merge_times": metrics.gitlab_merge_times,

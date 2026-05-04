@@ -51,6 +51,7 @@ class EngineerQuarterMetrics:
     github_prs: int = 0
     gitlab_mrs: int = 0
     reviews: int = 0
+    github_reviews: int = 0
     merge_time_days: float | None = None
     story_points: int = 0
     scored_prs: list[ScoredPR] = field(default_factory=list)
