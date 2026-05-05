@@ -604,23 +604,36 @@ HTML_TEMPLATE = """\
             type: 'line',
             data: {{
                 labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
-                datasets: names.map((name, i) => ({{
-                    label: name,
-                    data: Q.map(q => q.gh_prs[i] + q.gl_mrs[i]),
-                    borderColor: colors[i],
-                    backgroundColor: colors[i] + '20',
-                    tension: 0.3,
-                    fill: false,
-                    pointRadius: 4,
-                    segment: {{
-                        borderDash: ctx => {{
-                            if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
-                                return [5, 5];
+                datasets: [
+                    ...names.map((name, i) => ({{
+                        label: name,
+                        data: Q.map(q => q.gh_prs[i] + q.gl_mrs[i]),
+                        borderColor: colors[i],
+                        backgroundColor: colors[i] + '20',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 4,
+                        segment: {{
+                            borderDash: ctx => {{
+                                if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                    return [5, 5];
+                                }}
+                                return [];
                             }}
-                            return [];
                         }}
+                    }})),
+                    {{
+                        label: 'Team Average',
+                        data: Q.map(q => calculateAverage(names.map((_, i) => q.gh_prs[i] + q.gl_mrs[i]))),
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        order: -1
                     }}
-                }})),
+                ],
             }},
             options: {{
                 responsive: true,
@@ -635,23 +648,36 @@ HTML_TEMPLATE = """\
             type: 'line',
             data: {{
                 labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
-                datasets: names.map((name, i) => ({{
-                    label: name,
-                    data: Q.map(q => q.reviews[i]),
-                    borderColor: colors[i],
-                    backgroundColor: colors[i] + '20',
-                    tension: 0.3,
-                    fill: false,
-                    pointRadius: 4,
-                    segment: {{
-                        borderDash: ctx => {{
-                            if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
-                                return [5, 5];
+                datasets: [
+                    ...names.map((name, i) => ({{
+                        label: name,
+                        data: Q.map(q => q.reviews[i]),
+                        borderColor: colors[i],
+                        backgroundColor: colors[i] + '20',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 4,
+                        segment: {{
+                            borderDash: ctx => {{
+                                if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                    return [5, 5];
+                                }}
+                                return [];
                             }}
-                            return [];
                         }}
+                    }})),
+                    {{
+                        label: 'Team Average',
+                        data: Q.map(q => calculateAverage(q.reviews)),
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        order: -1
                     }}
-                }})),
+                ],
             }},
             options: {{
                 responsive: true,
@@ -666,24 +692,38 @@ HTML_TEMPLATE = """\
             type: 'line',
             data: {{
                 labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
-                datasets: names.map((name, i) => ({{
-                    label: name,
-                    data: Q.map(q => q.merge_time[i]),
-                    borderColor: colors[i],
-                    backgroundColor: colors[i] + '20',
-                    tension: 0.3,
-                    fill: false,
-                    pointRadius: 4,
-                    spanGaps: true,
-                    segment: {{
-                        borderDash: ctx => {{
-                            if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
-                                return [5, 5];
+                datasets: [
+                    ...names.map((name, i) => ({{
+                        label: name,
+                        data: Q.map(q => q.merge_time[i]),
+                        borderColor: colors[i],
+                        backgroundColor: colors[i] + '20',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 4,
+                        spanGaps: true,
+                        segment: {{
+                            borderDash: ctx => {{
+                                if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                    return [5, 5];
+                                }}
+                                return [];
                             }}
-                            return [];
                         }}
+                    }})),
+                    {{
+                        label: 'Team Average',
+                        data: Q.map(q => calculateAverage(q.merge_time)),
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        spanGaps: true,
+                        order: -1
                     }}
-                }})),
+                ],
             }},
             options: {{
                 responsive: true,
@@ -700,23 +740,36 @@ HTML_TEMPLATE = """\
                 type: 'line',
                 data: {{
                     labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
-                    datasets: names.map((name, i) => ({{
-                        label: name,
-                        data: Q.map(q => q.sp[i]),
-                        borderColor: colors[i],
-                        backgroundColor: colors[i] + '20',
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 4,
-                        segment: {{
-                            borderDash: ctx => {{
-                                if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
-                                    return [5, 5];
+                    datasets: [
+                        ...names.map((name, i) => ({{
+                            label: name,
+                            data: Q.map(q => q.sp[i]),
+                            borderColor: colors[i],
+                            backgroundColor: colors[i] + '20',
+                            tension: 0.3,
+                            fill: false,
+                            pointRadius: 4,
+                            segment: {{
+                                borderDash: ctx => {{
+                                    if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                        return [5, 5];
+                                    }}
+                                    return [];
                                 }}
-                                return [];
                             }}
+                        }})),
+                        {{
+                            label: 'Team Average',
+                            data: Q.map(q => calculateAverage(q.sp)),
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.3,
+                            fill: false,
+                            pointRadius: 0,
+                            order: -1
                         }}
-                    }})),
+                    ],
                 }},
                 options: {{
                     responsive: true,
@@ -731,23 +784,36 @@ HTML_TEMPLATE = """\
                 type: 'line',
                 data: {{
                     labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
-                    datasets: names.map((name, i) => ({{
-                        label: name,
-                        data: Q.map(q => q.review_sp[i]),
-                        borderColor: colors[i],
-                        backgroundColor: colors[i] + '20',
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 4,
-                        segment: {{
-                            borderDash: ctx => {{
-                                if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
-                                    return [5, 5];
+                    datasets: [
+                        ...names.map((name, i) => ({{
+                            label: name,
+                            data: Q.map(q => q.review_sp[i]),
+                            borderColor: colors[i],
+                            backgroundColor: colors[i] + '20',
+                            tension: 0.3,
+                            fill: false,
+                            pointRadius: 4,
+                            segment: {{
+                                borderDash: ctx => {{
+                                    if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {{
+                                        return [5, 5];
+                                    }}
+                                    return [];
                                 }}
-                                return [];
                             }}
+                        }})),
+                        {{
+                            label: 'Team Average',
+                            data: Q.map(q => calculateAverage(q.review_sp)),
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.3,
+                            fill: false,
+                            pointRadius: 0,
+                            order: -1
                         }}
-                    }})),
+                    ],
                 }},
                 options: {{
                     responsive: true,
@@ -901,6 +967,13 @@ HTML_TEMPLATE = """\
             }});
         }}
 
+        // Statistics helper function
+        function calculateAverage(values) {{
+            const filtered = values.filter(v => v !== null && v !== undefined);
+            if (filtered.length === 0) return null;
+            return filtered.reduce((sum, v) => sum + v, 0) / filtered.length;
+        }}
+
         // Engineer Filter Implementation
         let engineerSelection = new Set(names); // All engineers selected by default
 
@@ -1011,10 +1084,32 @@ HTML_TEMPLATE = """\
             Object.values(detailViewCharts).forEach(chart => {{
                 if (!chart) return; // Skip if chart doesn't exist
 
+                // Update per-engineer dataset visibility
                 chart.data.datasets.forEach((dataset, index) => {{
+                    if (dataset.label === 'Team Average') {{
+                        return; // Skip reference line
+                    }}
                     const engineerName = names[index];
                     dataset.hidden = !engineerSelection.has(engineerName);
                 }});
+
+                // Recalculate average based on visible engineers
+                const avgDataset = chart.data.datasets.find(d => d.label === 'Team Average');
+
+                if (avgDataset) {{
+                    // For each quarter (data point)
+                    Q.forEach((quarter, qIdx) => {{
+                        // Collect values from non-hidden engineer datasets
+                        const values = [];
+                        chart.data.datasets.forEach((dataset, dsIdx) => {{
+                            if (dataset.label !== 'Team Average' && !dataset.hidden) {{
+                                values.push(dataset.data[qIdx]);
+                            }}
+                        }});
+
+                        avgDataset.data[qIdx] = calculateAverage(values);
+                    }});
+                }}
 
                 chart.update('none'); // 'none' animation mode for instant update
             }});
