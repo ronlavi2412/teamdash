@@ -431,6 +431,31 @@ HTML_TEMPLATE = """\
 
         .footer {{ text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.8rem; }}
 
+        /* Engineer Filter Styles */
+        .filter-bar {{ background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 24px; }}
+        .filter-dropdown {{ position: relative; display: inline-block; }}
+        .filter-button {{ display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 0.9rem; font-weight: 500; color: var(--text); cursor: pointer; transition: all 0.15s; }}
+        .filter-button:hover {{ border-color: var(--accent); background: var(--bg); }}
+        .filter-icon {{ font-size: 1rem; }}
+        .filter-count {{ display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; background: var(--accent); color: white; font-size: 0.75rem; font-weight: 600; border-radius: 10px; }}
+        .dropdown-arrow {{ font-size: 0.7rem; transition: transform 0.15s; }}
+        .filter-dropdown.open .dropdown-arrow {{ transform: rotate(180deg); }}
+        .filter-panel {{ display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 300px; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 1000; }}
+        .filter-dropdown.open .filter-panel {{ display: block; }}
+        .filter-actions {{ display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border); }}
+        .filter-action-btn {{ flex: 1; padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 0.8rem; font-weight: 500; color: var(--text); cursor: pointer; transition: all 0.15s; }}
+        .filter-action-btn:hover {{ background: var(--surface); border-color: var(--accent); }}
+        .filter-search {{ padding: 12px; border-bottom: 1px solid var(--border); }}
+        .filter-search input {{ width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 0.85rem; color: var(--text); background: var(--bg); }}
+        .filter-search input:focus {{ outline: none; border-color: var(--accent); }}
+        .filter-list {{ max-height: 300px; overflow-y: auto; padding: 8px; }}
+        .filter-checkbox {{ display: flex; align-items: center; padding: 8px 12px; cursor: pointer; border-radius: 4px; transition: background 0.15s; }}
+        .filter-checkbox:hover {{ background: var(--bg); }}
+        .filter-checkbox input[type="checkbox"] {{ margin-right: 10px; width: 16px; height: 16px; cursor: pointer; }}
+        .filter-checkbox label {{ flex: 1; cursor: pointer; font-size: 0.85rem; user-select: none; }}
+        .filter-checkbox.hidden {{ display: none; }}
+        .engineer-color-dot {{ display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }}
+
         @media (max-width: 768px) {{
             .chart-row {{ grid-template-columns: 1fr; }}
             .header {{ padding: 24px 20px; }}
@@ -457,6 +482,30 @@ HTML_TEMPLATE = """\
         {team_tab}
 
         <div id="tab-overview" class="tab-content">
+            <!-- Engineer Filter Section -->
+            <div class="filter-bar">
+                <div class="filter-dropdown">
+                    <button class="filter-button" id="engineer-filter-btn">
+                        <span class="filter-icon">👤</span>
+                        <span id="filter-label">All Engineers</span>
+                        <span class="filter-count" id="filter-count"></span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="filter-panel" id="engineer-filter-panel">
+                        <div class="filter-actions">
+                            <button class="filter-action-btn" id="select-all-btn">Select All</button>
+                            <button class="filter-action-btn" id="clear-all-btn">Clear All</button>
+                        </div>
+                        <div class="filter-search">
+                            <input type="text" id="engineer-search" placeholder="Search engineers..." />
+                        </div>
+                        <div class="filter-list" id="engineer-filter-list">
+                            <!-- Checkboxes generated dynamically via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="chart-row">
                 <div class="chart-card">
                     <h3>PRs + MRs per Quarter <span class="chart-info" data-tooltip="GitHub PRs and GitLab MRs merged per engineer during the quarter.">i</span></h3>
@@ -547,8 +596,11 @@ HTML_TEMPLATE = """\
             event.target.classList.add('active');
         }}
 
+        // Store chart instances for filtering
+        const detailViewCharts = {{}};
+
         // PRs+MRs trend
-        new Chart(document.getElementById('chart-prs-trend'), {{
+        detailViewCharts.prs = new Chart(document.getElementById('chart-prs-trend'), {{
             type: 'line',
             data: {{
                 labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
@@ -579,7 +631,7 @@ HTML_TEMPLATE = """\
         }});
 
         // Reviews trend
-        new Chart(document.getElementById('chart-reviews-trend'), {{
+        detailViewCharts.reviews = new Chart(document.getElementById('chart-reviews-trend'), {{
             type: 'line',
             data: {{
                 labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
@@ -610,7 +662,7 @@ HTML_TEMPLATE = """\
         }});
 
         // Merge time trend
-        new Chart(document.getElementById('chart-merge-time-trend'), {{
+        detailViewCharts.mergeTime = new Chart(document.getElementById('chart-merge-time-trend'), {{
             type: 'line',
             data: {{
                 labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
@@ -644,7 +696,7 @@ HTML_TEMPLATE = """\
         // Total complexity per quarter (overview tab)
         if ({has_scoring}) {{
             document.getElementById('overview-complexity').style.display = '';
-            new Chart(document.getElementById('chart-complexity-trend'), {{
+            detailViewCharts.complexity = new Chart(document.getElementById('chart-complexity-trend'), {{
                 type: 'line',
                 data: {{
                     labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
@@ -675,7 +727,7 @@ HTML_TEMPLATE = """\
             }});
 
             document.getElementById('overview-review-complexity').style.display = '';
-            new Chart(document.getElementById('chart-review-complexity-trend'), {{
+            detailViewCharts.reviewComplexity = new Chart(document.getElementById('chart-review-complexity-trend'), {{
                 type: 'line',
                 data: {{
                     labels: Q.map((q, idx) => isCurrentQuarter && idx === currentQuarterIndex ? q.label + ' *' : q.label),
@@ -848,6 +900,128 @@ HTML_TEMPLATE = """\
                 }},
             }});
         }}
+
+        // Engineer Filter Implementation
+        let engineerSelection = new Set(names); // All engineers selected by default
+
+        function initEngineerFilter() {{
+            const filterList = document.getElementById('engineer-filter-list');
+            const filterBtn = document.getElementById('engineer-filter-btn');
+            const filterPanel = document.getElementById('engineer-filter-panel');
+            const searchInput = document.getElementById('engineer-search');
+
+            // Generate checkboxes for each engineer
+            names.forEach((name, index) => {{
+                const checkbox = document.createElement('div');
+                checkbox.className = 'filter-checkbox';
+                checkbox.dataset.index = index;
+                checkbox.dataset.name = name.toLowerCase();
+
+                checkbox.innerHTML = `
+                    <input type="checkbox" id="engineer-${{index}}" checked>
+                    <label for="engineer-${{index}}">
+                        ${{name}}
+                        <span class="engineer-color-dot" style="background-color: ${{colors[index]}}"></span>
+                    </label>
+                `;
+
+                const input = checkbox.querySelector('input');
+                input.addEventListener('change', () => handleEngineerToggle(name, input.checked));
+
+                filterList.appendChild(checkbox);
+            }});
+
+            // Toggle dropdown
+            filterBtn.addEventListener('click', (e) => {{
+                e.stopPropagation();
+                document.querySelector('.filter-dropdown').classList.toggle('open');
+            }});
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {{
+                document.querySelector('.filter-dropdown').classList.remove('open');
+            }});
+
+            filterPanel.addEventListener('click', (e) => {{
+                e.stopPropagation();
+            }});
+
+            // Search functionality
+            searchInput.addEventListener('input', (e) => {{
+                const query = e.target.value.toLowerCase();
+                document.querySelectorAll('.filter-checkbox').forEach(checkbox => {{
+                    const name = checkbox.dataset.name;
+                    checkbox.classList.toggle('hidden', !name.includes(query));
+                }});
+            }});
+
+            // Select All button
+            document.getElementById('select-all-btn').addEventListener('click', () => {{
+                engineerSelection.clear();
+                names.forEach(name => engineerSelection.add(name));
+                document.querySelectorAll('.filter-checkbox input').forEach(input => {{
+                    input.checked = true;
+                }});
+                updateChartVisibility();
+                updateFilterLabel();
+            }});
+
+            // Clear All button
+            document.getElementById('clear-all-btn').addEventListener('click', () => {{
+                engineerSelection.clear();
+                document.querySelectorAll('.filter-checkbox input').forEach(input => {{
+                    input.checked = false;
+                }});
+                updateChartVisibility();
+                updateFilterLabel();
+            }});
+
+            updateFilterLabel();
+        }}
+
+        function handleEngineerToggle(name, isChecked) {{
+            if (isChecked) {{
+                engineerSelection.add(name);
+            }} else {{
+                engineerSelection.delete(name);
+            }}
+            updateChartVisibility();
+            updateFilterLabel();
+        }}
+
+        function updateFilterLabel() {{
+            const label = document.getElementById('filter-label');
+            const count = document.getElementById('filter-count');
+            const selectedCount = engineerSelection.size;
+
+            if (selectedCount === names.length) {{
+                label.textContent = 'All Engineers';
+                count.textContent = '';
+            }} else if (selectedCount === 0) {{
+                label.textContent = 'No Engineers';
+                count.textContent = '';
+            }} else {{
+                label.textContent = 'Engineers';
+                count.textContent = selectedCount;
+            }}
+        }}
+
+        function updateChartVisibility() {{
+            // Update all detail view charts
+            Object.values(detailViewCharts).forEach(chart => {{
+                if (!chart) return; // Skip if chart doesn't exist
+
+                chart.data.datasets.forEach((dataset, index) => {{
+                    const engineerName = names[index];
+                    dataset.hidden = !engineerSelection.has(engineerName);
+                }});
+
+                chart.update('none'); // 'none' animation mode for instant update
+            }});
+        }}
+
+        // Initialize filter when page loads
+        initEngineerFilter();
 
         // Table sorting
         document.querySelectorAll('#main-table th').forEach((th, colIdx) => {{
