@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 
+from teamdash.config import EngineerConfig, TeamConfig
+from teamdash.models import EngineerQuarterMetrics, QuarterSummary
 from teamdash.dashboard import (
     _build_dashboard_data,
     _build_config_data,
@@ -164,6 +166,96 @@ class TestGenerateDashboard:
         generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert "react" in content.lower() or "createElement" in content
+
+
+class TestJiraDashboard:
+    def test_has_jira_false_without_bugs(self, two_quarter_summaries, sample_config):
+        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        assert data["hasJira"] is False
+
+    def test_has_jira_true_with_bugs(self, sample_config, sample_quarter, sample_quarter_prev):
+        from teamdash.models import EngineerQuarterMetrics
+        summaries = [
+            QuarterSummary(
+                quarter=sample_quarter_prev,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6),
+                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                ],
+            ),
+            QuarterSummary(
+                quarter=sample_quarter,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8, verified_bugs=5),
+                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4, verified_bugs=3),
+                ],
+            ),
+        ]
+        data = _build_dashboard_data(sample_config, summaries)
+        assert data["hasJira"] is True
+
+    def test_verified_bugs_in_quarter_data(self, sample_config, sample_quarter, sample_quarter_prev):
+        from teamdash.models import EngineerQuarterMetrics
+        summaries = [
+            QuarterSummary(
+                quarter=sample_quarter_prev,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6, verified_bugs=2),
+                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3, verified_bugs=1),
+                ],
+            ),
+            QuarterSummary(
+                quarter=sample_quarter,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8, verified_bugs=5),
+                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4, verified_bugs=3),
+                ],
+            ),
+        ]
+        data = _build_dashboard_data(sample_config, summaries)
+        assert data["quarters"][1]["verified_bugs"] == [5, 3]
+
+    def test_verified_bugs_in_table_rows(self, sample_config, sample_quarter, sample_quarter_prev):
+        from teamdash.models import EngineerQuarterMetrics
+        summaries = [
+            QuarterSummary(
+                quarter=sample_quarter_prev,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6, verified_bugs=2),
+                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                ],
+            ),
+            QuarterSummary(
+                quarter=sample_quarter,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8, verified_bugs=5),
+                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4),
+                ],
+            ),
+        ]
+        rows = _build_table_row_data(summaries, ["Alice", "Bob"], has_scoring=False)
+        assert rows[0]["quarters"][1]["verified_bugs"] == 5
+        assert rows[1]["quarters"][1]["verified_bugs"] == 0
+
+
+class TestJiraConfigData:
+    def test_jira_config_present(self):
+        from teamdash.config import JiraConfig
+        config = TeamConfig(
+            team_name="Test",
+            gitlab_url=None,
+            github_orgs=["org"],
+            engineers=[EngineerConfig(name="A", github="a")],
+            jira=JiraConfig(cloud_id="redhat.atlassian.net", project_keys=["CNV", "MTV"]),
+        )
+        data = _build_config_data(config, has_scoring=False)
+        assert data["jira_cloud_id"] == "redhat.atlassian.net"
+        assert data["jira_project_keys"] == ["CNV", "MTV"]
+
+    def test_jira_config_absent(self, sample_config):
+        data = _build_config_data(sample_config, has_scoring=False)
+        assert data["jira_cloud_id"] is None
+        assert data["jira_project_keys"] == []
 
 
 class TestScoringDashboard:

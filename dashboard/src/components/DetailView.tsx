@@ -11,9 +11,10 @@ interface DetailViewProps {
   currentQuarterIndex: number;
   isCurrentQuarter: boolean;
   hasScoring: boolean;
+  hasJira: boolean;
 }
 
-export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring }: DetailViewProps) {
+export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira }: DetailViewProps) {
   const { selected, toggle, selectAll, clearAll } = useEngineerFilter(names);
 
   const commonProps = {
@@ -86,6 +87,18 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
         )}
       </div>
       <div className="chart-row">
+        {hasJira && (
+          <ChartCard
+            title="Verified Bugs per Quarter"
+            tooltip="Jira bugs resolved as Done per engineer during the quarter."
+            testId="chart-verified-bugs-trend"
+          >
+            <DetailLineChart
+              {...commonProps}
+              getValues={q => q.verified_bugs}
+            />
+          </ChartCard>
+        )}
         <ChartCard
           title="Median Merge Time per Quarter (days)"
           tooltip="Median days from PR/MR creation to merge per engineer for the quarter."

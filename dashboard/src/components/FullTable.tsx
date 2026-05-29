@@ -6,9 +6,10 @@ interface FullTableProps {
   tableRows: TableRowData[];
   quarterLabels: string[];
   hasScoring: boolean;
+  hasJira: boolean;
 }
 
-export function FullTable({ tableRows, quarterLabels, hasScoring }: FullTableProps) {
+export function FullTable({ tableRows, quarterLabels, hasScoring, hasJira }: FullTableProps) {
   const getCellValue = useCallback((row: TableRowData, colIdx: number): string | number => {
     if (colIdx === 0) return row.name;
 
@@ -62,9 +63,15 @@ export function FullTable({ tableRows, quarterLabels, hasScoring }: FullTablePro
     if (hasScoring && colIdx < offset + numQuarters) {
       return row.quarters[colIdx - offset].review_story_points;
     }
+    if (hasScoring) offset += numQuarters;
+
+    // Verified bugs columns (if jira)
+    if (hasJira && colIdx < offset + numQuarters) {
+      return row.quarters[colIdx - offset].verified_bugs;
+    }
 
     return 0;
-  }, [quarterLabels.length, hasScoring]);
+  }, [quarterLabels.length, hasScoring, hasJira]);
 
   const { sortedRows, sortCol, sortAsc, handleSort } = useTableSort(tableRows, getCellValue);
 
@@ -95,6 +102,11 @@ export function FullTable({ tableRows, quarterLabels, hasScoring }: FullTablePro
       headers.push({ label: `Review Cx ${ql}`, isNum: true });
     }
   }
+  if (hasJira) {
+    for (const ql of quarterLabels) {
+      headers.push({ label: `Bugs ${ql}`, isNum: true });
+    }
+  }
 
   function renderRow(row: TableRowData) {
     const cells: (string | number)[] = [];
@@ -107,6 +119,9 @@ export function FullTable({ tableRows, quarterLabels, hasScoring }: FullTablePro
     if (hasScoring) {
       for (const qm of row.quarters) cells.push(qm.story_points);
       for (const qm of row.quarters) cells.push(qm.review_story_points);
+    }
+    if (hasJira) {
+      for (const qm of row.quarters) cells.push(qm.verified_bugs);
     }
 
     return (

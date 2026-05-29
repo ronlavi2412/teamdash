@@ -125,3 +125,41 @@ scoring:
         config = load_config(str(f))
         assert config.scoring.diff_thresholds == (10, 50, 100, 200)
         assert config.scoring.size_points["XL"] == 21
+
+    def test_jira_config(self, tmp_path):
+        f = tmp_path / "team.yaml"
+        f.write_text(VALID_YAML + """
+jira:
+  cloud_id: "redhat.atlassian.net"
+  project_keys: ["CNV", "MTV"]
+""")
+        config = load_config(str(f))
+        assert config.jira is not None
+        assert config.jira.cloud_id == "redhat.atlassian.net"
+        assert config.jira.project_keys == ["CNV", "MTV"]
+
+    def test_no_jira_config(self, tmp_path):
+        f = tmp_path / "team.yaml"
+        f.write_text(VALID_YAML)
+        config = load_config(str(f))
+        assert config.jira is None
+
+    def test_engineer_jira_account_id(self, tmp_path):
+        f = tmp_path / "team.yaml"
+        f.write_text("""\
+team_name: "Test"
+github:
+  orgs: [org]
+engineers:
+  - name: Alice
+    github: alice
+    jira_account_id: "712020:abc-123"
+""")
+        config = load_config(str(f))
+        assert config.engineers[0].jira_account_id == "712020:abc-123"
+
+    def test_engineer_no_jira_account_id(self, tmp_path):
+        f = tmp_path / "team.yaml"
+        f.write_text(VALID_YAML)
+        config = load_config(str(f))
+        assert config.engineers[0].jira_account_id is None

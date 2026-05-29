@@ -13,6 +13,7 @@ team.yaml -> config.py -> aggregate.py -> dashboard.py -> HTML file
                  |              |
            scoring.py     fetch_github.py (gh api subprocess)
            (ScoringConfig) fetch_gitlab.py (glab api subprocess)
+                            fetch_jira.py  (reads pre-fetched JSON from Atlassian MCP)
 
 models.py   -- Quarter, PRDetail, ScoredPR, EngineerQuarterMetrics, QuarterSummary
 quarters.py -- date range calculation for N quarters
@@ -22,6 +23,7 @@ scoring.py  -- story point estimation from PR metadata
 - **No web framework** -- generates static HTML, no server
 - **No ORM or database** -- data is fetched live from APIs and cached as JSON in `~/.cache/teamdash/`
 - **External CLIs** -- uses `gh` and `glab` subprocesses for API auth, not raw HTTP requests
+- **Jira integration** -- verified bug counts are loaded from a pre-fetched JSON file (produced by the Atlassian MCP via the `fetch-jira-bugs` Claude Code agent); configured via `.mcp.json`
 - **Chart.js v4** loaded from CDN in the generated HTML
 - **`publish.sh`** -- deploys dashboard HTML to GitHub Pages via `gh-pages` branch
 
@@ -46,6 +48,7 @@ teamdash team.yaml -q 6               # last 6 quarters
 teamdash team.yaml --no-cache          # skip cache, fetch fresh data
 teamdash team.yaml --include-current   # include current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation
+teamdash team.yaml --jira-data jira-bugs.json  # include Jira verified bugs
 ```
 
 ## Testing
@@ -55,7 +58,7 @@ pip install -e ".[dev]"
 python -m pytest tests/ -x -q
 ```
 
-212 tests across 8 test files covering all modules: scoring, dashboard, aggregate, config, fetch_github, fetch_gitlab, models, and quarters. Tests use `unittest.mock` to patch subprocess calls and avoid real API hits.
+250 tests across 9 test files covering all modules: scoring, dashboard, aggregate, config, fetch_github, fetch_gitlab, fetch_jira, models, and quarters. Tests use `unittest.mock` to patch subprocess calls and avoid real API hits.
 
 ## Style
 

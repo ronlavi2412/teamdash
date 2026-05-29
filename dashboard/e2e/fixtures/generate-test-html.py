@@ -6,7 +6,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
-from teamdash.config import EngineerConfig, TeamConfig
+from teamdash.config import EngineerConfig, JiraConfig, TeamConfig
 from teamdash.dashboard import generate_dashboard
 from teamdash.models import (
     EngineerQuarterMetrics,
@@ -131,6 +131,62 @@ generate_dashboard(
     config,
     make_summaries(with_scoring=True),
     str(fixtures_dir / "test-dashboard-scoring.html"),
+)
+
+
+def make_jira_config():
+    return TeamConfig(
+        team_name="Test Team",
+        gitlab_url="https://gitlab.example.com",
+        github_orgs=["test-org"],
+        engineers=[
+            EngineerConfig(name="Alice", github="alice", gitlab="alice_gl", jira_account_id="abc-123"),
+            EngineerConfig(name="Bob", github="bob", gitlab="bob_gl", jira_account_id="def-456"),
+        ],
+        jira=JiraConfig(cloud_id="test.atlassian.net", project_keys=["PROJ"]),
+    )
+
+
+def make_jira_summaries():
+    q_prev = Quarter(label="2024-Q4", start="2024-10-01", end="2024-12-31")
+    q_cur = Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")
+    prev = QuarterSummary(
+        quarter=q_prev,
+        engineers=[
+            EngineerQuarterMetrics(
+                name="Alice", quarter="2024-Q4",
+                github_prs=8, gitlab_mrs=4, reviews=6,
+                merge_time_days=2.5, verified_bugs=3,
+            ),
+            EngineerQuarterMetrics(
+                name="Bob", quarter="2024-Q4",
+                github_prs=2, gitlab_mrs=1, reviews=3,
+                merge_time_days=3.1, verified_bugs=1,
+            ),
+        ],
+    )
+    cur = QuarterSummary(
+        quarter=q_cur,
+        engineers=[
+            EngineerQuarterMetrics(
+                name="Alice", quarter="2025-Q1",
+                github_prs=10, gitlab_mrs=5, reviews=8,
+                merge_time_days=1.8, verified_bugs=5,
+            ),
+            EngineerQuarterMetrics(
+                name="Bob", quarter="2025-Q1",
+                github_prs=3, gitlab_mrs=2, reviews=4,
+                merge_time_days=2.4, verified_bugs=2,
+            ),
+        ],
+    )
+    return [prev, cur]
+
+
+generate_dashboard(
+    make_jira_config(),
+    make_jira_summaries(),
+    str(fixtures_dir / "test-dashboard-jira.html"),
 )
 
 print("Generated test HTML fixtures.")

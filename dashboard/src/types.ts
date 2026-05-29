@@ -8,6 +8,7 @@ export interface QuarterData {
   xl_count: number[];
   review_sp: number[];
   size_dist: SizeDistribution[];
+  verified_bugs: number[];
 }
 
 export interface SizeDistribution {
@@ -21,6 +22,8 @@ export interface SizeDistribution {
 export interface ConfigData {
   github_orgs: string[];
   gitlab_url: string | null;
+  jira_cloud_id: string | null;
+  jira_project_keys: string[];
   engineers: EngineerConfigData[];
   scoring: ScoringConfigData | null;
 }
@@ -52,6 +55,7 @@ export interface QuarterMetrics {
   merge_time: number | null;
   story_points: number;
   review_story_points: number;
+  verified_bugs: number;
 }
 
 export interface DashboardData {
@@ -65,6 +69,7 @@ export interface DashboardData {
   currentQuarterIndex: number;
   isCurrentQuarter: boolean;
   hasScoring: boolean;
+  hasJira: boolean;
   config: ConfigData;
   tableRows: TableRowData[];
 }

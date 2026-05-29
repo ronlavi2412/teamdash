@@ -33,6 +33,7 @@ teamdash team.yaml -q 6               # last 6 quarters
 teamdash team.yaml --no-cache          # skip cache, fetch fresh data
 teamdash team.yaml --include-current   # include the current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation (faster)
+teamdash team.yaml --jira-data jira-bugs.json  # include Jira verified bugs data
 ```
 
 ## Configuration
@@ -68,8 +69,35 @@ engineers:
 | `engineers[].name` | Yes | Display name |
 | `engineers[].github` | No | GitHub username |
 | `engineers[].gitlab` | No | GitLab username |
+| `engineers[].jira_account_id` | No | Atlassian Jira account ID (for verified bugs tracking) |
+| `jira.cloud_id` | No | Atlassian cloud instance (e.g., `redhat.atlassian.net`) |
+| `jira.project_keys` | No | Jira project keys to query (e.g., `["CNV", "MTV"]`) |
 
 Each engineer needs at least one of `github` or `gitlab`.
+
+### Jira Configuration
+
+To track verified bugs from Jira, add a `jira` section and per-engineer `jira_account_id` fields:
+
+```yaml
+jira:
+  cloud_id: "redhat.atlassian.net"
+  project_keys: ["CNV", "MTV", "OCPBUGS"]
+
+engineers:
+  - name: "Jane Doe"
+    github: janedoe
+    gitlab: jdoe
+    jira_account_id: "712020:xxxx-xxxx-xxxx"
+```
+
+Jira data is fetched separately via the Atlassian MCP (configured in `.mcp.json`). Use the `fetch-jira-bugs` Claude Code agent to collect bug counts, then pass the resulting JSON file to teamdash:
+
+```bash
+teamdash team.yaml --jira-data jira-bugs.json
+```
+
+The JSON file format is `{"2025-Q1": {"Engineer Name": 5, ...}, ...}` mapping quarters to per-engineer verified bug counts.
 
 ### Scoring Configuration
 
@@ -104,7 +132,7 @@ The generated HTML file includes:
 - **Summary cards** -- Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
 - **Overall Team View tab** -- Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter. When scoring is enabled, also shows total story points and review complexity per quarter
 - **Detailed View tab** -- Per-engineer line charts: PRs+MRs trend, code reviews trend, avg merge time. When scoring is enabled, also shows per-engineer complexity and review complexity trends
-- **Full Table tab** -- Sortable table with all metrics per engineer per quarter (includes story point columns when scoring is enabled)
+- **Full Table tab** -- Sortable table with all metrics per engineer per quarter (includes story point columns when scoring is enabled, and verified bugs columns when Jira data is provided)
 
 ## Story Points
 
@@ -159,6 +187,7 @@ teamdash/
     scoring.py          # Story point estimation engine
     fetch_github.py     # GitHub data fetching via gh CLI
     fetch_gitlab.py     # GitLab data fetching via glab CLI
+    fetch_jira.py       # Jira verified bugs data loader (reads pre-fetched JSON)
     aggregate.py        # Orchestration, caching, and parallelization
     dashboard.py        # HTML dashboard generation
   tests/
@@ -170,6 +199,7 @@ teamdash/
     test_models.py
     test_quarters.py
     test_scoring.py
+    test_fetch_jira.py
   config/               # Team YAML configs (git-ignored)
   publish.sh            # GitHub Pages deployment script
   pyproject.toml        # Package configuration

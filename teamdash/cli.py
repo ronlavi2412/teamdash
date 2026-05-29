@@ -28,6 +28,8 @@ def main() -> None:
                         help="Skip story point estimation (faster, fewer API calls)")
     parser.add_argument("--refresh-gitlab", action="store_true",
                         help="Re-fetch only GitLab data, keep cached GitHub data")
+    parser.add_argument("--jira-data", default=None,
+                        help="Path to pre-fetched Jira verified bugs JSON file")
 
     args = parser.parse_args()
 
@@ -36,6 +38,11 @@ def main() -> None:
     if not args.refresh_gitlab and config.github_orgs and not check_auth():
         print("[ERROR] GitHub CLI not authenticated. Run: gh auth login", file=sys.stderr)
         sys.exit(1)
+
+    jira_data = None
+    if args.jira_data:
+        from teamdash.fetch_jira import load_jira_data
+        jira_data = load_jira_data(args.jira_data)
 
     quarters = get_quarters(args.quarters, include_current=args.include_current)
     print(f"Fetching data for {config.team_name} ({len(config.engineers)} engineers, "
@@ -46,6 +53,7 @@ def main() -> None:
         use_cache=not args.no_cache,
         enable_scoring=not args.no_scoring,
         refresh_gitlab=args.refresh_gitlab,
+        jira_data=jira_data,
     )
 
     generate_dashboard(config, summaries, args.output)

@@ -203,6 +203,7 @@ def _metrics_from_cache(
         review_story_points=cached_eng.get("review_story_points", 0),
         github_merge_times=cached_eng.get("_github_merge_times", []),
         gitlab_merge_times=cached_eng.get("_gitlab_merge_times", []),
+        verified_bugs=cached_eng.get("verified_bugs", 0),
     )
 
 
@@ -291,6 +292,7 @@ def _build_cache_entry(
         "merge_time_days": metrics.merge_time_days,
         "_github_merge_times": metrics.github_merge_times,
         "_gitlab_merge_times": metrics.gitlab_merge_times,
+        "verified_bugs": metrics.verified_bugs,
     }
     if enable_scoring:
         entry["story_points"] = metrics.story_points
@@ -317,6 +319,7 @@ def collect_all_data(
     use_cache: bool = True,
     enable_scoring: bool = True,
     refresh_gitlab: bool = False,
+    jira_data: dict[str, dict[str, int]] | None = None,
 ) -> list[QuarterSummary]:
     cache = _load_cache(config) if (use_cache or refresh_gitlab) else {}
     gitlab_ok = False
@@ -328,6 +331,7 @@ def collect_all_data(
     if refresh_gitlab:
         return _collect_refresh_gitlab(
             config, quarters, cache, gitlab_ok, enable_scoring,
+            jira_data=jira_data,
         )
 
     quarter_cached: dict[str, dict[str, EngineerQuarterMetrics]] = {}
@@ -370,14 +374,16 @@ def collect_all_data(
         engineer_metrics: list[EngineerQuarterMetrics] = []
         for eng in config.engineers:
             if eng.name in quarter_cached[q.label]:
-                engineer_metrics.append(quarter_cached[q.label][eng.name])
+                metrics = quarter_cached[q.label][eng.name]
             else:
                 metrics = fetched[(q.label, eng.name)]
-                engineer_metrics.append(metrics)
                 cache_entry = _build_cache_entry(metrics, enable_scoring)
                 q_cache = updated_cache.setdefault(q.label, {})
                 q_cache[eng.name] = cache_entry
                 q_cache["_meta"] = {"fetched_date": date.today().isoformat()}
+            if jira_data:
+                metrics.verified_bugs = jira_data.get(q.label, {}).get(eng.name, 0)
+            engineer_metrics.append(metrics)
         if q.label in updated_cache and "_meta" not in updated_cache[q.label]:
             updated_cache[q.label]["_meta"] = {"fetched_date": date.today().isoformat()}
         summaries.append(QuarterSummary(quarter=q, engineers=engineer_metrics))
@@ -392,6 +398,7 @@ def _collect_refresh_gitlab(
     cache: dict,
     gitlab_ok: bool,
     enable_scoring: bool,
+    jira_data: dict[str, dict[str, int]] | None = None,
 ) -> list[QuarterSummary]:
     updated_cache = dict(cache)
     summaries: list[QuarterSummary] = []
@@ -423,6 +430,8 @@ def _collect_refresh_gitlab(
                 metrics = EngineerQuarterMetrics(name=eng.name, quarter=q.label)
                 cache_entry = _build_cache_entry(metrics, enable_scoring)
 
+            if jira_data:
+                metrics.verified_bugs = jira_data.get(q.label, {}).get(eng.name, 0)
             engineer_metrics.append(metrics)
             q_cache = updated_cache.setdefault(q.label, {})
             q_cache[eng.name] = cache_entry

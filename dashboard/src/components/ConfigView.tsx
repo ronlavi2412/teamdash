@@ -20,7 +20,13 @@ export function ConfigView({ config, hasScoring }: ConfigViewProps) {
               {config.gitlab_url && (
                 <tr><td><strong>GitLab Instance</strong></td><td>{config.gitlab_url}</td></tr>
               )}
-              {config.github_orgs.length === 0 && !config.gitlab_url && (
+              {config.jira_cloud_id && (
+                <tr><td><strong>Jira Cloud</strong></td><td>{config.jira_cloud_id}</td></tr>
+              )}
+              {config.jira_project_keys.length > 0 && (
+                <tr><td><strong>Jira Projects</strong></td><td>{config.jira_project_keys.join(', ')}</td></tr>
+              )}
+              {config.github_orgs.length === 0 && !config.gitlab_url && !config.jira_cloud_id && (
                 <tr><td colSpan={2}>No data sources configured</td></tr>
               )}
             </tbody>

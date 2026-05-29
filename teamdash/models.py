@@ -60,6 +60,7 @@ class EngineerQuarterMetrics:
     scored_reviews: list[ScoredPR] = field(default_factory=list)
     github_merge_times: list[float] = field(default_factory=list)
     gitlab_merge_times: list[float] = field(default_factory=list)
+    verified_bugs: int = 0
 
     @property
     def total(self) -> int:
@@ -108,3 +109,7 @@ class QuarterSummary:
     @property
     def total_xl_count(self) -> int:
         return sum(e.xl_count for e in self.engineers)
+
+    @property
+    def total_verified_bugs(self) -> int:
+        return sum(e.verified_bugs for e in self.engineers)

@@ -47,6 +47,7 @@ export default function App({ data }: AppProps) {
             currentQuarterIndex={data.currentQuarterIndex}
             isCurrentQuarter={data.isCurrentQuarter}
             hasScoring={data.hasScoring}
+            hasJira={data.hasJira}
           />
         )}
         {activeTab === 'overview' && (
@@ -57,6 +58,7 @@ export default function App({ data }: AppProps) {
             currentQuarterIndex={data.currentQuarterIndex}
             isCurrentQuarter={data.isCurrentQuarter}
             hasScoring={data.hasScoring}
+            hasJira={data.hasJira}
           />
         )}
         {activeTab === 'table' && (
@@ -64,6 +66,7 @@ export default function App({ data }: AppProps) {
             tableRows={data.tableRows}
             quarterLabels={data.quarterLabels}
             hasScoring={data.hasScoring}
+            hasJira={data.hasJira}
           />
         )}
         {activeTab === 'config' && (

@@ -73,6 +73,7 @@ def _build_table_row_data(
                 "merge_time": eng.merge_time_days if eng else None,
                 "story_points": eng.story_points if eng else 0,
                 "review_story_points": eng.review_story_points if eng else 0,
+                "verified_bugs": eng.verified_bugs if eng else 0,
             })
 
         cur_eng = {e.name: e for e in cur.engineers}.get(name)
@@ -93,6 +94,8 @@ def _build_config_data(config: TeamConfig, has_scoring: bool) -> dict:
     data: dict = {
         "github_orgs": config.github_orgs,
         "gitlab_url": config.gitlab_url,
+        "jira_cloud_id": config.jira.cloud_id if config.jira else None,
+        "jira_project_keys": config.jira.project_keys if config.jira else [],
         "engineers": [
             {"name": e.name, "github": e.github, "gitlab": e.gitlab}
             for e in config.engineers
@@ -124,6 +127,7 @@ def _build_dashboard_data(
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     has_scoring = any(s.total_story_points > 0 for s in summaries)
+    has_jira = any(e.verified_bugs > 0 for s in summaries for e in s.engineers)
 
     today = date.today()
     is_current_quarter = date.fromisoformat(last_q.end) >= today
@@ -142,6 +146,7 @@ def _build_dashboard_data(
             "xl_count": [by_name.get(n, _zero(n, s.quarter.label)).xl_count for n in names],
             "review_sp": [by_name.get(n, _zero(n, s.quarter.label)).review_story_points for n in names],
             "size_dist": [_size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names],
+            "verified_bugs": [by_name.get(n, _zero(n, s.quarter.label)).verified_bugs for n in names],
         })
 
     return {
@@ -155,6 +160,7 @@ def _build_dashboard_data(
         "currentQuarterIndex": current_quarter_index,
         "isCurrentQuarter": is_current_quarter,
         "hasScoring": has_scoring,
+        "hasJira": has_jira,
         "config": _build_config_data(config, has_scoring),
         "tableRows": _build_table_row_data(summaries, names, has_scoring),
     }

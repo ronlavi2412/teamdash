@@ -106,3 +106,15 @@ class TestQuarterSummary:
         ]
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
         assert s.total_xl_count == 3
+
+    def test_total_verified_bugs(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(name="A", quarter="Q1", verified_bugs=5),
+            EngineerQuarterMetrics(name="B", quarter="Q1", verified_bugs=3),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        assert s.total_verified_bugs == 8
+
+    def test_verified_bugs_default_zero(self):
+        m = EngineerQuarterMetrics(name="X", quarter="Q1")
+        assert m.verified_bugs == 0

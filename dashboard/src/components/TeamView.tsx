@@ -8,9 +8,10 @@ interface TeamViewProps {
   currentQuarterIndex: number;
   isCurrentQuarter: boolean;
   hasScoring: boolean;
+  hasJira: boolean;
 }
 
-export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring }: TeamViewProps) {
+export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira }: TeamViewProps) {
   return (
     <div data-testid="tab-team">
       <div className="chart-row">
@@ -77,6 +78,23 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
               borderColor="#d97706"
               label="Total Reviews Complexity"
               yAxisLabel="Complexity Points"
+              currentQuarterIndex={currentQuarterIndex}
+              isCurrentQuarter={isCurrentQuarter}
+            />
+          </ChartCard>
+        )}
+        {hasJira && (
+          <ChartCard
+            title="Total Verified Bugs per Quarter"
+            tooltip="Total Jira bugs resolved as Done during the quarter across all team members."
+            testId="chart-team-verified-bugs"
+          >
+            <TeamBarChart
+              quarters={quarters}
+              getData={q => q.verified_bugs.reduce((a, b) => a + b, 0)}
+              color="#ef4444"
+              borderColor="#dc2626"
+              label="Total Verified Bugs"
               currentQuarterIndex={currentQuarterIndex}
               isCurrentQuarter={isCurrentQuarter}
             />

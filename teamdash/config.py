@@ -14,6 +14,13 @@ class EngineerConfig:
     name: str
     github: str | None = None
     gitlab: str | None = None
+    jira_account_id: str | None = None
+
+
+@dataclass
+class JiraConfig:
+    cloud_id: str
+    project_keys: list[str]
 
 
 @dataclass
@@ -23,6 +30,7 @@ class TeamConfig:
     github_orgs: list[str]
     engineers: list[EngineerConfig] = field(default_factory=list)
     scoring: ScoringConfig = field(default_factory=ScoringConfig)
+    jira: JiraConfig | None = None
 
 
 def load_config(path: str) -> TeamConfig:
@@ -65,7 +73,16 @@ def load_config(path: str) -> TeamConfig:
         if not gh and not gl:
             print(f"[ERROR] Engineer '{name}' needs at least one of 'github' or 'gitlab'", file=sys.stderr)
             sys.exit(1)
-        engineers.append(EngineerConfig(name=name, github=gh, gitlab=gl))
+        jira_id = eng.get("jira_account_id")
+        engineers.append(EngineerConfig(name=name, github=gh, gitlab=gl, jira_account_id=jira_id))
+
+    jira_raw = raw.get("jira")
+    jira = None
+    if jira_raw and isinstance(jira_raw, dict):
+        cloud_id = jira_raw.get("cloud_id")
+        project_keys = jira_raw.get("project_keys", [])
+        if cloud_id:
+            jira = JiraConfig(cloud_id=cloud_id, project_keys=project_keys)
 
     scoring_raw = raw.get("scoring", {}) or {}
     scoring_kwargs: dict = {}
@@ -87,4 +104,5 @@ def load_config(path: str) -> TeamConfig:
         github_orgs=github_orgs,
         engineers=engineers,
         scoring=scoring,
+        jira=jira,
     )
