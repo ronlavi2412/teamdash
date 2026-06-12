@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from teamdash.aggregate import _config_hash, _is_quarter_cache_fresh, _load_cache, _save_cache, collect_all_data
 from teamdash.config import EngineerConfig, TeamConfig
+from teamdash.fetch_jira import JiraData
 from teamdash.models import Quarter
 
 
@@ -197,7 +198,7 @@ class TestCollectAllData:
 
     def test_jira_data_merges_verified_bugs(self, sample_config):
         quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
-        jira_data = {"2025-Q1": {"Alice": 5, "Bob": 3}}
+        jira_data = JiraData(bugs={"2025-Q1": {"Alice": 5, "Bob": 3}})
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_prs", return_value=10),
@@ -219,7 +220,7 @@ class TestCollectAllData:
 
     def test_jira_data_missing_engineer_defaults_zero(self, sample_config):
         quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
-        jira_data = {"2025-Q1": {"Alice": 5}}
+        jira_data = JiraData(bugs={"2025-Q1": {"Alice": 5}})
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_prs", return_value=10),
@@ -257,3 +258,28 @@ class TestCollectAllData:
             )
 
         assert summaries[0].engineers[0].verified_bugs == 0
+
+    def test_jira_data_merges_activity_types(self, sample_config):
+        quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
+        jira_data = JiraData(
+            bugs={"2025-Q1": {"Alice": 5}},
+            activity_types={"2025-Q1": {"Alice": {"Incidents & Support": 3, "Security & Compliance": 2}}},
+        )
+        with (
+            patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
+            patch("teamdash.aggregate.fetch_prs", return_value=10),
+            patch("teamdash.aggregate.fetch_reviews", return_value=5),
+            patch("teamdash.aggregate.fetch_mrs", return_value=3),
+            patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0]),
+            patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[2.0]),
+            patch("teamdash.aggregate.fetch_gitlab_reviews", return_value=2),
+            patch("teamdash.aggregate._load_cache", return_value={}),
+            patch("teamdash.aggregate._save_cache"),
+        ):
+            summaries = collect_all_data(
+                sample_config, quarters, use_cache=False,
+                enable_scoring=False, jira_data=jira_data,
+            )
+
+        assert summaries[0].engineers[0].activity_type_counts == {"Incidents & Support": 3, "Security & Compliance": 2}
+        assert summaries[0].engineers[1].activity_type_counts == {}

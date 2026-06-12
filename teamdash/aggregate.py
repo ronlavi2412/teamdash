@@ -23,6 +23,7 @@ from teamdash.fetch_gitlab import (
     fetch_reviewed_mr_details as fetch_reviewed_gl_details,
 )
 from teamdash.fetch_gitlab import fetch_reviews as fetch_gitlab_reviews
+from teamdash.fetch_jira import JiraData
 from teamdash.models import EngineerQuarterMetrics, Quarter, QuarterSummary
 from teamdash.scoring import ScoringConfig, score_prs
 
@@ -319,7 +320,7 @@ def collect_all_data(
     use_cache: bool = True,
     enable_scoring: bool = True,
     refresh_gitlab: bool = False,
-    jira_data: dict[str, dict[str, int]] | None = None,
+    jira_data: JiraData | None = None,
 ) -> list[QuarterSummary]:
     cache = _load_cache(config) if (use_cache or refresh_gitlab) else {}
     gitlab_ok = False
@@ -382,7 +383,8 @@ def collect_all_data(
                 q_cache[eng.name] = cache_entry
                 q_cache["_meta"] = {"fetched_date": date.today().isoformat()}
             if jira_data:
-                metrics.verified_bugs = jira_data.get(q.label, {}).get(eng.name, 0)
+                metrics.verified_bugs = jira_data.bugs.get(q.label, {}).get(eng.name, 0)
+                metrics.activity_type_counts = jira_data.activity_types.get(q.label, {}).get(eng.name, {})
             engineer_metrics.append(metrics)
         if q.label in updated_cache and "_meta" not in updated_cache[q.label]:
             updated_cache[q.label]["_meta"] = {"fetched_date": date.today().isoformat()}
@@ -398,7 +400,7 @@ def _collect_refresh_gitlab(
     cache: dict,
     gitlab_ok: bool,
     enable_scoring: bool,
-    jira_data: dict[str, dict[str, int]] | None = None,
+    jira_data: JiraData | None = None,
 ) -> list[QuarterSummary]:
     updated_cache = dict(cache)
     summaries: list[QuarterSummary] = []
@@ -431,7 +433,8 @@ def _collect_refresh_gitlab(
                 cache_entry = _build_cache_entry(metrics, enable_scoring)
 
             if jira_data:
-                metrics.verified_bugs = jira_data.get(q.label, {}).get(eng.name, 0)
+                metrics.verified_bugs = jira_data.bugs.get(q.label, {}).get(eng.name, 0)
+                metrics.activity_type_counts = jira_data.activity_types.get(q.label, {}).get(eng.name, {})
             engineer_metrics.append(metrics)
             q_cache = updated_cache.setdefault(q.label, {})
             q_cache[eng.name] = cache_entry

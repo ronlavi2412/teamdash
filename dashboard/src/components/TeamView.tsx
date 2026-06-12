@@ -1,5 +1,6 @@
 import type { QuarterData } from '../types';
 import { ChartCard } from './ChartCard';
+import { TeamActivityTypeChart } from './TeamActivityTypeChart';
 import { TeamBarChart } from './TeamBarChart';
 import { TeamLineChart } from './TeamLineChart';
 
@@ -9,9 +10,11 @@ interface TeamViewProps {
   isCurrentQuarter: boolean;
   hasScoring: boolean;
   hasJira: boolean;
+  hasActivityTypes: boolean;
+  activityTypeNames: string[];
 }
 
-export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira }: TeamViewProps) {
+export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasActivityTypes, activityTypeNames }: TeamViewProps) {
   return (
     <div data-testid="tab-team">
       <div className="chart-row">
@@ -95,6 +98,20 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
               color="#ef4444"
               borderColor="#dc2626"
               label="Total Verified Bugs"
+              currentQuarterIndex={currentQuarterIndex}
+              isCurrentQuarter={isCurrentQuarter}
+            />
+          </ChartCard>
+        )}
+        {hasActivityTypes && (
+          <ChartCard
+            title="Issues by Activity Type per Quarter"
+            tooltip="Total Jira issues resolved per quarter, broken down by activity type across all team members."
+            testId="chart-team-activity-types"
+          >
+            <TeamActivityTypeChart
+              quarters={quarters}
+              activityTypeNames={activityTypeNames}
               currentQuarterIndex={currentQuarterIndex}
               isCurrentQuarter={isCurrentQuarter}
             />

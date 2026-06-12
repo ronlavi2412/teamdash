@@ -1,5 +1,6 @@
 import type { QuarterData } from '../types';
 import { useEngineerFilter } from '../hooks/useEngineerFilter';
+import { ActivityTypeChart } from './ActivityTypeChart';
 import { ChartCard } from './ChartCard';
 import { DetailLineChart } from './DetailLineChart';
 import { EngineerFilter } from './EngineerFilter';
@@ -12,9 +13,12 @@ interface DetailViewProps {
   isCurrentQuarter: boolean;
   hasScoring: boolean;
   hasJira: boolean;
+  hasActivityTypes: boolean;
+  activityTypeNames: string[];
+  quarterLabels: string[];
 }
 
-export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira }: DetailViewProps) {
+export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasActivityTypes, activityTypeNames, quarterLabels }: DetailViewProps) {
   const { selected, toggle, selectAll, clearAll } = useEngineerFilter(names);
 
   const commonProps = {
@@ -86,6 +90,24 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
           </ChartCard>
         )}
       </div>
+      {hasActivityTypes && (
+        <div className="chart-row">
+          <ChartCard
+            title="Issues by Activity Type"
+            tooltip="Per-engineer Jira issues broken down by activity type for the selected quarter."
+            testId="chart-activity-type-breakdown"
+          >
+            <ActivityTypeChart
+              quarters={quarters}
+              names={names}
+              colors={colors}
+              selectedEngineers={selected}
+              activityTypeNames={activityTypeNames}
+              quarterLabels={quarterLabels}
+            />
+          </ChartCard>
+        </div>
+      )}
       <div className="chart-row">
         {hasJira && (
           <ChartCard

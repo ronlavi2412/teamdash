@@ -276,3 +276,61 @@ class TestScoringDashboard:
     def test_scoring_config_data(self, sample_config):
         data = _build_config_data(sample_config, has_scoring=True)
         assert data["scoring"]["size_points"]["XL"] == 21
+
+
+class TestActivityTypeDashboard:
+    def test_has_activity_types_false_without_data(self, two_quarter_summaries, sample_config):
+        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        assert data["hasActivityTypes"] is False
+        assert data["activityTypeNames"] == []
+
+    def test_has_activity_types_true_with_data(self, sample_config, sample_quarter, sample_quarter_prev):
+        from teamdash.models import EngineerQuarterMetrics
+        summaries = [
+            QuarterSummary(
+                quarter=sample_quarter_prev,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6),
+                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                ],
+            ),
+            QuarterSummary(
+                quarter=sample_quarter,
+                engineers=[
+                    EngineerQuarterMetrics(
+                        name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8,
+                        activity_type_counts={"Incidents & Support": 3, "Security & Compliance": 1},
+                    ),
+                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4),
+                ],
+            ),
+        ]
+        data = _build_dashboard_data(sample_config, summaries)
+        assert data["hasActivityTypes"] is True
+        assert "Incidents & Support" in data["activityTypeNames"]
+        assert "Security & Compliance" in data["activityTypeNames"]
+
+    def test_activity_types_in_quarter_data(self, sample_config, sample_quarter, sample_quarter_prev):
+        from teamdash.models import EngineerQuarterMetrics
+        summaries = [
+            QuarterSummary(
+                quarter=sample_quarter_prev,
+                engineers=[
+                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6),
+                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                ],
+            ),
+            QuarterSummary(
+                quarter=sample_quarter,
+                engineers=[
+                    EngineerQuarterMetrics(
+                        name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8,
+                        activity_type_counts={"Incidents & Support": 3},
+                    ),
+                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4),
+                ],
+            ),
+        ]
+        data = _build_dashboard_data(sample_config, summaries)
+        assert data["quarters"][1]["activity_types"][0] == {"Incidents & Support": 3}
+        assert data["quarters"][1]["activity_types"][1] == {}

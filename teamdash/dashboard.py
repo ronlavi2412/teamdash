@@ -74,6 +74,7 @@ def _build_table_row_data(
                 "story_points": eng.story_points if eng else 0,
                 "review_story_points": eng.review_story_points if eng else 0,
                 "verified_bugs": eng.verified_bugs if eng else 0,
+                "activity_type_counts": eng.activity_type_counts if eng else {},
             })
 
         cur_eng = {e.name: e for e in cur.engineers}.get(name)
@@ -128,6 +129,13 @@ def _build_dashboard_data(
 
     has_scoring = any(s.total_story_points > 0 for s in summaries)
     has_jira = any(e.verified_bugs > 0 for s in summaries for e in s.engineers)
+    has_activity_types = any(
+        e.activity_type_counts for s in summaries for e in s.engineers
+    )
+    activity_type_names = sorted({
+        at for s in summaries for e in s.engineers
+        for at in e.activity_type_counts
+    })
 
     today = date.today()
     is_current_quarter = date.fromisoformat(last_q.end) >= today
@@ -147,6 +155,7 @@ def _build_dashboard_data(
             "review_sp": [by_name.get(n, _zero(n, s.quarter.label)).review_story_points for n in names],
             "size_dist": [_size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names],
             "verified_bugs": [by_name.get(n, _zero(n, s.quarter.label)).verified_bugs for n in names],
+            "activity_types": [by_name.get(n, _zero(n, s.quarter.label)).activity_type_counts for n in names],
         })
 
     return {
@@ -161,6 +170,8 @@ def _build_dashboard_data(
         "isCurrentQuarter": is_current_quarter,
         "hasScoring": has_scoring,
         "hasJira": has_jira,
+        "hasActivityTypes": has_activity_types,
+        "activityTypeNames": activity_type_names,
         "config": _build_config_data(config, has_scoring),
         "tableRows": _build_table_row_data(summaries, names, has_scoring),
     }

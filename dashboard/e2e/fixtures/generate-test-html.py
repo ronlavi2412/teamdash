@@ -189,4 +189,66 @@ generate_dashboard(
     str(fixtures_dir / "test-dashboard-jira.html"),
 )
 
+
+def make_activity_type_summaries():
+    q_prev = Quarter(label="2024-Q4", start="2024-10-01", end="2024-12-31")
+    q_cur = Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")
+    prev = QuarterSummary(
+        quarter=q_prev,
+        engineers=[
+            EngineerQuarterMetrics(
+                name="Alice", quarter="2024-Q4",
+                github_prs=8, gitlab_mrs=4, reviews=6,
+                merge_time_days=2.5, verified_bugs=3,
+                activity_type_counts={
+                    "Incidents & Support": 2,
+                    "Product / Portfolio Work": 4,
+                    "Quality / Stability / Reliability": 1,
+                },
+            ),
+            EngineerQuarterMetrics(
+                name="Bob", quarter="2024-Q4",
+                github_prs=2, gitlab_mrs=1, reviews=3,
+                merge_time_days=3.1, verified_bugs=1,
+                activity_type_counts={
+                    "Incidents & Support": 1,
+                    "Security & Compliance": 1,
+                },
+            ),
+        ],
+    )
+    cur = QuarterSummary(
+        quarter=q_cur,
+        engineers=[
+            EngineerQuarterMetrics(
+                name="Alice", quarter="2025-Q1",
+                github_prs=10, gitlab_mrs=5, reviews=8,
+                merge_time_days=1.8, verified_bugs=5,
+                activity_type_counts={
+                    "Incidents & Support": 3,
+                    "Product / Portfolio Work": 5,
+                    "Quality / Stability / Reliability": 2,
+                    "Security & Compliance": 1,
+                },
+            ),
+            EngineerQuarterMetrics(
+                name="Bob", quarter="2025-Q1",
+                github_prs=3, gitlab_mrs=2, reviews=4,
+                merge_time_days=2.4, verified_bugs=2,
+                activity_type_counts={
+                    "Product / Portfolio Work": 2,
+                    "Future Sustainability": 1,
+                },
+            ),
+        ],
+    )
+    return [prev, cur]
+
+
+generate_dashboard(
+    make_jira_config(),
+    make_activity_type_summaries(),
+    str(fixtures_dir / "test-dashboard-activity-types.html"),
+)
+
 print("Generated test HTML fixtures.")

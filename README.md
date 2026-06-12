@@ -33,7 +33,8 @@ teamdash team.yaml -q 6               # last 6 quarters
 teamdash team.yaml --no-cache          # skip cache, fetch fresh data
 teamdash team.yaml --include-current   # include the current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation (faster)
-teamdash team.yaml --jira-data jira-bugs.json  # include Jira verified bugs data
+teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
+teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs + activity types)
 ```
 
 ## Configuration
@@ -91,13 +92,24 @@ engineers:
     jira_account_id: "712020:xxxx-xxxx-xxxx"
 ```
 
-Jira data is fetched separately via the Atlassian MCP (configured in `.mcp.json`). Use the `fetch-jira-bugs` Claude Code agent to collect bug counts, then pass the resulting JSON file to teamdash:
+Jira data is fetched separately via the Atlassian MCP (configured in `.mcp.json`). Use the `fetch-jira-data` Claude Code agent to collect bug counts and activity type breakdown, then pass the resulting JSON file to teamdash:
 
 ```bash
-teamdash team.yaml --jira-data jira-bugs.json
+teamdash team.yaml --jira-data jira-data.json
 ```
 
-The JSON file format is `{"2025-Q1": {"Engineer Name": 5, ...}, ...}` mapping quarters to per-engineer verified bug counts.
+The JSON file maps quarters to per-engineer verified bug counts, with an optional `activity_types` section for issue breakdown by activity type:
+
+```json
+{
+  "2025-Q1": {"Engineer Name": 5, ...},
+  "activity_types": {
+    "2025-Q1": {
+      "Engineer Name": {"Incidents & Support": 3, "Product / Portfolio Work": 2}
+    }
+  }
+}
+```
 
 ### Scoring Configuration
 
@@ -120,7 +132,6 @@ scoring:
     M: ["size/m", "t-shirt/m"]
     L: ["size/l", "t-shirt/l"]
     XL: ["size/xl", "t-shirt/xl"]
-  qe_labels: ["qe-task", "needs-qe-validation", "bug", "type/bug"]
 ```
 
 All scoring fields are optional; omitted fields use the defaults shown above. Use `--no-scoring` to skip story point estimation entirely.
@@ -147,7 +158,7 @@ Each signal maps to a t-shirt size (XS/S/M/L/XL) via configurable thresholds. Th
 
 Points are assigned per size: XS=2, S=5, M=8, L=13, XL=21 (Fibonacci-like, configurable).
 
-PRs with QE-related labels (e.g., `bug`, `qe-task`) are tracked as QE points separately from dev points. Review complexity scores the PRs reviewed by each engineer using the same sizing logic. XL PRs are flagged with "should-split" as a suggestion to break them into smaller changesets.
+Review complexity scores the PRs reviewed by each engineer using the same sizing logic. XL PRs are flagged with "should-split" as a suggestion to break them into smaller changesets.
 
 Use `--no-scoring` to skip estimation for faster runs with fewer API calls.
 
@@ -187,19 +198,25 @@ teamdash/
     scoring.py          # Story point estimation engine
     fetch_github.py     # GitHub data fetching via gh CLI
     fetch_gitlab.py     # GitLab data fetching via glab CLI
-    fetch_jira.py       # Jira verified bugs data loader (reads pre-fetched JSON)
+    fetch_jira.py       # Jira data loader (verified bugs + activity types from pre-fetched JSON)
     aggregate.py        # Orchestration, caching, and parallelization
-    dashboard.py        # HTML dashboard generation
+    dashboard.py        # HTML dashboard generation (embeds React bundle)
+  dashboard/
+    src/                # React/TypeScript frontend (Chart.js charts)
+    e2e/                # Playwright end-to-end tests
+    vite.config.ts      # Vite build config
   tests/
+    conftest.py
     test_aggregate.py
     test_config.py
     test_dashboard.py
+    test_e2e.py
     test_fetch_github.py
     test_fetch_gitlab.py
+    test_fetch_jira.py
     test_models.py
     test_quarters.py
     test_scoring.py
-    test_fetch_jira.py
   config/               # Team YAML configs (git-ignored)
   publish.sh            # GitHub Pages deployment script
   pyproject.toml        # Package configuration

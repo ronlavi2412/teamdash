@@ -9,6 +9,7 @@ export interface QuarterData {
   review_sp: number[];
   size_dist: SizeDistribution[];
   verified_bugs: number[];
+  activity_types: Record<string, number>[];
 }
 
 export interface SizeDistribution {
@@ -56,6 +57,7 @@ export interface QuarterMetrics {
   story_points: number;
   review_story_points: number;
   verified_bugs: number;
+  activity_type_counts: Record<string, number>;
 }
 
 export interface DashboardData {
@@ -70,6 +72,8 @@ export interface DashboardData {
   isCurrentQuarter: boolean;
   hasScoring: boolean;
   hasJira: boolean;
+  hasActivityTypes: boolean;
+  activityTypeNames: string[];
   config: ConfigData;
   tableRows: TableRowData[];
 }

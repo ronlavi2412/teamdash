@@ -118,3 +118,34 @@ class TestQuarterSummary:
     def test_verified_bugs_default_zero(self):
         m = EngineerQuarterMetrics(name="X", quarter="Q1")
         assert m.verified_bugs == 0
+
+    def test_activity_type_counts_default_empty(self):
+        m = EngineerQuarterMetrics(name="X", quarter="Q1")
+        assert m.activity_type_counts == {}
+
+    def test_total_activity_type_counts(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(
+                name="A", quarter="Q1",
+                activity_type_counts={"Incidents & Support": 3, "Security & Compliance": 1},
+            ),
+            EngineerQuarterMetrics(
+                name="B", quarter="Q1",
+                activity_type_counts={"Incidents & Support": 2, "Product / Portfolio Work": 4},
+            ),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        totals = s.total_activity_type_counts
+        assert totals == {
+            "Incidents & Support": 5,
+            "Security & Compliance": 1,
+            "Product / Portfolio Work": 4,
+        }
+
+    def test_total_activity_type_counts_empty(self, sample_quarter):
+        engineers = [
+            EngineerQuarterMetrics(name="A", quarter="Q1"),
+            EngineerQuarterMetrics(name="B", quarter="Q1"),
+        ]
+        s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
+        assert s.total_activity_type_counts == {}

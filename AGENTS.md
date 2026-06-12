@@ -9,7 +9,7 @@ Teamdash is a Python CLI tool that generates interactive HTML dashboards from Gi
 Single-package Python project (`teamdash/`) with no framework. The data flow is:
 
 ```
-team.yaml -> config.py -> aggregate.py -> dashboard.py -> HTML file
+team.yaml -> config.py -> cli.py -> aggregate.py -> dashboard.py -> HTML file
                  |              |
            scoring.py     fetch_github.py (gh api subprocess)
            (ScoringConfig) fetch_gitlab.py (glab api subprocess)
@@ -23,17 +23,16 @@ scoring.py  -- story point estimation from PR metadata
 - **No web framework** -- generates static HTML, no server
 - **No ORM or database** -- data is fetched live from APIs and cached as JSON in `~/.cache/teamdash/`
 - **External CLIs** -- uses `gh` and `glab` subprocesses for API auth, not raw HTTP requests
-- **Jira integration** -- verified bug counts are loaded from a pre-fetched JSON file (produced by the Atlassian MCP via the `fetch-jira-bugs` Claude Code agent); configured via `.mcp.json`
-- **Chart.js v4** loaded from CDN in the generated HTML
+- **Jira integration** -- verified bug counts and activity type breakdown are loaded from a pre-fetched JSON file (produced by the Atlassian MCP via the `fetch-jira-data` Claude Code agent); configured via `.mcp.json`
+- **React frontend** -- dashboard UI is a React/TypeScript app in `dashboard/` built with Vite and Chart.js, compiled into a JS/CSS bundle that `dashboard.py` embeds in the output HTML
 - **`publish.sh`** -- deploys dashboard HTML to GitHub Pages via `gh-pages` branch
 
 ## Key Patterns
 
 - API calls use subprocess to `gh api` / `glab api` rather than HTTP libraries, leveraging the user's existing CLI auth sessions
 - **Rate limit handling**: GitHub search API has a 30 req/min limit. On 403 or "rate limit" errors, `fetch_github.py` sleeps 60s then retries once. Individual PR detail fetches sleep 0.5s between requests
-- **Parallelization**: `aggregate.py` uses `ThreadPoolExecutor` with 4 workers for fetching across engineer/quarter combinations. Within each engineer fetch, a nested `ThreadPoolExecutor` with up to 5 workers parallelizes GitHub/GitLab API calls
-- Dashboard HTML is built with Python f-strings from a large template constant in `dashboard.py` (~700 lines)
-- All data is passed to the template as inline JavaScript arrays
+- **Parallelization**: `aggregate.py` uses `ThreadPoolExecutor` with 2 workers for fetching across engineer/quarter combinations. Within each engineer fetch, a nested `ThreadPoolExecutor` with up to 5 workers parallelizes GitHub/GitLab API calls
+- `dashboard.py` serializes data as JSON into `window.__DASHBOARD_DATA__` and embeds the React bundle from `dashboard/dist/`
 - Caching is daily and keyed by config hash (MD5 of team name, orgs, engineers, and scoring config); `--no-cache` skips reading the cache but still writes it
 - **Scoring**: story point estimation uses 4 signals (diff size, files changed, review friction, merge time) to classify PRs as XS/S/M/L/XL. PR labels can override the heuristic. Scoring is enabled by default; `--no-scoring` skips it for faster runs
 - **Data models**: all structured data uses `dataclasses` in `models.py` (no Pydantic). Key classes: `PRDetail`, `ScoredPR`, `EngineerQuarterMetrics`, `QuarterSummary`
@@ -48,7 +47,8 @@ teamdash team.yaml -q 6               # last 6 quarters
 teamdash team.yaml --no-cache          # skip cache, fetch fresh data
 teamdash team.yaml --include-current   # include current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation
-teamdash team.yaml --jira-data jira-bugs.json  # include Jira verified bugs
+teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
+teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs + activity types)
 ```
 
 ## Testing
@@ -58,7 +58,7 @@ pip install -e ".[dev]"
 python -m pytest tests/ -x -q
 ```
 
-250 tests across 9 test files covering all modules: scoring, dashboard, aggregate, config, fetch_github, fetch_gitlab, fetch_jira, models, and quarters. Tests use `unittest.mock` to patch subprocess calls and avoid real API hits.
+10 test files covering all modules: scoring, dashboard, aggregate, config, fetch_github, fetch_gitlab, fetch_jira, models, quarters, and e2e. Tests use `unittest.mock` to patch subprocess calls and avoid real API hits.
 
 ## Style
 

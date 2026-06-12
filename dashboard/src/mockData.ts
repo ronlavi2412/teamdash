@@ -22,6 +22,10 @@ export const mockData: DashboardData = {
         { XS: 1, S: 1, M: 1, L: 0, XL: 0 },
       ],
       verified_bugs: [3, 1],
+      activity_types: [
+        { "Incidents & Support": 2, "Product / Portfolio Work": 4, "Quality / Stability / Reliability": 1, "Security & Compliance": 0, "Future Sustainability": 1, "Associate Wellness & Development": 0 },
+        { "Incidents & Support": 1, "Product / Portfolio Work": 1, "Quality / Stability / Reliability": 0, "Security & Compliance": 1, "Future Sustainability": 0, "Associate Wellness & Development": 0 },
+      ],
     },
     {
       label: "Q1'25",
@@ -37,12 +41,25 @@ export const mockData: DashboardData = {
         { XS: 1, S: 2, M: 1, L: 1, XL: 0 },
       ],
       verified_bugs: [5, 2],
+      activity_types: [
+        { "Incidents & Support": 3, "Product / Portfolio Work": 5, "Quality / Stability / Reliability": 2, "Security & Compliance": 1, "Future Sustainability": 0, "Associate Wellness & Development": 1 },
+        { "Incidents & Support": 0, "Product / Portfolio Work": 2, "Quality / Stability / Reliability": 1, "Security & Compliance": 0, "Future Sustainability": 1, "Associate Wellness & Development": 0 },
+      ],
     },
   ],
   currentQuarterIndex: -1,
   isCurrentQuarter: false,
   hasScoring: true,
   hasJira: true,
+  hasActivityTypes: true,
+  activityTypeNames: [
+    "Associate Wellness & Development",
+    "Future Sustainability",
+    "Incidents & Support",
+    "Product / Portfolio Work",
+    "Quality / Stability / Reliability",
+    "Security & Compliance",
+  ],
   config: {
     github_orgs: ["test-org"],
     gitlab_url: "https://gitlab.example.com",
@@ -63,16 +80,16 @@ export const mockData: DashboardData = {
     {
       name: "Alice",
       quarters: [
-        { total: 12, github_prs: 8, gitlab_mrs: 4, reviews: 6, merge_time: 2.5, story_points: 35, review_story_points: 18, verified_bugs: 3 },
-        { total: 15, github_prs: 10, gitlab_mrs: 5, reviews: 8, merge_time: 1.8, story_points: 34, review_story_points: 21, verified_bugs: 5 },
+        { total: 12, github_prs: 8, gitlab_mrs: 4, reviews: 6, merge_time: 2.5, story_points: 35, review_story_points: 18, verified_bugs: 3, activity_type_counts: { "Incidents & Support": 2, "Product / Portfolio Work": 4, "Quality / Stability / Reliability": 1 } },
+        { total: 15, github_prs: 10, gitlab_mrs: 5, reviews: 8, merge_time: 1.8, story_points: 34, review_story_points: 21, verified_bugs: 5, activity_type_counts: { "Incidents & Support": 3, "Product / Portfolio Work": 5, "Quality / Stability / Reliability": 2 } },
       ],
       growth: "+25%",
     },
     {
       name: "Bob",
       quarters: [
-        { total: 3, github_prs: 2, gitlab_mrs: 1, reviews: 3, merge_time: 3.1, story_points: 10, review_story_points: 10, verified_bugs: 1 },
-        { total: 5, github_prs: 3, gitlab_mrs: 2, reviews: 4, merge_time: 2.4, story_points: 16, review_story_points: 13, verified_bugs: 2 },
+        { total: 3, github_prs: 2, gitlab_mrs: 1, reviews: 3, merge_time: 3.1, story_points: 10, review_story_points: 10, verified_bugs: 1, activity_type_counts: { "Incidents & Support": 1, "Security & Compliance": 1 } },
+        { total: 5, github_prs: 3, gitlab_mrs: 2, reviews: 4, merge_time: 2.4, story_points: 16, review_story_points: 13, verified_bugs: 2, activity_type_counts: { "Product / Portfolio Work": 2, "Quality / Stability / Reliability": 1 } },
       ],
       growth: "+67%",
     },

@@ -48,6 +48,8 @@ export default function App({ data }: AppProps) {
             isCurrentQuarter={data.isCurrentQuarter}
             hasScoring={data.hasScoring}
             hasJira={data.hasJira}
+            hasActivityTypes={data.hasActivityTypes}
+            activityTypeNames={data.activityTypeNames}
           />
         )}
         {activeTab === 'overview' && (
@@ -59,6 +61,9 @@ export default function App({ data }: AppProps) {
             isCurrentQuarter={data.isCurrentQuarter}
             hasScoring={data.hasScoring}
             hasJira={data.hasJira}
+            hasActivityTypes={data.hasActivityTypes}
+            activityTypeNames={data.activityTypeNames}
+            quarterLabels={data.quarterLabels}
           />
         )}
         {activeTab === 'table' && (
