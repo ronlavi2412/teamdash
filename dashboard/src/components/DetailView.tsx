@@ -93,8 +93,8 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
       {hasActivityTypes && (
         <div className="chart-row">
           <ChartCard
-            title="Issues by Activity Type"
-            tooltip="Per-engineer Jira issues broken down by activity type for the selected quarter."
+            title="Story Points by Activity Type"
+            tooltip="Per-engineer Jira story points broken down by activity type for the selected quarter. Issues without story points default to 2 SP."
             testId="chart-activity-type-breakdown"
           >
             <ActivityTypeChart
@@ -111,8 +111,8 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
       <div className="chart-row">
         {hasJira && (
           <ChartCard
-            title="Verified Bugs per Quarter"
-            tooltip="Jira bugs resolved as Done per engineer during the quarter."
+            title="Verified Bugs SP per Quarter"
+            tooltip="Story points of Jira bugs resolved as Done per engineer during the quarter."
             testId="chart-verified-bugs-trend"
           >
             <DetailLineChart

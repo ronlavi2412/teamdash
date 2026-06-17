@@ -156,12 +156,12 @@ def make_jira_summaries():
             EngineerQuarterMetrics(
                 name="Alice", quarter="2024-Q4",
                 github_prs=8, gitlab_mrs=4, reviews=6,
-                merge_time_days=2.5, verified_bugs=3,
+                merge_time_days=2.5, verified_bugs=6,
             ),
             EngineerQuarterMetrics(
                 name="Bob", quarter="2024-Q4",
                 github_prs=2, gitlab_mrs=1, reviews=3,
-                merge_time_days=3.1, verified_bugs=1,
+                merge_time_days=3.1, verified_bugs=2,
             ),
         ],
     )
@@ -171,12 +171,12 @@ def make_jira_summaries():
             EngineerQuarterMetrics(
                 name="Alice", quarter="2025-Q1",
                 github_prs=10, gitlab_mrs=5, reviews=8,
-                merge_time_days=1.8, verified_bugs=5,
+                merge_time_days=1.8, verified_bugs=10,
             ),
             EngineerQuarterMetrics(
                 name="Bob", quarter="2025-Q1",
                 github_prs=3, gitlab_mrs=2, reviews=4,
-                merge_time_days=2.4, verified_bugs=2,
+                merge_time_days=2.4, verified_bugs=4,
             ),
         ],
     )
@@ -199,20 +199,20 @@ def make_activity_type_summaries():
             EngineerQuarterMetrics(
                 name="Alice", quarter="2024-Q4",
                 github_prs=8, gitlab_mrs=4, reviews=6,
-                merge_time_days=2.5, verified_bugs=3,
+                merge_time_days=2.5, verified_bugs=6,
                 activity_type_counts={
-                    "Incidents & Support": 2,
-                    "Product / Portfolio Work": 4,
-                    "Quality / Stability / Reliability": 1,
+                    "Incidents & Support": 10,
+                    "Product / Portfolio Work": 18,
+                    "Quality / Stability / Reliability": 5,
                 },
             ),
             EngineerQuarterMetrics(
                 name="Bob", quarter="2024-Q4",
                 github_prs=2, gitlab_mrs=1, reviews=3,
-                merge_time_days=3.1, verified_bugs=1,
+                merge_time_days=3.1, verified_bugs=2,
                 activity_type_counts={
-                    "Incidents & Support": 1,
-                    "Security & Compliance": 1,
+                    "Incidents & Support": 2,
+                    "Security & Compliance": 3,
                 },
             ),
         ],
@@ -223,21 +223,21 @@ def make_activity_type_summaries():
             EngineerQuarterMetrics(
                 name="Alice", quarter="2025-Q1",
                 github_prs=10, gitlab_mrs=5, reviews=8,
-                merge_time_days=1.8, verified_bugs=5,
+                merge_time_days=1.8, verified_bugs=10,
                 activity_type_counts={
-                    "Incidents & Support": 3,
-                    "Product / Portfolio Work": 5,
-                    "Quality / Stability / Reliability": 2,
-                    "Security & Compliance": 1,
+                    "Incidents & Support": 14,
+                    "Product / Portfolio Work": 22,
+                    "Quality / Stability / Reliability": 8,
+                    "Security & Compliance": 3,
                 },
             ),
             EngineerQuarterMetrics(
                 name="Bob", quarter="2025-Q1",
                 github_prs=3, gitlab_mrs=2, reviews=4,
-                merge_time_days=2.4, verified_bugs=2,
+                merge_time_days=2.4, verified_bugs=4,
                 activity_type_counts={
-                    "Product / Portfolio Work": 2,
-                    "Future Sustainability": 1,
+                    "Product / Portfolio Work": 10,
+                    "Future Sustainability": 5,
                 },
             ),
         ],

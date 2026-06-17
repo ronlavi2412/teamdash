@@ -104,7 +104,7 @@ export function FullTable({ tableRows, quarterLabels, hasScoring, hasJira }: Ful
   }
   if (hasJira) {
     for (const ql of quarterLabels) {
-      headers.push({ label: `Bugs ${ql}`, isNum: true });
+      headers.push({ label: `Bugs SP ${ql}`, isNum: true });
     }
   }
 

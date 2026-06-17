@@ -55,7 +55,7 @@ export function TeamActivityTypeChart({
     },
     scales: {
       x: { stacked: true },
-      y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Issues' } },
+      y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Story Points' } },
     },
   }), []);
 

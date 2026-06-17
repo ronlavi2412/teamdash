@@ -23,7 +23,7 @@ scoring.py  -- story point estimation from PR metadata
 - **No web framework** -- generates static HTML, no server
 - **No ORM or database** -- data is fetched live from APIs and cached as JSON in `~/.cache/teamdash/`
 - **External CLIs** -- uses `gh` and `glab` subprocesses for API auth, not raw HTTP requests
-- **Jira integration** -- verified bug counts and activity type breakdown are loaded from a pre-fetched JSON file (produced by the Atlassian MCP via the `fetch-jira-data` Claude Code agent); configured via `.mcp.json`
+- **Jira integration** -- verified bug story point sums and activity type story point sums are loaded from a pre-fetched JSON file (produced by the Atlassian MCP via the `fetch-jira-data` Claude Code agent); configured via `.mcp.json`
 - **React frontend** -- dashboard UI is a React/TypeScript app in `dashboard/` built with Vite and Chart.js, compiled into a JS/CSS bundle that `dashboard.py` embeds in the output HTML
 - **`publish.sh`** -- deploys dashboard HTML to GitHub Pages via `gh-pages` branch
 

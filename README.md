@@ -92,13 +92,13 @@ engineers:
     jira_account_id: "712020:xxxx-xxxx-xxxx"
 ```
 
-Jira data is fetched separately via the Atlassian MCP (configured in `.mcp.json`). Use the `fetch-jira-data` Claude Code agent to collect bug counts and activity type breakdown, then pass the resulting JSON file to teamdash:
+Jira data is fetched separately via the Atlassian MCP (configured in `.mcp.json`). Use the `fetch-jira-data` Claude Code agent to collect verified bug story point sums and activity type story point sums, then pass the resulting JSON file to teamdash:
 
 ```bash
 teamdash team.yaml --jira-data jira-data.json
 ```
 
-The JSON file maps quarters to per-engineer verified bug counts, with an optional `activity_types` section for issue breakdown by activity type:
+The JSON file maps quarters to per-engineer verified bug story point sums, with an optional `activity_types` section for story point sums by activity type:
 
 ```json
 {

@@ -88,8 +88,8 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
         )}
         {hasJira && (
           <ChartCard
-            title="Total Verified Bugs per Quarter"
-            tooltip="Total Jira bugs resolved as Done during the quarter across all team members."
+            title="Verified Bugs SP per Quarter"
+            tooltip="Total story points of Jira bugs resolved as Done during the quarter across all team members."
             testId="chart-team-verified-bugs"
           >
             <TeamBarChart
@@ -97,7 +97,7 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
               getData={q => q.verified_bugs.reduce((a, b) => a + b, 0)}
               color="#ef4444"
               borderColor="#dc2626"
-              label="Total Verified Bugs"
+              label="Verified Bugs SP"
               currentQuarterIndex={currentQuarterIndex}
               isCurrentQuarter={isCurrentQuarter}
             />
@@ -105,8 +105,8 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
         )}
         {hasActivityTypes && (
           <ChartCard
-            title="Issues by Activity Type per Quarter"
-            tooltip="Total Jira issues resolved per quarter, broken down by activity type across all team members."
+            title="Story Points by Activity Type per Quarter"
+            tooltip="Total Jira story points resolved per quarter, broken down by activity type across all team members. Issues without story points default to 2 SP."
             testId="chart-team-activity-types"
           >
             <TeamActivityTypeChart

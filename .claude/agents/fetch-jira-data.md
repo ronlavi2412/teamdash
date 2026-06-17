@@ -1,11 +1,11 @@
 ---
 name: fetch-jira-data
-description: Fetch verified bug counts and activity type breakdown from Jira for each engineer per quarter and write a JSON file for use with teamdash --jira-data
+description: Fetch verified bug story point sums and activity type story point sums from Jira for each engineer per quarter and write a JSON file for use with teamdash --jira-data
 ---
 
 # Fetch Jira Data
 
-Collect per-engineer, per-quarter verified bug counts and activity type issue counts from Jira and write a JSON file that teamdash can consume via `--jira-data`.
+Collect per-engineer, per-quarter verified bug story point sums and activity type story point sums from Jira and write a JSON file that teamdash can consume via `--jira-data`.
 
 ## Steps
 
@@ -20,21 +20,26 @@ Collect per-engineer, per-quarter verified bug counts and activity type issue co
    - Q3: Jul 1 – Sep 30
    - Q4: Oct 1 – Dec 31
 
-3. **Query Jira for verified bugs** — for each engineer/quarter combination, use the Atlassian MCP tool `searchJiraIssuesUsingJql` with:
+3. **Query Jira for verified bugs (story points)** — for each engineer/quarter combination, use the Atlassian MCP tool `searchJiraIssuesUsingJql` with:
    - `cloudId`: the `jira.cloud_id` from config
-   - `jql`: `issuetype = Bug AND resolution = Done AND resolutiondate >= "{quarter_start}" AND resolutiondate <= "{quarter_end}" AND (assignee = "{jira_account_id}" OR cf[10470] = "{jira_account_id}") AND project in ({project_keys})`
-   - The `cf[10470]` is the QA Contact custom field — bugs count for an engineer if they are the assignee OR the QA contact
-   - `maxResults`: 1 (we only need the `total` count)
-   - `fields`: `["summary"]`
+   - `jql`: `issuetype = Bug AND resolution in (Done, "Done-Errata") AND resolutiondate >= "{quarter_start}" AND resolutiondate <= "{quarter_end}" AND cf[10470] = "{jira_account_id}" AND project in ({project_keys})`
+   - The `cf[10470]` is the QA Contact custom field — bugs count for an engineer if they are the QA contact
+   - `maxResults`: 100
+   - `fields`: `["summary", "customfield_10028"]`
 
-   The `total` field in the response gives the bug count. If an engineer has no `jira_account_id`, skip them (count = 0).
+   The `customfield_10028` field is "Story Points". For each returned issue, read this field. **If story points is null, 0, or missing, use a default of 2.** Sum the story points for all issues to get the total for that engineer/quarter. If results exceed `maxResults`, paginate using `nextPageToken` until all issues are fetched. If an engineer has no `jira_account_id`, skip them (SP = 0).
 
-4. **Discover the Activity Type custom field** — inspect a sample issue or use `getJiraIssueTypeMetaWithFields` to find the custom field ID for "Activity Type" (a dropdown field). The field name in JQL is typically `"Activity Type"` or `cf[XXXXX]`.
+4. **Discover the Activity Type and Story Points custom fields** — inspect a sample issue (use `getJiraIssue` with `fields: ["*all"]`) or use `getJiraIssueTypeMetaWithFields` to find:
+   - The custom field ID for "Activity Type" (a dropdown field). The field name in JQL is typically `"Activity Type"` or `cf[XXXXX]`.
+   - The field name for story points. Common names: `story_points` (Jira Cloud next-gen) or `customfield_10016` (Jira Cloud classic). Check which one is present on sample issues.
 
-5. **Query Jira for activity type counts** — for each engineer/quarter/activity-type combination, query **all resolved issues** (not just bugs):
-   - `jql`: `resolution = Done AND resolutiondate >= "{quarter_start}" AND resolutiondate <= "{quarter_end}" AND (assignee = "{jira_account_id}" OR cf[10470] = "{jira_account_id}") AND "Activity Type" = "{activity_type_value}" AND project in ({project_keys})`
-   - `maxResults`: 1 (we only need the `total` count)
-   - `fields`: `["summary"]`
+5. **Query Jira for activity type story point sums** — for each engineer/quarter/activity-type combination, query **all resolved issues** (not just bugs):
+   - `jql`: `resolution in (Done, "Done-Errata") AND issuetype in (Bug, Task, Story, Vulnerability) AND resolutiondate >= "{quarter_start}" AND resolutiondate <= "{quarter_end}" AND (assignee = "{jira_account_id}" OR cf[10470] = "{jira_account_id}") AND "Activity Type" = "{activity_type_value}" AND project in ({project_keys})`
+   - `maxResults`: 100
+   - `fields`: `["summary", "story_points"]` (or the discovered story points field name)
+   - If results exceed `maxResults`, paginate using `nextPageToken` until all issues are fetched.
+
+   For each returned issue, read the story points field. **If story points is null, 0, or missing, use a default of 2.** Sum the story points for all issues in the result set to get the total for that activity type.
 
    The 6 activity type values are:
    - Associate Wellness & Development
@@ -44,7 +49,7 @@ Collect per-engineer, per-quarter verified bug counts and activity type issue co
    - Security & Compliance
    - Product / Portfolio Work
 
-6. **Build the JSON structure**:
+6. **Build the JSON structure** (all values are story point sums — both verified bugs and activity types):
    ```json
    {
      "2025-Q3": {"Engineer Name": 5, "Other Engineer": 3},
@@ -52,8 +57,8 @@ Collect per-engineer, per-quarter verified bug counts and activity type issue co
      "activity_types": {
        "2025-Q3": {
          "Engineer Name": {
-           "Incidents & Support": 3,
-           "Product / Portfolio Work": 2
+           "Incidents & Support": 14,
+           "Product / Portfolio Work": 8
          }
        }
      }
@@ -76,4 +81,5 @@ teamdash config/team-rlavi.yaml --jira-data jira-data.json
 - The Atlassian MCP uses browser OAuth — first-time users will get a browser auth prompt.
 - If Jira returns exactly 100 results for `maxResults: 1`, the `total` field still reflects the true count.
 - Engineer names in the JSON must exactly match the names in the team YAML config.
-- Activity type counts include all resolved issue types (Stories, Tasks, Bugs, etc.), not just bugs.
+- Activity type story point sums include all resolved issue types (Stories, Tasks, Bugs, etc.), not just bugs.
+- Issues without story points (null, 0, or missing) default to 2 SP.
