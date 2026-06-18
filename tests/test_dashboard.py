@@ -6,7 +6,7 @@ import os
 from teamdash.config import EngineerConfig, TeamConfig
 from teamdash.models import EngineerQuarterMetrics, QuarterSummary
 from teamdash.dashboard import (
-    _build_dashboard_data,
+    build_dashboard_data,
     _build_config_data,
     _build_table_row_data,
     _delta_class,
@@ -61,15 +61,15 @@ class TestDeltaClass:
 
 class TestBuildDashboardData:
     def test_contains_names(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["names"] == ["Alice", "Bob"]
 
     def test_contains_quarter_labels(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["quarterLabels"] == ["Q4'24", "Q1'25"]
 
     def test_contains_quarters_data(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert len(data["quarters"]) == 2
         q = data["quarters"][0]
         assert "gh_prs" in q
@@ -78,23 +78,23 @@ class TestBuildDashboardData:
         assert "merge_time" in q
 
     def test_has_scoring_false_without_scoring(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["hasScoring"] is False
 
     def test_has_scoring_true_with_scoring(self, two_quarter_summaries_with_scoring, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries_with_scoring)
+        data = build_dashboard_data(sample_config, two_quarter_summaries_with_scoring)
         assert data["hasScoring"] is True
 
     def test_colors_match_engineers(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert len(data["colors"]) == 2
 
     def test_title_contains_team_name(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert "Test Team" in data["title"]
 
     def test_data_is_json_serializable(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         json.dumps(data)
 
 
@@ -170,7 +170,7 @@ class TestGenerateDashboard:
 
 class TestJiraDashboard:
     def test_has_jira_false_without_bugs(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["hasJira"] is False
 
     def test_has_jira_true_with_bugs(self, sample_config, sample_quarter, sample_quarter_prev):
@@ -191,7 +191,7 @@ class TestJiraDashboard:
                 ],
             ),
         ]
-        data = _build_dashboard_data(sample_config, summaries)
+        data = build_dashboard_data(sample_config, summaries)
         assert data["hasJira"] is True
 
     def test_verified_bugs_in_quarter_data(self, sample_config, sample_quarter, sample_quarter_prev):
@@ -212,7 +212,7 @@ class TestJiraDashboard:
                 ],
             ),
         ]
-        data = _build_dashboard_data(sample_config, summaries)
+        data = build_dashboard_data(sample_config, summaries)
         assert data["quarters"][1]["verified_bugs"] == [5, 3]
 
     def test_verified_bugs_in_table_rows(self, sample_config, sample_quarter, sample_quarter_prev):
@@ -260,7 +260,7 @@ class TestJiraConfigData:
 
 class TestScoringDashboard:
     def test_scoring_data_present(self, two_quarter_summaries_with_scoring, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries_with_scoring)
+        data = build_dashboard_data(sample_config, two_quarter_summaries_with_scoring)
         q = data["quarters"][1]
         assert q["sp"] == [34, 16]
         assert q["xl_count"] == [1, 0]
@@ -280,7 +280,7 @@ class TestScoringDashboard:
 
 class TestActivityTypeDashboard:
     def test_has_activity_types_false_without_data(self, two_quarter_summaries, sample_config):
-        data = _build_dashboard_data(sample_config, two_quarter_summaries)
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["hasActivityTypes"] is False
         assert data["activityTypeNames"] == []
 
@@ -305,7 +305,7 @@ class TestActivityTypeDashboard:
                 ],
             ),
         ]
-        data = _build_dashboard_data(sample_config, summaries)
+        data = build_dashboard_data(sample_config, summaries)
         assert data["hasActivityTypes"] is True
         assert "Incidents & Support" in data["activityTypeNames"]
         assert "Security & Compliance" in data["activityTypeNames"]
@@ -331,6 +331,6 @@ class TestActivityTypeDashboard:
                 ],
             ),
         ]
-        data = _build_dashboard_data(sample_config, summaries)
+        data = build_dashboard_data(sample_config, summaries)
         assert data["quarters"][1]["activity_types"][0] == {"Incidents & Support": 3}
         assert data["quarters"][1]["activity_types"][1] == {}

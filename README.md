@@ -27,6 +27,7 @@ Open `dashboard.html` in a browser.
 ## Usage
 
 ```bash
+# Combined (fetch + generate in one step)
 teamdash team.yaml                     # 4 quarters, output dashboard.html
 teamdash team.yaml -o report.html      # custom output path
 teamdash team.yaml -q 6               # last 6 quarters
@@ -35,6 +36,13 @@ teamdash team.yaml --include-current   # include the current (in-progress) quart
 teamdash team.yaml --no-scoring        # skip story point estimation (faster)
 teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
 teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs + activity types)
+
+# Fetch only (write data.json, no dashboard generation)
+teamdash fetch team.yaml -o data.json
+teamdash fetch team.yaml --jira-data jira-data.json -o data.json
+
+# Generate only (read data.json, no API calls)
+teamdash generate data.json -o dashboard.html
 ```
 
 ## Configuration

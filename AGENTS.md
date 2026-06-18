@@ -6,18 +6,25 @@ Teamdash is a Python CLI tool that generates interactive HTML dashboards from Gi
 
 ## Architecture
 
-Single-package Python project (`teamdash/`) with no framework. The data flow is:
+Single-package Python project (`teamdash/`) with no framework. Three CLI modes:
 
 ```
+# Combined (default): fetch + generate
 team.yaml -> config.py -> cli.py -> aggregate.py -> dashboard.py -> HTML file
-                 |              |
-           scoring.py     fetch_github.py (gh api subprocess)
-           (ScoringConfig) fetch_gitlab.py (glab api subprocess)
-                            fetch_jira.py  (reads pre-fetched JSON from Atlassian MCP)
 
-models.py   -- Quarter, PRDetail, ScoredPR, EngineerQuarterMetrics, QuarterSummary
-quarters.py -- date range calculation for N quarters
-scoring.py  -- story point estimation from PR metadata
+# Fetch only: produce data.json
+team.yaml -> config.py -> cli.py -> aggregate.py -> dashboard.py (build_dashboard_data) -> data.json
+
+# Generate only: read data.json, skip API calls
+data.json -> cli.py -> dashboard.py (generate_dashboard_from_data) -> HTML file
+
+Supporting modules:
+  fetch_github.py  -- gh api subprocess calls
+  fetch_gitlab.py  -- glab api subprocess calls
+  fetch_jira.py    -- reads pre-fetched JSON from Atlassian MCP
+  scoring.py       -- story point estimation from PR metadata (ScoringConfig)
+  models.py        -- Quarter, PRDetail, ScoredPR, EngineerQuarterMetrics, QuarterSummary
+  quarters.py      -- date range calculation for N quarters
 ```
 
 - **No web framework** -- generates static HTML, no server
@@ -41,6 +48,8 @@ scoring.py  -- story point estimation from PR metadata
 
 ```bash
 pip install .
+
+# Combined (fetch + generate in one step)
 teamdash team.yaml                     # 4 quarters, output dashboard.html
 teamdash team.yaml -o report.html      # custom output path
 teamdash team.yaml -q 6               # last 6 quarters
@@ -49,6 +58,13 @@ teamdash team.yaml --include-current   # include current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation
 teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
 teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs + activity types)
+
+# Fetch only (write data.json, no dashboard generation)
+teamdash fetch team.yaml -o data.json
+teamdash fetch team.yaml --jira-data jira-data.json -o data.json
+
+# Generate only (read data.json, no API calls)
+teamdash generate data.json -o dashboard.html
 ```
 
 ## Testing

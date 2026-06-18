@@ -114,7 +114,7 @@ def _build_config_data(config: TeamConfig, has_scoring: bool) -> dict:
     return data
 
 
-def _build_dashboard_data(
+def build_dashboard_data(
     config: TeamConfig,
     summaries: list[QuarterSummary],
 ) -> dict:
@@ -182,8 +182,11 @@ def generate_dashboard(
     summaries: list[QuarterSummary],
     output_path: str,
 ) -> None:
-    data = _build_dashboard_data(config, summaries)
+    data = build_dashboard_data(config, summaries)
+    generate_dashboard_from_data(data, output_path)
 
+
+def generate_dashboard_from_data(data: dict, output_path: str) -> None:
     dist_dir = Path(__file__).parent.parent / "dashboard" / "dist"
     js_path = dist_dir / "dashboard.js"
     css_path = dist_dir / "dashboard.css"
