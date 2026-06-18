@@ -38,6 +38,9 @@ def load_jira_data(path: str) -> JiraData | None:
         print(f"[WARN] Jira data must be a JSON object, got {type(data).__name__}", file=sys.stderr)
         return None
 
+    if "jiraData" in data:
+        data = data["jiraData"]
+
     bugs = {k: v for k, v in data.items() if k != "activity_types"}
     activity_types = data.get("activity_types", {})
 

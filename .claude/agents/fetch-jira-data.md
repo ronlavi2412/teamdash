@@ -73,7 +73,13 @@ Collect per-engineer, per-quarter verified bug story point sums and activity typ
 
 After running this agent, use the generated file with teamdash:
 ```bash
-teamdash config/team-rlavi.yaml --jira-data jira-data.json
+teamdash fetch config/team-rlavi.yaml --jira-data jira-data.json -o data.json
+teamdash generate data.json
+```
+
+The `data.json` file embeds the Jira data, so subsequent fetches can reuse it:
+```bash
+teamdash fetch config/team-rlavi.yaml --jira-data data.json -o data.json
 ```
 
 ## Notes

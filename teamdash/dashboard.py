@@ -117,6 +117,7 @@ def _build_config_data(config: TeamConfig, has_scoring: bool) -> dict:
 def build_dashboard_data(
     config: TeamConfig,
     summaries: list[QuarterSummary],
+    jira_raw: dict | None = None,
 ) -> dict:
     names = [e.name for e in summaries[0].engineers]
     colors = [COLORS[i % len(COLORS)] for i in range(len(names))]
@@ -158,7 +159,7 @@ def build_dashboard_data(
             "activity_types": [by_name.get(n, _zero(n, s.quarter.label)).activity_type_counts for n in names],
         })
 
-    return {
+    result = {
         "title": title,
         "subtitle": subtitle,
         "generated": generated,
@@ -175,6 +176,9 @@ def build_dashboard_data(
         "config": _build_config_data(config, has_scoring),
         "tableRows": _build_table_row_data(summaries, names, has_scoring),
     }
+    if jira_raw is not None:
+        result["jiraData"] = jira_raw
+    return result
 
 
 def generate_dashboard(

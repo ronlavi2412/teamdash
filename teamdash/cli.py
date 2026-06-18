@@ -57,9 +57,23 @@ def _do_fetch(args: argparse.Namespace) -> tuple:
     return config, summaries
 
 
+def _load_jira_raw(path: str) -> dict | None:
+    from pathlib import Path
+    try:
+        data = json.loads(Path(path).read_text())
+    except (json.JSONDecodeError, FileNotFoundError):
+        return None
+    if isinstance(data, dict) and "jiraData" in data:
+        return data["jiraData"]
+    if isinstance(data, dict):
+        return data
+    return None
+
+
 def _cmd_fetch(args: argparse.Namespace) -> None:
     config, summaries = _do_fetch(args)
-    data = build_dashboard_data(config, summaries)
+    jira_raw = _load_jira_raw(args.jira_data) if args.jira_data else None
+    data = build_dashboard_data(config, summaries, jira_raw=jira_raw)
     output = args.output or "data.json"
     with open(output, "w") as f:
         json.dump(data, f, indent=2)
