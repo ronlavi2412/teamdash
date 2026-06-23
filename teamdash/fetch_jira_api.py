@@ -109,7 +109,7 @@ def fetch_verified_bugs(
     jql = (
         f'issuetype = Bug AND resolution in (Done, "Done-Errata")'
         f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
-        f' AND (assignee = "{jira_account_id}" OR {QA_CONTACT_FIELD} = "{jira_account_id}")'
+        f' AND {QA_CONTACT_FIELD} = "{jira_account_id}"'
         f" AND {_project_clause(project_keys)}"
     )
     issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD], email, token)
