@@ -9,6 +9,7 @@ description = "Generate interactive HTML dashboards of team engineering metrics 
 requires-python = ">=3.10"
 dependencies = [
     "pyyaml>=6.0",
+    "requests>=2.28",
 ]
 
 [project.optional-dependencies]

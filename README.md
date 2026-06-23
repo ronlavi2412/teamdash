@@ -41,6 +41,9 @@ teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bug
 teamdash fetch team.yaml -o data.json
 teamdash fetch team.yaml --jira-data jira-data.json -o data.json
 
+# Fetch Jira only (requires JIRA_EMAIL and JIRA_API_TOKEN env vars)
+teamdash fetch-jira team.yaml -o jira-data.json
+
 # Generate only (read data.json, no API calls)
 teamdash generate data.json -o dashboard.html
 ```
@@ -100,9 +103,13 @@ engineers:
     jira_account_id: "712020:xxxx-xxxx-xxxx"
 ```
 
-Jira data is fetched separately via the Atlassian MCP (configured in `.mcp.json`). Use the `fetch-jira-data` Claude Code agent to collect verified bug story point sums and activity type story point sums, then pass the resulting JSON file to teamdash:
+Fetch Jira data and pass the resulting JSON file to teamdash:
 
 ```bash
+# Fetch Jira data (requires JIRA_EMAIL and JIRA_API_TOKEN env vars)
+teamdash fetch-jira team.yaml -o jira-data.json
+
+# Generate dashboard with Jira data
 teamdash team.yaml --jira-data jira-data.json
 ```
 
@@ -207,6 +214,7 @@ teamdash/
     fetch_github.py     # GitHub data fetching via gh CLI
     fetch_gitlab.py     # GitLab data fetching via glab CLI
     fetch_jira.py       # Jira data loader (verified bugs + activity types from pre-fetched JSON)
+    fetch_jira_api.py   # Jira REST API client (direct fetch with pagination)
     aggregate.py        # Orchestration, caching, and parallelization
     dashboard.py        # HTML dashboard generation (embeds React bundle)
   dashboard/

@@ -80,6 +80,40 @@ def _cmd_fetch(args: argparse.Namespace) -> None:
     print(f"Data written to {output}", file=sys.stderr)
 
 
+def _cmd_fetch_jira(args: argparse.Namespace) -> None:
+    from teamdash.fetch_jira_api import check_auth as check_jira_auth
+    from teamdash.fetch_jira_api import fetch_all_jira_data, get_credentials
+
+    config = load_config(args.config)
+    if not config.jira:
+        print("[ERROR] No jira section in config", file=sys.stderr)
+        sys.exit(1)
+
+    email, token = get_credentials()
+    if not check_jira_auth(config.jira.cloud_id, email, token):
+        print("[ERROR] Jira authentication failed. Check JIRA_EMAIL and JIRA_API_TOKEN",
+              file=sys.stderr)
+        sys.exit(1)
+
+    quarters = get_quarters(args.quarters, include_current=args.include_current)
+    print(f"Fetching Jira data for {config.team_name} ({len(quarters)} quarters)...",
+          file=sys.stderr)
+
+    jira_data = fetch_all_jira_data(config, quarters, email, token)
+
+    output = args.output or "jira-data.json"
+    result: dict = {}
+    for q_label, eng_bugs in jira_data.bugs.items():
+        result[q_label] = eng_bugs
+    if jira_data.activity_types:
+        result["activity_types"] = jira_data.activity_types
+
+    with open(output, "w") as f:
+        json.dump(result, f, indent=2)
+        f.write("\n")
+    print(f"Jira data written to {output}", file=sys.stderr)
+
+
 def _cmd_generate(args: argparse.Namespace) -> None:
     with open(args.data) as f:
         data = json.load(f)
@@ -100,6 +134,20 @@ def main() -> None:
         parser.add_argument("-o", "--output", default=None,
                             help="Output JSON file path (default: data.json)")
         _cmd_fetch(parser.parse_args(args[1:]))
+
+    elif args and args[0] == "fetch-jira":
+        parser = argparse.ArgumentParser(
+            prog="teamdash fetch-jira",
+            description="Fetch Jira data (verified bugs + activity types) and write JSON",
+        )
+        parser.add_argument("config", help="Path to team.yaml config file")
+        parser.add_argument("-q", "--quarters", type=int, default=4,
+                            help="Number of quarters to include (default: 4)")
+        parser.add_argument("--include-current", action="store_true",
+                            help="Include the current (in-progress) quarter")
+        parser.add_argument("-o", "--output", default=None,
+                            help="Output JSON file path (default: jira-data.json)")
+        _cmd_fetch_jira(parser.parse_args(args[1:]))
 
     elif args and args[0] == "generate":
         parser = argparse.ArgumentParser(

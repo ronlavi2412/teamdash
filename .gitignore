@@ -8,6 +8,9 @@ venv/
 *.html
 *.csv
 config/
+dashboard/.vite/
 dashboard/node_modules/
 dashboard/e2e/fixtures/*.html
 dashboard/test-results/
+jira-data.json
+data.json
