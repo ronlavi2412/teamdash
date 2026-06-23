@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -24,15 +25,15 @@ from teamdash.scoring import ScoringConfig, score_prs
 
 pytestmark = pytest.mark.e2e
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "team.yaml"
+_DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config" / "team.yaml"
+CONFIG_PATH = Path(os.environ.get("TEAMDASH_TEST_CONFIG", str(_DEFAULT_CONFIG)))
 Q1_2026 = Quarter(label="2026-Q1", start="2026-01-01", end="2026-03-31")
-
-GH_USER = "avivtur"
-GL_USER = "aturgema"
 
 
 @pytest.fixture(scope="module")
 def team_config():
+    if not CONFIG_PATH.exists():
+        pytest.skip(f"Config file not found: {CONFIG_PATH}")
     return load_config(str(CONFIG_PATH))
 
 
@@ -44,6 +45,22 @@ def github_orgs(team_config):
 @pytest.fixture(scope="module")
 def gitlab_url(team_config):
     return team_config.gitlab_url
+
+
+@pytest.fixture(scope="module")
+def gh_user(team_config):
+    eng = next((e for e in team_config.engineers if e.github), None)
+    if not eng:
+        pytest.skip("No engineer with a GitHub username in config")
+    return eng.github
+
+
+@pytest.fixture(scope="module")
+def gl_user(team_config):
+    eng = next((e for e in team_config.engineers if e.gitlab), None)
+    if not eng:
+        pytest.skip("No engineer with a GitLab username in config")
+    return eng.gitlab
 
 
 @pytest.fixture(scope="module")
@@ -59,100 +76,100 @@ def gitlab_authenticated(gitlab_url):
 
 
 class TestGitHubConsistency:
-    def test_pr_count_matches_details(self, github_orgs, github_authenticated):
+    def test_pr_count_matches_details(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        count = fetch_prs(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
-        details = fetch_pr_details(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        count = fetch_prs(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
+        details = fetch_pr_details(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         assert count == len(details), (
             f"PR count ({count}) != detail count ({len(details)})"
         )
 
-    def test_merge_times_count_matches_pr_count(self, github_orgs, github_authenticated):
+    def test_merge_times_count_matches_pr_count(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        count = fetch_prs(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
-        merge_times = fetch_merge_times(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        count = fetch_prs(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
+        merge_times = fetch_merge_times(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         assert len(merge_times) == count, (
             f"Merge time entries ({len(merge_times)}) != PR count ({count})"
         )
 
-    def test_merge_times_are_non_negative(self, github_orgs, github_authenticated):
+    def test_merge_times_are_non_negative(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        merge_times = fetch_merge_times(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        merge_times = fetch_merge_times(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         for mt in merge_times:
             assert 0 <= mt < 365, f"Merge time {mt} out of range"
 
-    def test_reviews_non_negative(self, github_orgs, github_authenticated):
+    def test_reviews_non_negative(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        count = fetch_reviews(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        count = fetch_reviews(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         assert count >= 0
 
-    def test_pr_details_have_valid_metadata(self, github_orgs, github_authenticated):
+    def test_pr_details_have_valid_metadata(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        details = fetch_pr_details(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        details = fetch_pr_details(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         for d in details:
             assert d.source == "github"
-            assert d.author == GH_USER
+            assert d.author == gh_user
             assert d.additions >= 0
             assert d.deletions >= 0
             assert d.changed_files >= 0
             assert d.url.startswith("https://github.com/")
 
-    def test_reviewed_pr_details_exclude_self(self, github_orgs, github_authenticated):
+    def test_reviewed_pr_details_exclude_self(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        reviewed = fetch_reviewed_pr_details(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        reviewed = fetch_reviewed_pr_details(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         for d in reviewed:
             assert d.source == "github"
 
 
 class TestGitLabConsistency:
-    def test_mr_count_matches_details(self, gitlab_url, gitlab_authenticated):
+    def test_mr_count_matches_details(self, gl_user, gitlab_url, gitlab_authenticated):
         if not gitlab_authenticated:
             pytest.skip("GitLab not authenticated")
-        count = fetch_mrs(gitlab_url, GL_USER, Q1_2026.start, Q1_2026.end)
-        details = fetch_mr_details(gitlab_url, GL_USER, Q1_2026.start, Q1_2026.end)
+        count = fetch_mrs(gitlab_url, gl_user, Q1_2026.start, Q1_2026.end)
+        details = fetch_mr_details(gitlab_url, gl_user, Q1_2026.start, Q1_2026.end)
         assert count == len(details), (
             f"MR count ({count}) != detail count ({len(details)})"
         )
 
-    def test_merge_times_count_matches_mr_count(self, gitlab_url, gitlab_authenticated):
+    def test_merge_times_count_matches_mr_count(self, gl_user, gitlab_url, gitlab_authenticated):
         if not gitlab_authenticated:
             pytest.skip("GitLab not authenticated")
-        count = fetch_mrs(gitlab_url, GL_USER, Q1_2026.start, Q1_2026.end)
-        merge_times = fetch_mr_merge_times(gitlab_url, GL_USER, Q1_2026.start, Q1_2026.end)
+        count = fetch_mrs(gitlab_url, gl_user, Q1_2026.start, Q1_2026.end)
+        merge_times = fetch_mr_merge_times(gitlab_url, gl_user, Q1_2026.start, Q1_2026.end)
         assert len(merge_times) == count, (
             f"Merge time entries ({len(merge_times)}) != MR count ({count})"
         )
 
-    def test_merge_times_are_non_negative(self, gitlab_url, gitlab_authenticated):
+    def test_merge_times_are_non_negative(self, gl_user, gitlab_url, gitlab_authenticated):
         if not gitlab_authenticated:
             pytest.skip("GitLab not authenticated")
-        merge_times = fetch_mr_merge_times(gitlab_url, GL_USER, Q1_2026.start, Q1_2026.end)
+        merge_times = fetch_mr_merge_times(gitlab_url, gl_user, Q1_2026.start, Q1_2026.end)
         for mt in merge_times:
             assert 0 <= mt < 365, f"Merge time {mt} out of range"
 
-    def test_mr_details_have_valid_metadata(self, gitlab_url, gitlab_authenticated):
+    def test_mr_details_have_valid_metadata(self, gl_user, gitlab_url, gitlab_authenticated):
         if not gitlab_authenticated:
             pytest.skip("GitLab not authenticated")
-        details = fetch_mr_details(gitlab_url, GL_USER, Q1_2026.start, Q1_2026.end)
+        details = fetch_mr_details(gitlab_url, gl_user, Q1_2026.start, Q1_2026.end)
         for d in details:
             assert d.source == "gitlab"
-            assert d.author == GL_USER
+            assert d.author == gl_user
             assert d.additions >= 0
             assert d.deletions >= 0
             assert d.changed_files >= 0
 
 
 class TestScoringConsistency:
-    def test_all_scored_prs_have_valid_sizes(self, github_orgs, github_authenticated):
+    def test_all_scored_prs_have_valid_sizes(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        details = fetch_pr_details(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        details = fetch_pr_details(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         scored = score_prs(details, ScoringConfig())
         valid_sizes = {"XS", "S", "M", "L", "XL"}
         default_points = {"XS": 2, "S": 5, "M": 8, "L": 13, "XL": 21}
@@ -161,10 +178,10 @@ class TestScoringConsistency:
             assert s.points == default_points[s.size]
             assert s.points > 0
 
-    def test_xl_prs_flagged_should_split(self, github_orgs, github_authenticated):
+    def test_xl_prs_flagged_should_split(self, gh_user, github_orgs, github_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
-        details = fetch_pr_details(GH_USER, github_orgs, Q1_2026.start, Q1_2026.end)
+        details = fetch_pr_details(gh_user, github_orgs, Q1_2026.start, Q1_2026.end)
         scored = score_prs(details, ScoringConfig())
         for s in scored:
             if s.size == "XL":
@@ -172,13 +189,13 @@ class TestScoringConsistency:
 
 
 class TestFullPipeline:
-    def test_single_engineer_metrics(self, team_config, github_authenticated, gitlab_authenticated):
+    def test_single_engineer_metrics(self, gh_user, team_config, github_authenticated, gitlab_authenticated):
         if not github_authenticated:
             pytest.skip("GitHub not authenticated")
 
         from teamdash.aggregate import _fetch_engineer_data
 
-        eng = next(e for e in team_config.engineers if e.github == GH_USER)
+        eng = next(e for e in team_config.engineers if e.github == gh_user)
         metrics = _fetch_engineer_data(eng, team_config, gitlab_authenticated, Q1_2026, enable_scoring=True)
 
         assert metrics.name == eng.name

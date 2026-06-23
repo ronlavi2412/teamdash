@@ -42,7 +42,7 @@ Supporting modules:
 
 - API calls use subprocess to `gh api` / `glab api` rather than HTTP libraries, leveraging the user's existing CLI auth sessions
 - **Rate limit handling**: GitHub search API has a 30 req/min limit. On 403 or "rate limit" errors, `fetch_github.py` sleeps 60s then retries once. Individual PR detail fetches sleep 0.5s between requests
-- **Parallelization**: `aggregate.py` uses `ThreadPoolExecutor` with 2 workers for fetching across engineer/quarter combinations. Within each engineer fetch, a nested `ThreadPoolExecutor` with up to 5 workers parallelizes GitHub/GitLab API calls
+- **Parallelization**: `aggregate.py` uses `ThreadPoolExecutor` with 4 workers for fetching across engineer/quarter combinations. Within each engineer fetch, a nested `ThreadPoolExecutor` with up to 5 workers parallelizes GitHub/GitLab API calls
 - `dashboard.py` serializes data as JSON into `window.__DASHBOARD_DATA__` and embeds the React bundle from `dashboard/dist/`
 - Caching is daily and keyed by config hash (MD5 of team name, orgs, engineers, and scoring config); `--no-cache` skips reading the cache but still writes it
 - **Scoring**: story point estimation uses 4 signals (diff size, files changed, review friction, merge time) to classify PRs as XS/S/M/L/XL. PR labels can override the heuristic. Scoring is enabled by default; `--no-scoring` skips it for faster runs

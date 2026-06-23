@@ -131,30 +131,31 @@ def _fetch_engineer_data_scored(
 ) -> EngineerQuarterMetrics:
     from teamdash.models import PRDetail
 
+    futures: dict[str, object] = {}
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        if eng.github and config.github_orgs:
+            futures["gh_details"] = pool.submit(fetch_pr_details, eng.github, config.github_orgs, q.start, q.end)
+            futures["gh_reviews"] = pool.submit(fetch_reviews, eng.github, config.github_orgs, q.start, q.end)
+            futures["gh_reviewed"] = pool.submit(fetch_reviewed_pr_details, eng.github, config.github_orgs, q.start, q.end)
+        if eng.gitlab and config.gitlab_url and gitlab_ok:
+            futures["gl_details"] = pool.submit(fetch_mr_details, config.gitlab_url, eng.gitlab, q.start, q.end)
+            futures["gl_reviews"] = pool.submit(fetch_gitlab_reviews, config.gitlab_url, eng.gitlab, q.start, q.end)
+            futures["gl_reviewed"] = pool.submit(fetch_reviewed_gl_details, config.gitlab_url, eng.gitlab, q.start, q.end)
+
     all_details: list[PRDetail] = []
+    if "gh_details" in futures:
+        all_details.extend(futures["gh_details"].result())
+    if "gl_details" in futures:
+        all_details.extend(futures["gl_details"].result())
 
-    gh_reviews = 0
-    if eng.github and config.github_orgs:
-        gh_details = fetch_pr_details(eng.github, config.github_orgs, q.start, q.end)
-        all_details.extend(gh_details)
-        gh_reviews = fetch_reviews(eng.github, config.github_orgs, q.start, q.end)
-
-    gl_details: list[PRDetail] = []
-    gl_reviews = 0
-    if eng.gitlab and config.gitlab_url and gitlab_ok:
-        gl_details = fetch_mr_details(config.gitlab_url, eng.gitlab, q.start, q.end)
-        all_details.extend(gl_details)
-        gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
+    gh_reviews = futures["gh_reviews"].result() if "gh_reviews" in futures else 0
+    gl_reviews = futures["gl_reviews"].result() if "gl_reviews" in futures else 0
 
     reviewed_details: list[PRDetail] = []
-    if eng.github and config.github_orgs:
-        reviewed_details = fetch_reviewed_pr_details(
-            eng.github, config.github_orgs, q.start, q.end,
-        )
-    if eng.gitlab and config.gitlab_url and gitlab_ok:
-        reviewed_details.extend(
-            fetch_reviewed_gl_details(config.gitlab_url, eng.gitlab, q.start, q.end),
-        )
+    if "gh_reviewed" in futures:
+        reviewed_details.extend(futures["gh_reviewed"].result())
+    if "gl_reviewed" in futures:
+        reviewed_details.extend(futures["gl_reviewed"].result())
 
     gh_prs = sum(1 for d in all_details if d.source == "github")
     gl_mrs = sum(1 for d in all_details if d.source == "gitlab")
@@ -357,7 +358,7 @@ def collect_all_data(
                 fetch_tasks.append((eng, q))
 
     fetched: dict[tuple[str, str], EngineerQuarterMetrics] = {}
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         future_to_key = {
             pool.submit(
                 _fetch_engineer_data, eng, config, gitlab_ok, q,
