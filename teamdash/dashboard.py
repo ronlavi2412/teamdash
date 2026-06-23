@@ -118,6 +118,7 @@ def build_dashboard_data(
     config: TeamConfig,
     summaries: list[QuarterSummary],
     jira_raw: dict | None = None,
+    engineer_summaries: dict[str, str] | None = None,
 ) -> dict:
     names = [e.name for e in summaries[0].engineers]
     colors = [COLORS[i % len(COLORS)] for i in range(len(names))]
@@ -178,6 +179,8 @@ def build_dashboard_data(
     }
     if jira_raw is not None:
         result["jiraData"] = jira_raw
+    if engineer_summaries:
+        result["summaries"] = engineer_summaries
     return result
 
 

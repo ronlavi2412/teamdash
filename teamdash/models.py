@@ -23,6 +23,7 @@ class PRDetail:
     additions: int
     deletions: int
     changed_files: int
+    title: str = ""
     labels: list[str] = field(default_factory=list)
     review_count: int = 0
     changes_requested_count: int = 0

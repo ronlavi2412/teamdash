@@ -308,6 +308,7 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
         additions=additions,
         deletions=deletions,
         changed_files=changed_files,
+        title=mr.get("title", ""),
         labels=labels,
         review_count=review_count,
         changes_requested_count=0,

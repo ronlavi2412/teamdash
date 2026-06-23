@@ -18,6 +18,7 @@ import { TeamView } from './components/TeamView';
 import { DetailView } from './components/DetailView';
 import { FullTable } from './components/FullTable';
 import { ConfigView } from './components/ConfigView';
+import { SummariesView } from './components/SummariesView';
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, PointElement, LineElement,
@@ -30,6 +31,7 @@ interface AppProps {
 
 export default function App({ data }: AppProps) {
   const [activeTab, setActiveTab] = useState('team');
+  const hasSummaries = !!(data.summaries && Object.keys(data.summaries).length > 0);
 
   return (
     <>
@@ -40,7 +42,7 @@ export default function App({ data }: AppProps) {
         isCurrentQuarter={data.isCurrentQuarter}
       />
       <div className="container">
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} hasSummaries={hasSummaries} />
         {activeTab === 'team' && (
           <TeamView
             quarters={data.quarters}
@@ -78,6 +80,12 @@ export default function App({ data }: AppProps) {
           <ConfigView
             config={data.config}
             hasScoring={data.hasScoring}
+          />
+        )}
+        {activeTab === 'summaries' && hasSummaries && (
+          <SummariesView
+            summaries={data.summaries!}
+            names={data.names}
           />
         )}
       </div>

@@ -303,6 +303,7 @@ def _build_cache_entry(
         summary = [
             {
                 "url": s.detail.url,
+                "title": s.detail.title,
                 "size": s.size,
                 "points": s.points,
                 "flags": s.flags,

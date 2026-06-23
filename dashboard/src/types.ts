@@ -76,4 +76,5 @@ export interface DashboardData {
   activityTypeNames: string[];
   config: ConfigData;
   tableRows: TableRowData[];
+  summaries?: Record<string, string>;
 }

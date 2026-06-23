@@ -164,6 +164,7 @@ query($q: String!, $cursor: String) {
     pageInfo { hasNextPage endCursor }
     nodes {
       ... on PullRequest {
+        title
         url
         additions
         deletions
@@ -225,6 +226,7 @@ def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
                 source="github",
                 author=author,
                 additions=node.get("additions", 0),
+                title=node.get("title", ""),
                 deletions=node.get("deletions", 0),
                 changed_files=node.get("changedFiles", 0),
                 labels=labels,
