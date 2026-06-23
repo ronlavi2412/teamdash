@@ -261,11 +261,21 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
         if "deletions" in mr_detail:
             deletions = mr_detail.get("deletions", 0) or 0
 
-    notes_data = _glab_api_get(
-        gitlab_url,
-        f"{host}/api/v4/projects/{project_id}/merge_requests/{iid}/notes?per_page=100",
-    )
-    time.sleep(0.5)
+    all_notes: list[dict] = []
+    page = 1
+    while True:
+        page_data = _glab_api_get(
+            gitlab_url,
+            f"{host}/api/v4/projects/{project_id}/merge_requests/{iid}/notes?per_page=100&page={page}",
+        )
+        time.sleep(0.5)
+        if not isinstance(page_data, list) or not page_data:
+            break
+        all_notes.extend(page_data)
+        if len(page_data) < 100:
+            break
+        page += 1
+    notes_data = all_notes
 
     review_count = 0
     comments_count = 0
