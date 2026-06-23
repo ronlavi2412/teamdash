@@ -7,11 +7,9 @@ from unittest.mock import patch
 import pytest
 
 from teamdash.fetch_github import (
-    _gh_api_get,
     _gh_search_count,
     _gh_search_items,
     _orgs_query,
-    _parse_pr_url,
     _run_gh,
     check_auth,
     fetch_merge_times,
@@ -189,60 +187,38 @@ class TestFetchMergeTimes:
         assert "org:org1+org:org2" in query
 
 
-class TestGhApiGet:
-    def test_success(self):
-        fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps({"additions": 100, "deletions": 50}),
-        )
-        with patch("teamdash.fetch_github._run_gh", return_value=fake):
-            result = _gh_api_get("/repos/org/repo/pulls/1")
-        assert result == {"additions": 100, "deletions": 50}
-
-    def test_returns_none_on_error(self):
-        fake = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="not found")
-        with patch("teamdash.fetch_github._run_gh", return_value=fake):
-            assert _gh_api_get("/repos/org/repo/pulls/999") is None
-
-    def test_returns_none_when_run_returns_none(self):
-        with patch("teamdash.fetch_github._run_gh", return_value=None):
-            assert _gh_api_get("/repos/org/repo/pulls/1") is None
-
-
-class TestParsePrUrl:
-    def test_standard_url(self):
-        assert _parse_pr_url("https://github.com/org/repo/pull/42") == ("org", "repo", "42")
-
-    def test_url_with_trailing_slash(self):
-        assert _parse_pr_url("https://github.com/org/repo/pull/42/") == ("org", "repo", "42")
-
-    def test_invalid_url(self):
-        assert _parse_pr_url("https://github.com/org/repo/issues/42") is None
-
-    def test_enterprise_url(self):
-        assert _parse_pr_url("https://github.example.com/org/repo/pull/1") == ("org", "repo", "1")
-
-
 class TestFetchPrDetails:
+    def _graphql_response(self, nodes, has_next=False, cursor=None):
+        return {
+            "data": {
+                "search": {
+                    "pageInfo": {"hasNextPage": has_next, "endCursor": cursor},
+                    "nodes": nodes,
+                },
+            },
+        }
+
     def test_returns_details(self):
-        search_items = [
+        nodes = [
             {
-                "html_url": "https://github.com/org/repo/pull/1",
-                "created_at": "2025-01-01T00:00:00Z",
-                "closed_at": "2025-01-03T00:00:00Z",
-                "labels": [{"name": "feature"}],
-                "comments": 2,
+                "url": "https://github.com/org/repo/pull/1",
+                "additions": 100,
+                "deletions": 50,
+                "changedFiles": 5,
+                "createdAt": "2025-01-01T00:00:00Z",
+                "closedAt": "2025-01-03T00:00:00Z",
+                "labels": {"nodes": [{"name": "feature"}]},
+                "comments": {"totalCount": 2},
+                "reviews": {
+                    "totalCount": 2,
+                    "nodes": [
+                        {"state": "APPROVED"},
+                        {"state": "CHANGES_REQUESTED"},
+                    ],
+                },
             },
         ]
-        pr_data = {"additions": 100, "deletions": 50, "changed_files": 5}
-        reviews = [
-            {"state": "APPROVED"},
-            {"state": "CHANGES_REQUESTED"},
-        ]
-        with (
-            patch("teamdash.fetch_github._gh_search_items", return_value=search_items),
-            patch("teamdash.fetch_github._gh_api_get", side_effect=[pr_data, reviews]),
-        ):
+        with patch("teamdash.fetch_github._gh_graphql", return_value=self._graphql_response(nodes)):
             result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
 
         assert len(result) == 1
@@ -257,29 +233,44 @@ class TestFetchPrDetails:
         assert d.merge_time_days == 2.0
         assert d.source == "github"
 
-    def test_skips_on_failed_detail_fetch(self):
-        search_items = [
-            {"html_url": "https://github.com/org/repo/pull/1", "labels": [], "comments": 0},
-        ]
-        with (
-            patch("teamdash.fetch_github._gh_search_items", return_value=search_items),
-            patch("teamdash.fetch_github._gh_api_get", return_value=None),
-        ):
+    def test_returns_empty_on_failed_graphql(self):
+        with patch("teamdash.fetch_github._gh_graphql", return_value=None):
             result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
         assert result == []
 
     def test_empty_search_results(self):
-        with patch("teamdash.fetch_github._gh_search_items", return_value=[]):
+        with patch("teamdash.fetch_github._gh_graphql", return_value=self._graphql_response([])):
             result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
         assert result == []
 
-    def test_combined_query(self):
-        with patch("teamdash.fetch_github._gh_search_items", return_value=[]) as mock:
-            fetch_pr_details("alice", ["org1", "org2"], "2025-01-01", "2025-03-31")
-        assert mock.call_count == 1
-        query = mock.call_args[0][0]
-        assert "org:org1+org:org2" in query
-        assert "author:alice" in query
+    def test_skips_empty_nodes(self):
+        nodes = [None, {}, {"url": "https://github.com/org/repo/pull/1",
+                            "additions": 10, "deletions": 5, "changedFiles": 1,
+                            "createdAt": "2025-01-01T00:00:00Z", "closedAt": "2025-01-02T00:00:00Z",
+                            "labels": {"nodes": []}, "comments": {"totalCount": 0},
+                            "reviews": {"totalCount": 0, "nodes": []}}]
+        with patch("teamdash.fetch_github._gh_graphql", return_value=self._graphql_response(nodes)):
+            result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
+        assert len(result) == 1
+
+    def test_pagination(self):
+        page1 = self._graphql_response(
+            [{"url": "https://github.com/org/repo/pull/1", "additions": 1, "deletions": 0,
+              "changedFiles": 1, "createdAt": "2025-01-01T00:00:00Z", "closedAt": "2025-01-02T00:00:00Z",
+              "labels": {"nodes": []}, "comments": {"totalCount": 0},
+              "reviews": {"totalCount": 0, "nodes": []}}],
+            has_next=True, cursor="abc123",
+        )
+        page2 = self._graphql_response(
+            [{"url": "https://github.com/org/repo/pull/2", "additions": 2, "deletions": 0,
+              "changedFiles": 1, "createdAt": "2025-01-01T00:00:00Z", "closedAt": "2025-01-02T00:00:00Z",
+              "labels": {"nodes": []}, "comments": {"totalCount": 0},
+              "reviews": {"totalCount": 0, "nodes": []}}],
+        )
+        with patch("teamdash.fetch_github._gh_graphql", side_effect=[page1, page2]) as mock:
+            result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
+        assert len(result) == 2
+        assert mock.call_count == 2
 
 
 class TestCheckAuth:

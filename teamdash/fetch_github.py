@@ -70,8 +70,12 @@ def _orgs_query(orgs: list[str]) -> str:
     return "+".join(f"org:{org}" for org in orgs)
 
 
-def _gh_api_get(endpoint: str) -> dict | list | None:
-    result = _run_gh(["gh", "api", endpoint])
+def _gh_graphql(query: str, variables: dict | None = None) -> dict | None:
+    cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
+    if variables:
+        for k, v in variables.items():
+            cmd.extend(["-f", f"{k}={v}"])
+    result = _run_gh(cmd)
     if result is None or result.returncode != 0:
         return None
     try:
@@ -154,68 +158,89 @@ def fetch_reviews(username: str, orgs: list[str], start: str, end: str) -> int:
     return _gh_search_count(query)
 
 
-def _parse_pr_url(html_url: str) -> tuple[str, str, str] | None:
-    parts = html_url.rstrip("/").split("/")
-    try:
-        idx = parts.index("pull")
-        return parts[idx - 2], parts[idx - 1], parts[idx + 1]
-    except (ValueError, IndexError):
-        return None
+_SEARCH_PR_DETAILS_QUERY = """
+query($q: String!, $cursor: String) {
+  search(query: $q, type: ISSUE, first: 100, after: $cursor) {
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+        url
+        additions
+        deletions
+        changedFiles
+        createdAt
+        closedAt
+        labels(first: 10) { nodes { name } }
+        comments { totalCount }
+        reviews(first: 100) {
+          totalCount
+          nodes { state }
+        }
+      }
+    }
+  }
+}
+"""
 
 
 def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
-    items = _gh_search_items(query)
+    gql_query = query.replace("+", " ")
     details: list[PRDetail] = []
+    cursor = None
 
-    for item in items:
-        html_url = item.get("html_url", "")
-        parsed = _parse_pr_url(html_url)
-        if not parsed:
-            continue
-        owner, repo, number = parsed
+    while True:
+        variables = {"q": gql_query}
+        if cursor:
+            variables["cursor"] = cursor
+        data = _gh_graphql(_SEARCH_PR_DETAILS_QUERY, variables)
+        if not data:
+            break
 
-        pr_data = _gh_api_get(f"/repos/{owner}/{repo}/pulls/{number}")
-        if not pr_data or not isinstance(pr_data, dict):
-            continue
+        search = data.get("data", {}).get("search", {})
+        for node in search.get("nodes", []):
+            if not node or "url" not in node:
+                continue
 
-        reviews_data = _gh_api_get(f"/repos/{owner}/{repo}/pulls/{number}/reviews")
+            created = node.get("createdAt", "")
+            closed = node.get("closedAt")
+            merge_time = None
+            if created and closed:
+                dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
+                merge_time = round(
+                    (dt_closed - dt_created).total_seconds() / 86400, 1
+                )
 
-        review_count = 0
-        changes_requested = 0
-        if isinstance(reviews_data, list):
-            review_count = len(reviews_data)
+            reviews = node.get("reviews", {})
+            review_nodes = reviews.get("nodes", [])
+            review_count = reviews.get("totalCount", 0)
             changes_requested = sum(
-                1 for r in reviews_data if r.get("state") == "CHANGES_REQUESTED"
+                1 for r in review_nodes if r.get("state") == "CHANGES_REQUESTED"
             )
 
-        labels = [l.get("name", "") for l in item.get("labels", [])]
-        comments_count = item.get("comments", 0)
+            labels = [l.get("name", "") for l in node.get("labels", {}).get("nodes", [])]
 
-        created = item.get("created_at", "")
-        closed = item.get("closed_at")
-        merge_time = None
-        if created and closed:
-            dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
-            dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
-            merge_time = round(
-                (dt_closed - dt_created).total_seconds() / 86400, 1
-            )
+            details.append(PRDetail(
+                url=node["url"],
+                source="github",
+                author=author,
+                additions=node.get("additions", 0),
+                deletions=node.get("deletions", 0),
+                changed_files=node.get("changedFiles", 0),
+                labels=labels,
+                review_count=review_count,
+                changes_requested_count=changes_requested,
+                comments_count=node.get("comments", {}).get("totalCount", 0),
+                merge_time_days=merge_time,
+                created_at=created,
+                closed_at=closed,
+            ))
 
-        details.append(PRDetail(
-            url=html_url,
-            source="github",
-            author=author,
-            additions=pr_data.get("additions", 0),
-            deletions=pr_data.get("deletions", 0),
-            changed_files=pr_data.get("changed_files", 0),
-            labels=labels,
-            review_count=review_count,
-            changes_requested_count=changes_requested,
-            comments_count=comments_count,
-            merge_time_days=merge_time,
-            created_at=created,
-            closed_at=closed,
-        ))
+        page_info = search.get("pageInfo", {})
+        if page_info.get("hasNextPage"):
+            cursor = page_info["endCursor"]
+        else:
+            break
 
     return details
 
