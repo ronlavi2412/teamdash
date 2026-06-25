@@ -8,7 +8,6 @@ version = "0.1.0"
 description = "Generate interactive HTML dashboards of team engineering metrics from GitHub and GitLab"
 requires-python = ">=3.10"
 dependencies = [
-    "pyyaml>=6.0",
     "requests>=2.28",
 ]
 

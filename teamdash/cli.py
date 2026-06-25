@@ -16,7 +16,7 @@ from teamdash.quarters import get_quarters
 
 
 def _add_fetch_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("config", help="Path to team.yaml config file")
+    parser.add_argument("config", help="Path to team.json config file")
     parser.add_argument("-q", "--quarters", type=int, default=4,
                         help="Number of quarters to include (default: 4)")
     parser.add_argument("--no-cache", action="store_true",
@@ -143,7 +143,7 @@ def main() -> None:
             prog="teamdash fetch-jira",
             description="Fetch Jira data (verified bugs, activity types, cycle times) and write JSON",
         )
-        parser.add_argument("config", help="Path to team.yaml config file")
+        parser.add_argument("config", help="Path to team.json config file")
         parser.add_argument("-q", "--quarters", type=int, default=4,
                             help="Number of quarters to include (default: 4)")
         parser.add_argument("--include-current", action="store_true",

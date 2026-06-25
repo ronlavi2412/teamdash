@@ -36,31 +36,38 @@ Teamdash is a Python CLI that fetches engineering metrics from GitHub, GitLab, a
 
 ## Setting Up Your Team Config
 
-Create a file `config/team.yaml` (this directory is git-ignored so your config stays local):
+Copy the example and fill in your team's details (`config.json` is git-ignored so your config stays local):
 
-```yaml
-team_name: "My Team"
+```bash
+cp config.example.json config.json
+```
 
-github:
-  orgs:
-    - my-github-org
-
-gitlab:
-  url: "https://gitlab.example.com"   # omit if not using GitLab
-
-jira:
-  cloud_id: "mycompany.atlassian.net"
-  project_keys: ["PROJ", "OPS"]       # omit if not using Jira
-
-engineers:
-  - name: "Jane Doe"
-    github: janedoe
-    gitlab: jdoe
-    jira_account_id: "712020:xxxx-xxxx-xxxx"
-
-  - name: "John Smith"
-    github: jsmith
-    # gitlab and jira_account_id are optional
+```json
+{
+  "team_name": "My Team",
+  "github": {
+    "orgs": ["my-github-org"]
+  },
+  "gitlab": {
+    "url": "https://gitlab.example.com"
+  },
+  "jira": {
+    "cloud_id": "mycompany.atlassian.net",
+    "project_keys": ["PROJ", "OPS"]
+  },
+  "engineers": [
+    {
+      "name": "Jane Doe",
+      "github": "janedoe",
+      "gitlab": "jdoe",
+      "jira_account_id": "712020:xxxx-xxxx-xxxx"
+    },
+    {
+      "name": "John Smith",
+      "github": "jsmith"
+    }
+  ]
+}
 ```
 
 ### How to find the values
@@ -87,17 +94,17 @@ Look for the `accountId` field in the JSON response. It looks like `"712020:xxxx
 ### Quick start (no Jira)
 
 ```bash
-teamdash config/team.yaml --include-current
+teamdash config.json --include-current
 ```
 
 ### Full workflow (with Jira and summaries)
 
 ```bash
 # Step 1: Fetch Jira data (verified bugs, activity types, cycle times)
-teamdash fetch-jira config/team.yaml -q 4 --include-current -o jira-data.json
+teamdash fetch-jira config.json -q 4 --include-current -o jira-data.json
 
 # Step 2: Fetch GitHub/GitLab data and combine with Jira data
-teamdash fetch config/team.yaml -q 4 --include-current --jira-data jira-data.json -o data.json
+teamdash fetch config.json -q 4 --include-current --jira-data jira-data.json -o data.json
 
 # Step 3: Generate the dashboard
 teamdash generate data.json -o dashboard.html
@@ -119,21 +126,21 @@ Then ask: *"regenerate the dashboard"* — Claude Code reads the project's `AGEN
 
 ```bash
 # Combined (fetch + generate in one step)
-teamdash team.yaml                     # 4 quarters, output dashboard.html
-teamdash team.yaml -o report.html      # custom output path
-teamdash team.yaml -q 6               # last 6 quarters
-teamdash team.yaml --no-cache          # skip cache, fetch fresh data
-teamdash team.yaml --include-current   # include the current (in-progress) quarter
-teamdash team.yaml --no-scoring        # skip story point estimation (faster)
-teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
-teamdash team.yaml --jira-data jira-data.json  # include Jira data
+teamdash team.json                     # 4 quarters, output dashboard.html
+teamdash team.json -o report.html      # custom output path
+teamdash team.json -q 6               # last 6 quarters
+teamdash team.json --no-cache          # skip cache, fetch fresh data
+teamdash team.json --include-current   # include the current (in-progress) quarter
+teamdash team.json --no-scoring        # skip story point estimation (faster)
+teamdash team.json --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
+teamdash team.json --jira-data jira-data.json  # include Jira data
 
 # Fetch only (write data.json, no dashboard generation)
-teamdash fetch team.yaml -o data.json
-teamdash fetch team.yaml --jira-data jira-data.json -o data.json
+teamdash fetch team.json -o data.json
+teamdash fetch team.json --jira-data jira-data.json -o data.json
 
 # Fetch Jira only (requires JIRA_EMAIL and JIRA_API_TOKEN)
-teamdash fetch-jira team.yaml -o jira-data.json
+teamdash fetch-jira team.json -o jira-data.json
 
 # Generate only (read data.json, no API calls)
 teamdash generate data.json -o dashboard.html
@@ -158,23 +165,22 @@ Points per size: XS=2, S=5, M=8, L=13, XL=21 (configurable).
 
 Customize by adding a `scoring` section to your config:
 
-```yaml
-scoring:
-  size_points:
-    XS: 2
-    S: 5
-    M: 8
-    L: 13
-    XL: 21
-  diff_thresholds: [50, 200, 500, 1200]
-  file_thresholds: [3, 8, 15, 30]
-  merge_time_thresholds: [0.5, 2.0, 5.0, 10.0]
-  size_label_patterns:
-    XS: ["size/xs", "t-shirt/xs"]
-    S: ["size/s", "t-shirt/s"]
-    M: ["size/m", "t-shirt/m"]
-    L: ["size/l", "t-shirt/l"]
-    XL: ["size/xl", "t-shirt/xl"]
+```json
+{
+  "scoring": {
+    "size_points": {"XS": 2, "S": 5, "M": 8, "L": 13, "XL": 21},
+    "diff_thresholds": [50, 200, 500, 1200],
+    "file_thresholds": [3, 8, 15, 30],
+    "merge_time_thresholds": [0.5, 2.0, 5.0, 10.0],
+    "size_label_patterns": {
+      "XS": ["size/xs", "t-shirt/xs"],
+      "S": ["size/s", "t-shirt/s"],
+      "M": ["size/m", "t-shirt/m"],
+      "L": ["size/l", "t-shirt/l"],
+      "XL": ["size/xl", "t-shirt/xl"]
+    }
+  }
+}
 ```
 
 Use `--no-scoring` to skip estimation for faster runs.
@@ -209,7 +215,7 @@ teamdash/
     __init__.py         # Package version
     __main__.py         # python -m teamdash entry point
     cli.py              # CLI entry point
-    config.py           # YAML config loading
+    config.py           # JSON config loading
     quarters.py         # Quarter date range calculation
     models.py           # Data classes
     scoring.py          # Story point estimation
@@ -221,7 +227,8 @@ teamdash/
     dashboard.py        # HTML dashboard generation
   dashboard/            # React/TypeScript frontend (Chart.js)
   tests/                # Python unit tests
-  config/               # Team YAML configs (git-ignored)
+  config.example.json   # Example config (tracked)
+  config.json           # Your team config (git-ignored)
   pyproject.toml        # Package configuration
   requirements.txt      # Python dependencies
   publish.sh            # GitHub Pages deployment

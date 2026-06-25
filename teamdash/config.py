@@ -4,7 +4,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import yaml
+import json
 
 from teamdash.scoring import ScoringConfig
 
@@ -40,13 +40,13 @@ def load_config(path: str) -> TeamConfig:
         sys.exit(1)
 
     try:
-        raw = yaml.safe_load(p.read_text())
-    except yaml.YAMLError as e:
-        print(f"[ERROR] Invalid YAML in {path}: {e}", file=sys.stderr)
+        raw = json.loads(p.read_text())
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Invalid JSON in {path}: {e}", file=sys.stderr)
         sys.exit(1)
 
     if not isinstance(raw, dict):
-        print(f"[ERROR] Config must be a YAML mapping, got {type(raw).__name__}", file=sys.stderr)
+        print(f"[ERROR] Config must be a JSON object, got {type(raw).__name__}", file=sys.stderr)
         sys.exit(1)
 
     team_name = raw.get("team_name")

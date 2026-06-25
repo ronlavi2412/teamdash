@@ -25,7 +25,7 @@ from teamdash.scoring import ScoringConfig, score_prs
 
 pytestmark = pytest.mark.e2e
 
-_DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config" / "team.yaml"
+_DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config.json"
 CONFIG_PATH = Path(os.environ.get("TEAMDASH_TEST_CONFIG", str(_DEFAULT_CONFIG)))
 Q1_2026 = Quarter(label="2026-Q1", start="2026-01-01", end="2026-03-31")
 

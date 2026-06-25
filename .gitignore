@@ -7,7 +7,7 @@ build/
 venv/
 *.html
 *.csv
-config/
+config.json
 dashboard/.vite/
 dashboard/node_modules/
 dashboard/e2e/fixtures/*.html

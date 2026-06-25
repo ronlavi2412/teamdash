@@ -1,0 +1,25 @@
+{
+  "team_name": "My Team",
+  "github": {
+    "orgs": ["my-github-org"]
+  },
+  "gitlab": {
+    "url": "https://gitlab.example.com"
+  },
+  "jira": {
+    "cloud_id": "mycompany.atlassian.net",
+    "project_keys": ["PROJ", "OPS"]
+  },
+  "engineers": [
+    {
+      "name": "Jane Doe",
+      "github": "janedoe",
+      "gitlab": "jdoe",
+      "jira_account_id": "712020:xxxx-xxxx-xxxx"
+    },
+    {
+      "name": "John Smith",
+      "github": "jsmith"
+    }
+  ]
+}

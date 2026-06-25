@@ -6,7 +6,7 @@
 teamdash/
   teamdash/              # Python package
     cli.py               # CLI entry point (argparse, 4 subcommands)
-    config.py            # YAML config loading and validation (TeamConfig, EngineerConfig, JiraConfig)
+    config.py            # JSON config loading and validation (TeamConfig, EngineerConfig, JiraConfig)
     quarters.py          # Quarter date range calculation
     models.py            # Dataclasses: Quarter, PRDetail, ScoredPR, EngineerQuarterMetrics, QuarterSummary
     scoring.py           # Story point estimation engine (ScoringConfig, 4-signal heuristic)
@@ -27,7 +27,8 @@ teamdash/
       fixtures/          # Generated HTML test fixtures
     vite.config.ts       # Vite build config (single-file output: dashboard.js, dashboard.css)
   tests/                 # Python unit tests (pytest, unittest.mock)
-  config/                # Team YAML configs (git-ignored)
+  config.example.json    # Example config (tracked)
+  config.json            # Your team config (git-ignored)
   publish.sh             # GitHub Pages deployment script
 ```
 
@@ -47,7 +48,7 @@ teamdash/
 
 | Package | Purpose |
 |---------|---------|
-| `pyyaml` | YAML config parsing |
+| (stdlib `json`) | JSON config parsing |
 | `requests` | Jira REST API calls |
 | `pytest` | Test framework (dev) |
 
