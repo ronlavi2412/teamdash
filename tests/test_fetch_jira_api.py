@@ -132,7 +132,7 @@ class TestFindFirstTransitionTo:
         assert _find_first_transition_to(changelog, DEV_END_STATUSES) == "2025-01-06T10:00:00.000+0000"
 
 
-def _make_issue(project_key, changelog_transitions, resolution_date="2025-01-17T10:00:00.000+0000"):
+def _make_issue(project_key, changelog_transitions, issue_type="Story", resolution_date="2025-01-17T10:00:00.000+0000"):
     histories = []
     for ts, status in changelog_transitions:
         histories.append({
@@ -142,6 +142,7 @@ def _make_issue(project_key, changelog_transitions, resolution_date="2025-01-17T
     return {
         "fields": {
             "project": {"key": project_key},
+            "issuetype": {"name": issue_type},
             "resolutiondate": resolution_date,
         },
         "changelog": {"histories": histories},
@@ -149,40 +150,18 @@ def _make_issue(project_key, changelog_transitions, resolution_date="2025-01-17T
 
 
 class TestFetchCycleTimes:
-    def test_groups_by_project(self):
+    def test_groups_by_project_and_type(self):
         issues = [
             _make_issue("CNV", [
                 ("2025-01-06T10:00:00.000+0000", "In Progress"),
                 ("2025-01-10T10:00:00.000+0000", "MODIFIED"),
                 ("2025-01-13T10:00:00.000+0000", "ON_QA"),
-            ]),
-            _make_issue("MTV", [
+            ], issue_type="Story"),
+            _make_issue("CNV", [
                 ("2025-01-06T10:00:00.000+0000", "Assigned"),
                 ("2025-01-08T10:00:00.000+0000", "Dev Complete"),
                 ("2025-01-10T10:00:00.000+0000", "Testing"),
-            ]),
-        ]
-
-        with patch("teamdash.fetch_jira_api._jira_search_with_changelog", return_value=issues):
-            result = fetch_cycle_times(
-                "test.atlassian.net", ["CNV", "MTV"], "2025-01-01", "2025-03-31",
-                "email", "token",
-            )
-
-        assert "CNV" in result
-        assert "MTV" in result
-        assert len(result["CNV"]["dev"]) == 1
-        assert len(result["CNV"]["build"]) == 1
-        assert len(result["CNV"]["qe"]) == 1
-        assert len(result["CNV"]["total"]) == 1
-
-    def test_phase_calculation(self):
-        issues = [
-            _make_issue("CNV", [
-                ("2025-01-06T10:00:00.000+0000", "In Progress"),
-                ("2025-01-10T10:00:00.000+0000", "MODIFIED"),
-                ("2025-01-13T10:00:00.000+0000", "ON_QA"),
-            ], resolution_date="2025-01-17T10:00:00.000+0000"),
+            ], issue_type="Bug"),
         ]
 
         with patch("teamdash.fetch_jira_api._jira_search_with_changelog", return_value=issues):
@@ -191,10 +170,31 @@ class TestFetchCycleTimes:
                 "email", "token",
             )
 
-        assert result["CNV"]["dev"] == [4.0]
-        assert result["CNV"]["build"] == [1.0]
-        assert result["CNV"]["qe"] == [4.0]
-        assert result["CNV"]["total"] == [9.0]
+        assert "CNV" in result
+        assert "Story" in result["CNV"]
+        assert "Bug" in result["CNV"]
+        assert len(result["CNV"]["Story"]["dev"]) == 1
+        assert len(result["CNV"]["Bug"]["dev"]) == 1
+
+    def test_phase_calculation(self):
+        issues = [
+            _make_issue("CNV", [
+                ("2025-01-06T10:00:00.000+0000", "In Progress"),
+                ("2025-01-10T10:00:00.000+0000", "MODIFIED"),
+                ("2025-01-13T10:00:00.000+0000", "ON_QA"),
+            ], issue_type="Story", resolution_date="2025-01-17T10:00:00.000+0000"),
+        ]
+
+        with patch("teamdash.fetch_jira_api._jira_search_with_changelog", return_value=issues):
+            result = fetch_cycle_times(
+                "test.atlassian.net", ["CNV"], "2025-01-01", "2025-03-31",
+                "email", "token",
+            )
+
+        assert result["CNV"]["Story"]["dev"] == [4.0]
+        assert result["CNV"]["Story"]["build"] == [1.0]
+        assert result["CNV"]["Story"]["qe"] == [4.0]
+        assert result["CNV"]["Story"]["total"] == [9.0]
 
     def test_missing_dev_end(self):
         issues = [
@@ -210,10 +210,10 @@ class TestFetchCycleTimes:
                 "email", "token",
             )
 
-        assert result["CNV"]["dev"] == []
-        assert result["CNV"]["build"] == []
-        assert result["CNV"]["qe"] == [4.0]
-        assert result["CNV"]["total"] == [9.0]
+        assert result["CNV"]["Story"]["dev"] == []
+        assert result["CNV"]["Story"]["build"] == []
+        assert result["CNV"]["Story"]["qe"] == [4.0]
+        assert result["CNV"]["Story"]["total"] == [9.0]
 
     def test_skips_no_dev_start(self):
         issues = [
@@ -228,7 +228,7 @@ class TestFetchCycleTimes:
                 "email", "token",
             )
 
-        assert result["CNV"]["total"] == []
+        assert result["CNV"]["Story"]["total"] == []
 
     def test_empty_issues(self):
         with patch("teamdash.fetch_jira_api._jira_search_with_changelog", return_value=[]):
@@ -244,6 +244,7 @@ class TestFetchCycleTimes:
             {
                 "fields": {
                     "project": {},
+                    "issuetype": {"name": "Story"},
                     "resolutiondate": "2025-01-17T10:00:00.000+0000",
                 },
                 "changelog": {"histories": []},

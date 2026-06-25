@@ -10,7 +10,7 @@ from pathlib import Path
 class JiraData:
     bugs: dict[str, dict[str, int]] = field(default_factory=dict)
     activity_types: dict[str, dict[str, dict[str, int]]] = field(default_factory=dict)
-    cycle_times: dict[str, dict[str, dict[str, list[float]]]] = field(default_factory=dict)
+    cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = field(default_factory=dict)
 
 
 def load_jira_data(path: str) -> JiraData | None:

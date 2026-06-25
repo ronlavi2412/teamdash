@@ -342,24 +342,25 @@ class TestCycleTimeDashboard:
         assert data["hasCycleTime"] is False
 
     def test_has_cycle_time_true_with_data(self, two_quarter_summaries, sample_config):
-        ct_data = {"2025-Q1": {"CNV": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}}}
+        ct_data = {"2025-Q1": {"CNV": {"Story": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}}}}
         data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
         assert data["hasCycleTime"] is True
 
     def test_cycle_time_data_in_output(self, two_quarter_summaries, sample_config):
         ct_data = {
-            "2025-Q1": {"CNV": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}},
+            "2025-Q1": {"CNV": {"Story": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}}},
         }
         data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
         assert "Q1'25" in data["cycleTimeData"]
         assert "CNV" in data["cycleTimeData"]["Q1'25"]
+        assert "Story" in data["cycleTimeData"]["Q1'25"]["CNV"]
         assert data["cycleTimeProjects"] == ["CNV"]
 
     def test_cycle_time_projects_sorted(self, two_quarter_summaries, sample_config):
         ct_data = {
             "2025-Q1": {
-                "MTV": {"dev": [1.0], "build": [1.0], "qe": [1.0], "total": [3.0]},
-                "CNV": {"dev": [2.0], "build": [1.0], "qe": [1.0], "total": [4.0]},
+                "MTV": {"Bug": {"dev": [1.0], "build": [1.0], "qe": [1.0], "total": [3.0]}},
+                "CNV": {"Story": {"dev": [2.0], "build": [1.0], "qe": [1.0], "total": [4.0]}},
             },
         }
         data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)

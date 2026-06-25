@@ -2,6 +2,12 @@ import { Line } from 'react-chartjs-2';
 import type { CycleTimeQuarterData } from '../types';
 import { calculatePercentile, getQuarterLabel } from '../utils';
 
+const ISSUE_TYPE_COLORS: Record<string, string> = {
+  Story: '#10b981',
+  Bug: '#f59e0b',
+  Vulnerability: '#eab308',
+};
+
 interface TeamCycleTimeChartProps {
   cycleTimeData: Record<string, CycleTimeQuarterData>;
   quarterLabels: string[];
@@ -9,43 +15,68 @@ interface TeamCycleTimeChartProps {
   isCurrentQuarter: boolean;
 }
 
+function collectTotalsByType(
+  cycleTimeData: Record<string, CycleTimeQuarterData>,
+  quarterLabels: string[],
+): { issueTypes: string[]; byType: Record<string, (number | null)[]> } {
+  const typeSet = new Set<string>();
+  for (const qData of Object.values(cycleTimeData)) {
+    for (const projTypes of Object.values(qData)) {
+      for (const typeName of Object.keys(projTypes)) {
+        typeSet.add(typeName);
+      }
+    }
+  }
+  const issueTypes = [...typeSet].sort();
+
+  const byType: Record<string, (number | null)[]> = {};
+  for (const t of issueTypes) {
+    byType[t] = quarterLabels.map(label => {
+      const qData = cycleTimeData[label];
+      if (!qData) return null;
+      const allTotals: number[] = [];
+      for (const projTypes of Object.values(qData)) {
+        const phases = projTypes[t];
+        if (phases) allTotals.push(...phases.total);
+      }
+      return calculatePercentile(allTotals, 50);
+    });
+  }
+  return { issueTypes, byType };
+}
+
 export function TeamCycleTimeChart({ cycleTimeData, quarterLabels, currentQuarterIndex, isCurrentQuarter }: TeamCycleTimeChartProps) {
   const labels = quarterLabels.map((q, idx) => getQuarterLabel(q, idx, currentQuarterIndex, isCurrentQuarter));
-
-  const allTotals = quarterLabels.map(label => {
-    const qData = cycleTimeData[label];
-    if (!qData) return [];
-    return Object.values(qData).flatMap(proj => proj.total);
-  });
+  const { issueTypes, byType } = collectTotalsByType(cycleTimeData, quarterLabels);
 
   return (
     <Line
       data={{
         labels,
-        datasets: [{
-          label: 'Median Cycle Time (days)',
-          data: allTotals.map(v => calculatePercentile(v, 50)),
-          borderColor: '#3b82f6',
-          backgroundColor: '#3b82f620',
+        datasets: issueTypes.map(t => ({
+          label: t,
+          data: byType[t],
+          borderColor: ISSUE_TYPE_COLORS[t] ?? '#6366f1',
+          backgroundColor: (ISSUE_TYPE_COLORS[t] ?? '#6366f1') + '20',
           tension: 0.3,
-          fill: true,
+          fill: false,
           pointRadius: 5,
-          pointBackgroundColor: '#3b82f6',
+          pointBackgroundColor: ISSUE_TYPE_COLORS[t] ?? '#6366f1',
           spanGaps: true,
           segment: {
             borderDash: (ctx: any) => {
-              if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {
-                return [5, 5];
-              }
+              if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) return [5, 5];
               return [];
             },
           },
-        }],
+        })),
       }}
       options={{
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: true, position: 'top' },
+        },
         scales: {
           y: { beginAtZero: true, title: { display: true, text: 'Business Days' } },
         },

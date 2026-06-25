@@ -223,6 +223,10 @@ def fetch_activity_type_sps(
     return _sum_story_points(issues)
 
 
+def _empty_phases() -> dict[str, list[float]]:
+    return {"dev": [], "build": [], "qe": [], "total": []}
+
+
 def fetch_cycle_times(
     cloud_id: str,
     project_keys: list[str],
@@ -230,22 +234,26 @@ def fetch_cycle_times(
     end_date: str,
     email: str,
     token: str,
-) -> dict[str, dict[str, list[float]]]:
+) -> dict[str, dict[str, dict[str, list[float]]]]:
     jql = (
         f'issuetype in (Story, Bug, Vulnerability) AND resolution in (Done, "Done-Errata")'
         f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
         f" AND {_project_clause(project_keys)}"
     )
     issues = _jira_search_with_changelog(
-        cloud_id, jql, ["summary", "project", "resolutiondate"], email, token,
+        cloud_id, jql, ["summary", "project", "issuetype", "resolutiondate"], email, token,
     )
 
-    result: dict[str, dict[str, list[float]]] = {}
+    result: dict[str, dict[str, dict[str, list[float]]]] = {}
     for issue in issues:
         fields = issue.get("fields", {})
         project = fields.get("project", {})
         project_key = project.get("key")
         if not project_key:
+            continue
+
+        issue_type = fields.get("issuetype", {}).get("name")
+        if not issue_type:
             continue
 
         resolution_date_str = fields.get("resolutiondate")
@@ -258,7 +266,7 @@ def fetch_cycle_times(
         qe_start = _find_first_transition_to(changelog, QE_START_STATUSES)
         resolved = datetime.fromisoformat(resolution_date_str.replace("Z", "+00:00"))
 
-        proj_data = result.setdefault(project_key, {"dev": [], "build": [], "qe": [], "total": []})
+        type_data = result.setdefault(project_key, {}).setdefault(issue_type, _empty_phases())
 
         if dev_start and dev_end:
             d = _business_days(
@@ -266,7 +274,7 @@ def fetch_cycle_times(
                 datetime.fromisoformat(dev_end.replace("Z", "+00:00")),
             )
             if d > 0:
-                proj_data["dev"].append(d)
+                type_data["dev"].append(d)
 
         if dev_end and qe_start:
             d = _business_days(
@@ -274,7 +282,7 @@ def fetch_cycle_times(
                 datetime.fromisoformat(qe_start.replace("Z", "+00:00")),
             )
             if d > 0:
-                proj_data["build"].append(d)
+                type_data["build"].append(d)
 
         if qe_start:
             d = _business_days(
@@ -282,7 +290,7 @@ def fetch_cycle_times(
                 resolved,
             )
             if d > 0:
-                proj_data["qe"].append(d)
+                type_data["qe"].append(d)
 
         if dev_start:
             d = _business_days(
@@ -290,7 +298,7 @@ def fetch_cycle_times(
                 resolved,
             )
             if d > 0:
-                proj_data["total"].append(d)
+                type_data["total"].append(d)
 
     return result
 
@@ -308,7 +316,7 @@ def fetch_all_jira_data(
     project_keys = config.jira.project_keys
     bugs: dict[str, dict[str, int]] = {}
     activity_types: dict[str, dict[str, dict[str, int]]] = {}
-    cycle_times: dict[str, dict[str, dict[str, list[float]]]] = {}
+    cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = {}
 
     engineers_with_jira = [
         e for e in config.engineers if e.jira_account_id

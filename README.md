@@ -125,7 +125,10 @@ The JSON file maps quarters to per-engineer verified bug story point sums, with 
   },
   "cycle_times": {
     "2025-Q1": {
-      "CNV": {"dev": [3.0, 5.0], "build": [1.0, 2.0], "qe": [2.0, 4.0], "total": [6.0, 11.0]}
+      "CNV": {
+        "Story": {"dev": [3.0, 5.0], "build": [1.0, 2.0], "qe": [2.0, 4.0], "total": [6.0, 11.0]},
+        "Bug": {"dev": [2.0], "build": [1.0], "qe": [3.0], "total": [6.0]}
+      }
     }
   }
 }

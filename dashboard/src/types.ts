@@ -67,7 +67,8 @@ export interface CycleTimePhases {
   total: number[];
 }
 
-export type CycleTimeQuarterData = Record<string, CycleTimePhases>;
+export type CycleTimeProjectData = Record<string, CycleTimePhases>;
+export type CycleTimeQuarterData = Record<string, CycleTimeProjectData>;
 
 export interface DashboardData {
   title: string;
