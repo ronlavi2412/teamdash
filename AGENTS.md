@@ -34,7 +34,7 @@ Supporting modules:
 - **No web framework** -- generates static HTML, no server
 - **No ORM or database** -- data is fetched live from APIs and cached as JSON in `~/.cache/teamdash/`
 - **External CLIs** -- uses `gh` and `glab` subprocesses for API auth; Jira uses the `requests` library with Basic auth (email + API token)
-- **Jira integration** -- `fetch_jira_api.py` fetches verified bug and activity type story points directly from the Jira REST API; `fetch_jira.py` loads the resulting JSON file into the dashboard pipeline
+- **Jira integration** -- `fetch_jira_api.py` fetches verified bugs, activity type story points, and cycle times directly from the Jira REST API; `fetch_jira.py` loads the resulting JSON file into the dashboard pipeline
 - **React frontend** -- dashboard UI is a React/TypeScript app in `dashboard/` built with Vite and Chart.js, compiled into a JS/CSS bundle that `dashboard.py` embeds in the output HTML
 - **`publish.sh`** -- deploys dashboard HTML to GitHub Pages via `gh-pages` branch
 
@@ -61,7 +61,7 @@ teamdash team.yaml --no-cache          # skip cache, fetch fresh data
 teamdash team.yaml --include-current   # include current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation
 teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
-teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs + activity types)
+teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs, activity types, cycle time)
 
 # Fetch only (write data.json, no dashboard generation)
 teamdash fetch team.yaml -o data.json
@@ -81,7 +81,7 @@ pip install -e ".[dev]"
 python -m pytest tests/ -x -q
 ```
 
-10 test files covering core modules: scoring, dashboard, aggregate, config, fetch_github, fetch_gitlab, fetch_jira, models, quarters, and e2e. Tests use `unittest.mock` to patch subprocess calls and avoid real API hits.
+11 test files covering core modules: scoring, dashboard, aggregate, config, fetch_github, fetch_gitlab, fetch_jira, fetch_jira_api, models, quarters, and e2e. Tests use `unittest.mock` to patch subprocess calls and avoid real API hits.
 
 ## Style
 

@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from teamdash.aggregate import _config_hash, _is_quarter_cache_fresh, _load_cache, _save_cache, collect_all_data
+from teamdash.aggregate import _build_cache_entry, _config_hash, _is_quarter_cache_fresh, _load_cache, _metrics_from_cache, _save_cache, collect_all_data
 from teamdash.config import EngineerConfig, TeamConfig
 from teamdash.fetch_jira import JiraData
-from teamdash.models import Quarter
+from teamdash.models import EngineerQuarterMetrics, Quarter
 
 
 class TestConfigHash:
@@ -283,3 +283,21 @@ class TestCollectAllData:
 
         assert summaries[0].engineers[0].activity_type_counts == {"Incidents & Support": 3, "Security & Compliance": 2}
         assert summaries[0].engineers[1].activity_type_counts == {}
+
+class TestCacheEntries:
+    def test_build_cache_entry_basic(self):
+        metrics = EngineerQuarterMetrics(
+            name="Alice", quarter="2025-Q1",
+            github_prs=10, gitlab_mrs=5, reviews=8,
+        )
+        entry = _build_cache_entry(metrics, enable_scoring=False)
+        assert entry["github_prs"] == 10
+        assert entry["verified_bugs"] == 0
+
+    def test_metrics_from_cache_basic(self):
+        cached = {
+            "github_prs": 10, "gitlab_mrs": 5, "reviews": 8,
+        }
+        metrics = _metrics_from_cache("Alice", "2025-Q1", cached)
+        assert metrics.github_prs == 10
+        assert metrics.verified_bugs == 0

@@ -149,3 +149,4 @@ class TestQuarterSummary:
         ]
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
         assert s.total_activity_type_counts == {}
+

@@ -7,7 +7,7 @@ project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
 from teamdash.config import EngineerConfig, JiraConfig, TeamConfig
-from teamdash.dashboard import generate_dashboard
+from teamdash.dashboard import build_dashboard_data, generate_dashboard, generate_dashboard_from_data
 from teamdash.models import (
     EngineerQuarterMetrics,
     PRDetail,
@@ -250,5 +250,24 @@ generate_dashboard(
     make_activity_type_summaries(),
     str(fixtures_dir / "test-dashboard-activity-types.html"),
 )
+
+
+cycle_time_data = {
+    "2024-Q4": {
+        "PROJ-A": {"dev": [3.0, 5.0, 8.0], "build": [1.0, 2.0, 1.5], "qe": [2.0, 4.0, 3.0], "total": [6.0, 11.0, 12.5]},
+        "PROJ-B": {"dev": [4.0, 6.0], "build": [1.0, 2.5], "qe": [3.0, 5.0], "total": [8.0, 13.5]},
+    },
+    "2025-Q1": {
+        "PROJ-A": {"dev": [2.0, 4.0, 6.0], "build": [1.0, 1.5, 2.0], "qe": [2.0, 3.0, 4.0], "total": [5.0, 8.5, 12.0]},
+        "PROJ-B": {"dev": [5.0, 7.0], "build": [2.0, 3.0], "qe": [4.0, 6.0], "total": [11.0, 16.0]},
+    },
+}
+
+ct_data = build_dashboard_data(
+    make_jira_config(),
+    make_jira_summaries(),
+    cycle_time_data=cycle_time_data,
+)
+generate_dashboard_from_data(ct_data, str(fixtures_dir / "test-dashboard-cycle-time.html"))
 
 print("Generated test HTML fixtures.")

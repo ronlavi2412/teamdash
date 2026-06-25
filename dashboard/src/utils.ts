@@ -37,6 +37,16 @@ export function calculateMedian(values: (number | null)[]): number | null {
   return +(sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2).toFixed(1);
 }
 
+export function calculatePercentile(values: number[], p: number): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const k = (p / 100) * (sorted.length - 1);
+  const f = Math.floor(k);
+  const c = Math.ceil(k);
+  if (f === c) return +sorted[f].toFixed(1);
+  return +(sorted[f] * (c - k) + sorted[c] * (k - f)).toFixed(1);
+}
+
 export function getQuarterLabel(label: string, index: number, currentQuarterIndex: number, isCurrentQuarter: boolean): string {
   return isCurrentQuarter && index === currentQuarterIndex ? label + ' *' : label;
 }

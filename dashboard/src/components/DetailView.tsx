@@ -1,9 +1,10 @@
-import type { QuarterData } from '../types';
+import type { CycleTimeQuarterData, QuarterData } from '../types';
 import { useEngineerFilter } from '../hooks/useEngineerFilter';
 import { ActivityTypeChart } from './ActivityTypeChart';
 import { ChartCard } from './ChartCard';
 import { DetailLineChart } from './DetailLineChart';
 import { EngineerFilter } from './EngineerFilter';
+import { ProjectCycleTimeChart } from './ProjectCycleTimeChart';
 
 interface DetailViewProps {
   quarters: QuarterData[];
@@ -13,12 +14,15 @@ interface DetailViewProps {
   isCurrentQuarter: boolean;
   hasScoring: boolean;
   hasJira: boolean;
+  hasCycleTime: boolean;
+  cycleTimeData: Record<string, CycleTimeQuarterData>;
+  cycleTimeProjects: string[];
   hasActivityTypes: boolean;
   activityTypeNames: string[];
   quarterLabels: string[];
 }
 
-export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasActivityTypes, activityTypeNames, quarterLabels }: DetailViewProps) {
+export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasCycleTime, cycleTimeData, cycleTimeProjects, hasActivityTypes, activityTypeNames, quarterLabels }: DetailViewProps) {
   const { selected, toggle, selectAll, clearAll } = useEngineerFilter(names);
 
   const commonProps = {
@@ -109,6 +113,19 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
         </div>
       )}
       <div className="chart-row">
+        {hasCycleTime && (
+          <ChartCard
+            title="Cycle Time by Project (Business Days)"
+            tooltip="Median cycle time per project broken down by phase: Dev (Assigned → Modified), Build (Modified → ON_QA), QE (ON_QA → Resolved)."
+            testId="chart-project-cycle-time"
+          >
+            <ProjectCycleTimeChart
+              cycleTimeData={cycleTimeData}
+              cycleTimeProjects={cycleTimeProjects}
+              quarterLabels={quarterLabels}
+            />
+          </ChartCard>
+        )}
         {hasJira && (
           <ChartCard
             title="Verified Bugs SP per Quarter"

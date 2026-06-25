@@ -334,3 +334,37 @@ class TestActivityTypeDashboard:
         data = build_dashboard_data(sample_config, summaries)
         assert data["quarters"][1]["activity_types"][0] == {"Incidents & Support": 3}
         assert data["quarters"][1]["activity_types"][1] == {}
+
+
+class TestCycleTimeDashboard:
+    def test_has_cycle_time_false_without_data(self, two_quarter_summaries, sample_config):
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
+        assert data["hasCycleTime"] is False
+
+    def test_has_cycle_time_true_with_data(self, two_quarter_summaries, sample_config):
+        ct_data = {"2025-Q1": {"CNV": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}}}
+        data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
+        assert data["hasCycleTime"] is True
+
+    def test_cycle_time_data_in_output(self, two_quarter_summaries, sample_config):
+        ct_data = {
+            "2025-Q1": {"CNV": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}},
+        }
+        data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
+        assert "Q1'25" in data["cycleTimeData"]
+        assert "CNV" in data["cycleTimeData"]["Q1'25"]
+        assert data["cycleTimeProjects"] == ["CNV"]
+
+    def test_cycle_time_projects_sorted(self, two_quarter_summaries, sample_config):
+        ct_data = {
+            "2025-Q1": {
+                "MTV": {"dev": [1.0], "build": [1.0], "qe": [1.0], "total": [3.0]},
+                "CNV": {"dev": [2.0], "build": [1.0], "qe": [1.0], "total": [4.0]},
+            },
+        }
+        data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
+        assert data["cycleTimeProjects"] == ["CNV", "MTV"]
+
+    def test_no_cycle_time_in_quarter_data(self, two_quarter_summaries, sample_config):
+        data = build_dashboard_data(sample_config, two_quarter_summaries)
+        assert "cycle_time" not in data["quarters"][0]

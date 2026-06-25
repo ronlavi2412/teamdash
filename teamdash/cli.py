@@ -73,7 +73,8 @@ def _load_jira_raw(path: str) -> dict | None:
 def _cmd_fetch(args: argparse.Namespace) -> None:
     config, summaries = _do_fetch(args)
     jira_raw = _load_jira_raw(args.jira_data) if args.jira_data else None
-    data = build_dashboard_data(config, summaries, jira_raw=jira_raw)
+    cycle_time_data = jira_raw.get("cycle_times") if jira_raw else None
+    data = build_dashboard_data(config, summaries, jira_raw=jira_raw, cycle_time_data=cycle_time_data)
     output = args.output or "data.json"
     with open(output, "w") as f:
         json.dump(data, f, indent=2)
@@ -107,6 +108,8 @@ def _cmd_fetch_jira(args: argparse.Namespace) -> None:
         result[q_label] = eng_bugs
     if jira_data.activity_types:
         result["activity_types"] = jira_data.activity_types
+    if jira_data.cycle_times:
+        result["cycle_times"] = jira_data.cycle_times
 
     with open(output, "w") as f:
         json.dump(result, f, indent=2)
@@ -138,7 +141,7 @@ def main() -> None:
     elif args and args[0] == "fetch-jira":
         parser = argparse.ArgumentParser(
             prog="teamdash fetch-jira",
-            description="Fetch Jira data (verified bugs + activity types) and write JSON",
+            description="Fetch Jira data (verified bugs, activity types, cycle times) and write JSON",
         )
         parser.add_argument("config", help="Path to team.yaml config file")
         parser.add_argument("-q", "--quarters", type=int, default=4,

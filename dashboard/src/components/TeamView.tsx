@@ -1,7 +1,8 @@
-import type { QuarterData } from '../types';
+import type { CycleTimeQuarterData, QuarterData } from '../types';
 import { ChartCard } from './ChartCard';
 import { TeamActivityTypeChart } from './TeamActivityTypeChart';
 import { TeamBarChart } from './TeamBarChart';
+import { TeamCycleTimeChart } from './TeamCycleTimeChart';
 import { TeamLineChart } from './TeamLineChart';
 
 interface TeamViewProps {
@@ -10,11 +11,14 @@ interface TeamViewProps {
   isCurrentQuarter: boolean;
   hasScoring: boolean;
   hasJira: boolean;
+  hasCycleTime: boolean;
+  cycleTimeData: Record<string, CycleTimeQuarterData>;
+  quarterLabels: string[];
   hasActivityTypes: boolean;
   activityTypeNames: string[];
 }
 
-export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasActivityTypes, activityTypeNames }: TeamViewProps) {
+export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasCycleTime, cycleTimeData, quarterLabels, hasActivityTypes, activityTypeNames }: TeamViewProps) {
   return (
     <div data-testid="tab-team">
       <div className="chart-row">
@@ -112,6 +116,20 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
             <TeamActivityTypeChart
               quarters={quarters}
               activityTypeNames={activityTypeNames}
+              currentQuarterIndex={currentQuarterIndex}
+              isCurrentQuarter={isCurrentQuarter}
+            />
+          </ChartCard>
+        )}
+        {hasCycleTime && (
+          <ChartCard
+            title="Cycle Time per Quarter (Business Days)"
+            tooltip="Median (P50) and P90 cycle time in business days across all team members. Cycle time = first In Progress transition to resolution date."
+            testId="chart-team-cycle-time"
+          >
+            <TeamCycleTimeChart
+              cycleTimeData={cycleTimeData}
+              quarterLabels={quarterLabels}
               currentQuarterIndex={currentQuarterIndex}
               isCurrentQuarter={isCurrentQuarter}
             />

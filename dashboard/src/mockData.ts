@@ -51,6 +51,7 @@ export const mockData: DashboardData = {
   isCurrentQuarter: false,
   hasScoring: true,
   hasJira: true,
+  hasCycleTime: true,
   hasActivityTypes: true,
   activityTypeNames: [
     "Associate Wellness & Development",
@@ -60,6 +61,17 @@ export const mockData: DashboardData = {
     "Quality / Stability / Reliability",
     "Security & Compliance",
   ],
+  cycleTimeData: {
+    "Q4'24": {
+      "CNV": { dev: [3.0, 5.0, 8.0], build: [1.0, 2.0, 1.5], qe: [2.0, 4.0, 3.0], total: [6.0, 11.0, 12.5] },
+      "MTV": { dev: [4.0, 6.0], build: [1.0, 2.5], qe: [3.0, 5.0], total: [8.0, 13.5] },
+    },
+    "Q1'25": {
+      "CNV": { dev: [2.0, 4.0, 6.0, 3.0], build: [1.0, 1.5, 2.0, 1.0], qe: [2.0, 3.0, 4.0, 2.5], total: [5.0, 8.5, 12.0, 6.5] },
+      "MTV": { dev: [5.0, 7.0], build: [2.0, 3.0], qe: [4.0, 6.0], total: [11.0, 16.0] },
+    },
+  },
+  cycleTimeProjects: ["CNV", "MTV"],
   config: {
     github_orgs: ["test-org"],
     gitlab_url: "https://gitlab.example.com",

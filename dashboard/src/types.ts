@@ -60,6 +60,15 @@ export interface QuarterMetrics {
   activity_type_counts: Record<string, number>;
 }
 
+export interface CycleTimePhases {
+  dev: number[];
+  build: number[];
+  qe: number[];
+  total: number[];
+}
+
+export type CycleTimeQuarterData = Record<string, CycleTimePhases>;
+
 export interface DashboardData {
   title: string;
   subtitle: string;
@@ -72,8 +81,11 @@ export interface DashboardData {
   isCurrentQuarter: boolean;
   hasScoring: boolean;
   hasJira: boolean;
+  hasCycleTime: boolean;
   hasActivityTypes: boolean;
   activityTypeNames: string[];
+  cycleTimeData: Record<string, CycleTimeQuarterData>;
+  cycleTimeProjects: string[];
   config: ConfigData;
   tableRows: TableRowData[];
   summaries?: Record<string, string>;

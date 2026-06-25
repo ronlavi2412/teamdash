@@ -50,6 +50,9 @@ export default function App({ data }: AppProps) {
             isCurrentQuarter={data.isCurrentQuarter}
             hasScoring={data.hasScoring}
             hasJira={data.hasJira}
+            hasCycleTime={data.hasCycleTime}
+            cycleTimeData={data.cycleTimeData}
+            quarterLabels={data.quarterLabels}
             hasActivityTypes={data.hasActivityTypes}
             activityTypeNames={data.activityTypeNames}
           />
@@ -63,6 +66,9 @@ export default function App({ data }: AppProps) {
             isCurrentQuarter={data.isCurrentQuarter}
             hasScoring={data.hasScoring}
             hasJira={data.hasJira}
+            hasCycleTime={data.hasCycleTime}
+            cycleTimeData={data.cycleTimeData}
+            cycleTimeProjects={data.cycleTimeProjects}
             hasActivityTypes={data.hasActivityTypes}
             activityTypeNames={data.activityTypeNames}
             quarterLabels={data.quarterLabels}

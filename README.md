@@ -35,7 +35,7 @@ teamdash team.yaml --no-cache          # skip cache, fetch fresh data
 teamdash team.yaml --include-current   # include the current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation (faster)
 teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
-teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs + activity types)
+teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs, activity types, cycle time)
 
 # Fetch only (write data.json, no dashboard generation)
 teamdash fetch team.yaml -o data.json
@@ -81,7 +81,7 @@ engineers:
 | `engineers[].name` | Yes | Display name |
 | `engineers[].github` | No | GitHub username |
 | `engineers[].gitlab` | No | GitLab username |
-| `engineers[].jira_account_id` | No | Atlassian Jira account ID (for verified bugs tracking) |
+| `engineers[].jira_account_id` | No | Atlassian Jira account ID (for Jira metrics: verified bugs, activity types, cycle time) |
 | `jira.cloud_id` | No | Atlassian cloud instance (e.g., `redhat.atlassian.net`) |
 | `jira.project_keys` | No | Jira project keys to query (e.g., `["CNV", "MTV"]`) |
 
@@ -89,7 +89,7 @@ Each engineer needs at least one of `github` or `gitlab`.
 
 ### Jira Configuration
 
-To track verified bugs from Jira, add a `jira` section and per-engineer `jira_account_id` fields:
+To track verified bugs, activity types, and cycle time from Jira, add a `jira` section and per-engineer `jira_account_id` fields:
 
 ```yaml
 jira:
@@ -113,7 +113,7 @@ teamdash fetch-jira team.yaml -o jira-data.json
 teamdash team.yaml --jira-data jira-data.json
 ```
 
-The JSON file maps quarters to per-engineer verified bug story point sums, with an optional `activity_types` section for story point sums by activity type:
+The JSON file maps quarters to per-engineer verified bug story point sums, with optional `activity_types` and `cycle_times` sections:
 
 ```json
 {
@@ -121,6 +121,11 @@ The JSON file maps quarters to per-engineer verified bug story point sums, with 
   "activity_types": {
     "2025-Q1": {
       "Engineer Name": {"Incidents & Support": 3, "Product / Portfolio Work": 2}
+    }
+  },
+  "cycle_times": {
+    "2025-Q1": {
+      "CNV": {"dev": [3.0, 5.0], "build": [1.0, 2.0], "qe": [2.0, 4.0], "total": [6.0, 11.0]}
     }
   }
 }
@@ -213,7 +218,7 @@ teamdash/
     scoring.py          # Story point estimation engine
     fetch_github.py     # GitHub data fetching via gh CLI
     fetch_gitlab.py     # GitLab data fetching via glab CLI
-    fetch_jira.py       # Jira data loader (verified bugs + activity types from pre-fetched JSON)
+    fetch_jira.py       # Jira data loader (verified bugs, activity types, cycle times from pre-fetched JSON)
     fetch_jira_api.py   # Jira REST API client (direct fetch with pagination)
     aggregate.py        # Orchestration, caching, and parallelization
     dashboard.py        # HTML dashboard generation (embeds React bundle)
@@ -230,6 +235,7 @@ teamdash/
     test_fetch_github.py
     test_fetch_gitlab.py
     test_fetch_jira.py
+    test_fetch_jira_api.py
     test_models.py
     test_quarters.py
     test_scoring.py

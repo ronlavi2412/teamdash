@@ -10,6 +10,7 @@ from pathlib import Path
 class JiraData:
     bugs: dict[str, dict[str, int]] = field(default_factory=dict)
     activity_types: dict[str, dict[str, dict[str, int]]] = field(default_factory=dict)
+    cycle_times: dict[str, dict[str, dict[str, list[float]]]] = field(default_factory=dict)
 
 
 def load_jira_data(path: str) -> JiraData | None:
@@ -41,7 +42,8 @@ def load_jira_data(path: str) -> JiraData | None:
     if "jiraData" in data:
         data = data["jiraData"]
 
-    bugs = {k: v for k, v in data.items() if k != "activity_types"}
+    bugs = {k: v for k, v in data.items() if k not in ("activity_types", "cycle_times")}
     activity_types = data.get("activity_types", {})
+    cycle_times = data.get("cycle_times", {})
 
-    return JiraData(bugs=bugs, activity_types=activity_types)
+    return JiraData(bugs=bugs, activity_types=activity_types, cycle_times=cycle_times)

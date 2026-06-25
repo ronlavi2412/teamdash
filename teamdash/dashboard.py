@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -45,6 +46,18 @@ def _size_dist(eng: EngineerQuarterMetrics) -> dict[str, int]:
         if sp.size in counts:
             counts[sp.size] += 1
     return counts
+
+
+def _percentile(values: list[float], p: float) -> float | None:
+    if not values:
+        return None
+    s = sorted(values)
+    k = (p / 100) * (len(s) - 1)
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return round(s[f], 1)
+    return round(s[f] * (c - k) + s[c] * (k - f), 1)
 
 
 def _zero(name: str, quarter: str) -> EngineerQuarterMetrics:
@@ -119,6 +132,7 @@ def build_dashboard_data(
     summaries: list[QuarterSummary],
     jira_raw: dict | None = None,
     engineer_summaries: dict[str, str] | None = None,
+    cycle_time_data: dict | None = None,
 ) -> dict:
     names = [e.name for e in summaries[0].engineers]
     colors = [COLORS[i % len(COLORS)] for i in range(len(names))]
@@ -131,6 +145,7 @@ def build_dashboard_data(
 
     has_scoring = any(s.total_story_points > 0 for s in summaries)
     has_jira = any(e.verified_bugs > 0 for s in summaries for e in s.engineers)
+    has_cycle_time = bool(cycle_time_data and any(cycle_time_data.values()))
     has_activity_types = any(
         e.activity_type_counts for s in summaries for e in s.engineers
     )
@@ -160,6 +175,20 @@ def build_dashboard_data(
             "activity_types": [by_name.get(n, _zero(n, s.quarter.label)).activity_type_counts for n in names],
         })
 
+    ct_by_quarter: dict = {}
+    ct_projects: set[str] = set()
+    if cycle_time_data:
+        for q_label, projects in cycle_time_data.items():
+            short = None
+            for s in summaries:
+                if s.quarter.label == q_label:
+                    short = s.quarter.short_label
+                    break
+            if not short:
+                continue
+            ct_by_quarter[short] = projects
+            ct_projects.update(projects.keys())
+
     result = {
         "title": title,
         "subtitle": subtitle,
@@ -172,8 +201,11 @@ def build_dashboard_data(
         "isCurrentQuarter": is_current_quarter,
         "hasScoring": has_scoring,
         "hasJira": has_jira,
+        "hasCycleTime": has_cycle_time,
         "hasActivityTypes": has_activity_types,
         "activityTypeNames": activity_type_names,
+        "cycleTimeData": ct_by_quarter,
+        "cycleTimeProjects": sorted(ct_projects),
         "config": _build_config_data(config, has_scoring),
         "tableRows": _build_table_row_data(summaries, names, has_scoring),
     }
@@ -188,8 +220,9 @@ def generate_dashboard(
     config: TeamConfig,
     summaries: list[QuarterSummary],
     output_path: str,
+    cycle_time_data: dict | None = None,
 ) -> None:
-    data = build_dashboard_data(config, summaries)
+    data = build_dashboard_data(config, summaries, cycle_time_data=cycle_time_data)
     generate_dashboard_from_data(data, output_path)
 
 
