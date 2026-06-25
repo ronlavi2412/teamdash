@@ -93,8 +93,11 @@ Look for the `accountId` field in the JSON response. It looks like `"712020:xxxx
 
 ### Quick start (no Jira)
 
+Fetch GitHub and GitLab data for all configured engineers, estimate story points, and produce a self-contained `dashboard.html` file. The `--include-current` flag includes the in-progress quarter.
+
 ```bash
 teamdash config.json --include-current
+open dashboard.html
 ```
 
 ### Full workflow (with Jira and summaries)
@@ -112,15 +115,26 @@ teamdash generate data.json -o dashboard.html
 
 Open `dashboard.html` in a browser.
 
-### Using Claude Code for summaries
+### Using Claude Code
 
-[Claude Code](https://docs.anthropic.com/en/docs/claude-code) can generate narrative per-engineer summaries and embed them in the dashboard automatically. From the project directory:
+This repo includes [Claude Code](https://docs.anthropic.com/en/docs/claude-code) slash commands to automate setup and dashboard generation. From the project directory, run `claude` and use:
 
-```bash
+| Command | What it does |
+|---------|-------------|
+| `/setup` | Interactive setup wizard — checks prerequisites, verifies auth, installs dependencies, helps create `config.json` |
+| `/generate` | Full pipeline — fetches Jira/GitHub/GitLab data, generates per-engineer narrative summaries, produces `dashboard.html` |
+
+**First time setup:**
+```
 claude
+> /setup
 ```
 
-Then ask: *"regenerate the dashboard"* — Claude Code reads the project's `AGENTS.md` file and handles fetching data, generating narrative summaries for each engineer, and producing the final `dashboard.html`.
+**Generate your dashboard:**
+```
+claude
+> /generate
+```
 
 ## CLI Reference
 
