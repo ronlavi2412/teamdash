@@ -31,7 +31,6 @@ interface AppProps {
 
 export default function App({ data }: AppProps) {
   const [activeTab, setActiveTab] = useState('team');
-  const hasSummaries = !!(data.summaries && Object.keys(data.summaries).length > 0);
 
   return (
     <>
@@ -42,7 +41,7 @@ export default function App({ data }: AppProps) {
         isCurrentQuarter={data.isCurrentQuarter}
       />
       <div className="container">
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} hasSummaries={hasSummaries} />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
         {activeTab === 'team' && (
           <TeamView
             quarters={data.quarters}
@@ -88,9 +87,9 @@ export default function App({ data }: AppProps) {
             hasScoring={data.hasScoring}
           />
         )}
-        {activeTab === 'summaries' && hasSummaries && (
+        {activeTab === 'summaries' && (
           <SummariesView
-            summaries={data.summaries!}
+            summaries={data.summaries ?? {}}
             names={data.names}
           />
         )}
