@@ -1,5 +1,7 @@
 # Teamdash
 
+## Overview
+
 CLI tool that generates an interactive HTML dashboard showing team engineering metrics from GitHub and GitLab.
 
 Takes a YAML config file with team members' GitHub/GitLab usernames, fetches PR/MR and code review data via the `gh` and `glab` CLIs, and produces a self-contained HTML dashboard with Chart.js visualizations.
@@ -206,6 +208,10 @@ Fetched data is cached daily in `~/.cache/teamdash/`. Subsequent runs on the sam
 pip install -e ".[dev]"
 pytest
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, coding standards, and PR process.
 
 ## Project Structure
 

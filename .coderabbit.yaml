@@ -1,0 +1,50 @@
+language: en-US
+reviews:
+  profile: chill
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/*.html"
+    - "!**/package-lock.json"
+    - "!dashboard/dist/**"
+    - "!dashboard/e2e/fixtures/*.html"
+    - "!**/__pycache__/**"
+    - "!*.egg-info/**"
+  path_instructions:
+    - path: "teamdash/aggregate.py"
+      instructions: >
+        This module orchestrates caching, parallelization, and data collection.
+        Verify that cache read/write handles new fields in EngineerQuarterMetrics.
+        Check that --refresh-gitlab correctly preserves cached GitHub data while
+        re-fetching GitLab data.
+    - path: "teamdash/scoring.py"
+      instructions: >
+        Scoring engine classifies PRs using four signals. Verify that threshold
+        changes are reflected in both the scoring logic and the ScoringConfig defaults.
+        Label overrides must take precedence over heuristic signals.
+    - path: "teamdash/fetch_jira_api.py"
+      instructions: >
+        Jira REST API client with pagination. Verify JQL queries handle edge cases
+        (empty project_keys, missing fields). Check that ThreadPoolExecutor error
+        handling logs warnings without crashing the entire fetch.
+    - path: "teamdash/dashboard.py"
+      instructions: >
+        Generates the self-contained HTML file. Verify that new data fields are
+        serialized into window.__DASHBOARD_DATA__ and that the React bundle paths
+        (dashboard/dist/dashboard.js, dashboard/dist/dashboard.css) are correct.
+    - path: "dashboard/src/**"
+      instructions: >
+        React/TypeScript dashboard frontend. Verify that new data fields have
+        corresponding TypeScript interfaces in types.ts and that Chart.js datasets
+        handle null/missing values gracefully.
+    - path: "tests/**"
+      instructions: >
+        Python unit tests using pytest and unittest.mock. Verify that subprocess
+        and HTTP calls are properly mocked (no real API calls). Check that conftest
+        fixtures are updated when model fields change.
+  instructions: >
+    Read AGENTS.md for project conventions and review guidelines. Key rules:
+    all Python files must start with `from __future__ import annotations`;
+    data models use dataclasses (no Pydantic); errors/progress go to stderr;
+    API credentials resolve from environment variables, never from .env files.

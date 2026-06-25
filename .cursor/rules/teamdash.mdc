@@ -1,0 +1,24 @@
+---
+description: Teamdash project conventions and patterns
+globs:
+alwaysApply: true
+---
+
+# Teamdash
+
+Python CLI + React dashboard for team engineering metrics (GitHub, GitLab, Jira).
+
+## Conventions
+
+- Python 3.10+, `from __future__ import annotations` in every module
+- Dataclasses for models (no Pydantic); see `teamdash/models.py`
+- Errors/progress to stderr: `[WARN]`, `[ERROR]` prefixes
+- API creds from env vars (`JIRA_EMAIL`, `JIRA_API_TOKEN`), never `.env` files
+- Dashboard: React 19 + Chart.js, Vite build -> `dashboard/dist/`
+- Tests: `pytest` + `unittest.mock` (no real API calls); Playwright for E2E
+
+## New Data Field Checklist
+
+Update: `models.py` -> `types.ts` -> `aggregate.py` (cache) -> `conftest.py` (fixtures) -> rebuild dashboard
+
+## Context: [AGENTS.md](../../AGENTS.md) | [ARCHITECTURE.md](../../ARCHITECTURE.md) | [CONTRIBUTING.md](../../CONTRIBUTING.md)
