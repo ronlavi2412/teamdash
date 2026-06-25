@@ -16,13 +16,14 @@ If anything is missing, tell the user how to install it and stop.
 
 ## Step 3: Install dependencies
 
-Run these commands:
+Run these commands from the project root:
 ```
-pip install .
-cd dashboard && npm install && npm run build && cd ..
+pip install -e .
+npm install --prefix dashboard
+npm run build --prefix dashboard
 ```
 
-If either fails, show the error and help debug.
+If any step fails, show the error and help debug.
 
 ## Step 4: Create config
 

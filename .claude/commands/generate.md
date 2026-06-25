@@ -1,5 +1,7 @@
 Fetch all data and generate the teamdash dashboard. Default is 4 quarters.
 
+IMPORTANT: Always run commands from the project root directory. Use `python3 -m teamdash` (not the `teamdash` binary) to ensure you're running the latest source.
+
 ## Step 1: Ask about current quarter
 
 Ask the user: "Include the current (in-progress) quarter?" Default is yes.
@@ -16,7 +18,7 @@ Read `config.json` to check if it has a `jira` section.
 
 If `config.json` has a `jira` section, run:
 ```
-teamdash fetch-jira config.json -q 4 [--include-current] -o jira-data.json
+python3 -m python3 -m teamdash fetch-jira config.json -q 4 [--include-current] -o jira-data.json
 ```
 
 If there's no `jira` section, skip this step.
@@ -25,12 +27,12 @@ If there's no `jira` section, skip this step.
 
 If Jira data was fetched:
 ```
-teamdash fetch config.json -q 4 [--include-current] --jira-data jira-data.json -o data.json
+python3 -m teamdash fetch config.json -q 4 [--include-current] --jira-data jira-data.json -o data.json
 ```
 
 Otherwise:
 ```
-teamdash fetch config.json -q 4 [--include-current] -o data.json
+python3 -m teamdash fetch config.json -q 4 [--include-current] -o data.json
 ```
 
 ## Step 5: Generate summaries
@@ -44,7 +46,7 @@ Follow the instructions in AGENTS.md under "Generating Summaries":
 ## Step 6: Generate dashboard
 
 ```
-teamdash generate data.json -o dashboard.html
+python3 -m teamdash generate data.json -o dashboard.html
 ```
 
 Tell the user their dashboard is ready at `dashboard.html`.
