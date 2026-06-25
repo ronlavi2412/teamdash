@@ -268,10 +268,13 @@ def fetch_cycle_times(
 
         type_data = result.setdefault(project_key, {}).setdefault(issue_type, _empty_phases())
 
-        if dev_start and dev_end:
+        effective_dev_end_dt = (
+            datetime.fromisoformat(dev_end.replace("Z", "+00:00")) if dev_end else resolved
+        )
+        if dev_start:
             d = _business_days(
                 datetime.fromisoformat(dev_start.replace("Z", "+00:00")),
-                datetime.fromisoformat(dev_end.replace("Z", "+00:00")),
+                effective_dev_end_dt,
             )
             if d > 0:
                 type_data["dev"].append(d)

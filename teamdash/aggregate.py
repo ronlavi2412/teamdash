@@ -67,10 +67,18 @@ def _load_cache(config: TeamConfig) -> dict:
     return {}
 
 
-def _is_quarter_cache_fresh(quarter_data: dict, quarter_end: str) -> bool:
+def _is_quarter_cache_fresh(
+    quarter_data: dict, quarter_end: str, enable_scoring: bool = False,
+) -> bool:
     fetched = quarter_data.get("_meta", {}).get("fetched_date")
     if not fetched:
         return False
+    if enable_scoring:
+        for key, val in quarter_data.items():
+            if key == "_meta":
+                continue
+            if isinstance(val, dict) and "story_points" not in val:
+                return False
     if quarter_end < date.today().isoformat():
         return True
     return fetched == date.today().isoformat()
@@ -220,13 +228,14 @@ def _refresh_engineer_gitlab(
     gh_mt = cached_eng.get("_github_merge_times", [])
 
     if not enable_scoring:
-        gl_mrs = 0
-        gl_mt: list[float] = []
-        gl_reviews = 0
         if eng.gitlab and config.gitlab_url and gitlab_ok:
             gl_mrs = fetch_mrs(config.gitlab_url, eng.gitlab, q.start, q.end)
-            gl_mt = fetch_mr_merge_times(config.gitlab_url, eng.gitlab, q.start, q.end)
+            gl_mt: list[float] = fetch_mr_merge_times(config.gitlab_url, eng.gitlab, q.start, q.end)
             gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
+        else:
+            gl_mrs = cached_eng.get("gitlab_mrs", 0)
+            gl_mt = cached_eng.get("_gitlab_merge_times", [])
+            gl_reviews = max(0, cached_eng.get("reviews", 0) - cached_eng.get("_github_reviews", 0))
 
         all_mt = gh_mt + gl_mt
 
@@ -258,10 +267,29 @@ def _refresh_engineer_gitlab(
         gl_details = fetch_mr_details(config.gitlab_url, eng.gitlab, q.start, q.end)
         gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
 
-    gl_scored = score_prs(gl_details, config.scoring)
-    gl_sp = sum(s.points for s in gl_scored)
-    gl_xl = sum(1 for s in gl_scored if s.size == "XL")
-    gl_mt_scored = [d.merge_time_days for d in gl_details if d.merge_time_days is not None]
+    if gl_details:
+        gl_scored = score_prs(gl_details, config.scoring)
+        gl_sp = sum(s.points for s in gl_scored)
+        gl_xl = sum(1 for s in gl_scored if s.size == "XL")
+        gl_mt_scored = [d.merge_time_days for d in gl_details if d.merge_time_days is not None]
+        gl_mrs_count = len(gl_details)
+    elif not gitlab_ok:
+        gl_scored_summary = [
+            s for s in cached_eng.get("scored_prs_summary", [])
+            if "github.com" not in s.get("url", "")
+        ]
+        gl_scored = []
+        gl_sp = sum(s["points"] for s in gl_scored_summary)
+        gl_xl = sum(1 for s in gl_scored_summary if s.get("size") == "XL")
+        gl_mt_scored = cached_eng.get("_gitlab_merge_times", [])
+        gl_mrs_count = cached_eng.get("gitlab_mrs", 0)
+        gl_reviews = max(0, cached_eng.get("reviews", 0) - cached_eng.get("_github_reviews", 0))
+    else:
+        gl_scored = []
+        gl_sp = 0
+        gl_xl = 0
+        gl_mt_scored = []
+        gl_mrs_count = 0
 
     all_mt = gh_mt + gl_mt_scored
 
@@ -269,7 +297,7 @@ def _refresh_engineer_gitlab(
         name=eng.name,
         quarter=q.label,
         github_prs=gh_prs,
-        gitlab_mrs=len(gl_details),
+        gitlab_mrs=gl_mrs_count,
         reviews=gh_reviews + gl_reviews,
         github_reviews=gh_reviews,
         merge_time_days=_median(all_mt) if all_mt else cached_eng.get("merge_time_days"),
@@ -280,6 +308,31 @@ def _refresh_engineer_gitlab(
         github_merge_times=gh_mt,
         gitlab_merge_times=gl_mt_scored,
     )
+
+
+def _merge_cached_gitlab(
+    metrics: EngineerQuarterMetrics, old: dict, enable_scoring: bool,
+) -> list[dict]:
+    """Patch freshly-fetched metrics with GitLab values from old cache entry.
+
+    Returns GitLab scored_prs_summary entries for use as extra_scored_summary.
+    """
+    metrics.gitlab_mrs = old.get("gitlab_mrs", 0)
+    metrics.gitlab_merge_times = old.get("_gitlab_merge_times", [])
+    old_gl_reviews = max(0, old.get("reviews", 0) - old.get("_github_reviews", 0))
+    metrics.reviews = metrics.github_reviews + old_gl_reviews
+    all_mt = metrics.github_merge_times + metrics.gitlab_merge_times
+    metrics.merge_time_days = _median(all_mt) if all_mt else None
+
+    gl_scored_summary: list[dict] = []
+    if enable_scoring:
+        gl_scored_summary = [
+            s for s in old.get("scored_prs_summary", [])
+            if "github.com" not in s.get("url", "")
+        ]
+        metrics.story_points += sum(s["points"] for s in gl_scored_summary)
+        metrics.xl_count += sum(1 for s in gl_scored_summary if s.get("size") == "XL")
+    return gl_scored_summary
 
 
 def _build_cache_entry(
@@ -342,7 +395,7 @@ def collect_all_data(
 
     for q in quarters:
         cached_quarter = cache.get(q.label, {})
-        quarter_fresh = _is_quarter_cache_fresh(cached_quarter, q.end)
+        quarter_fresh = _is_quarter_cache_fresh(cached_quarter, q.end, enable_scoring)
         quarter_cached[q.label] = {}
 
         if quarter_fresh:
@@ -380,7 +433,14 @@ def collect_all_data(
                 metrics = quarter_cached[q.label][eng.name]
             else:
                 metrics = fetched[(q.label, eng.name)]
-                cache_entry = _build_cache_entry(metrics, enable_scoring)
+                extra_scored: list[dict] | None = None
+                if not gitlab_ok:
+                    old_eng = cache.get(q.label, {}).get(eng.name)
+                    if old_eng:
+                        extra_scored = _merge_cached_gitlab(metrics, old_eng, enable_scoring) or None
+                cache_entry = _build_cache_entry(
+                    metrics, enable_scoring, extra_scored_summary=extra_scored,
+                )
                 q_cache = updated_cache.setdefault(q.label, {})
                 q_cache[eng.name] = cache_entry
                 q_cache["_meta"] = {"fetched_date": date.today().isoformat()}

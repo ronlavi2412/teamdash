@@ -172,5 +172,7 @@ def main() -> None:
                             help="Output HTML file path (default: dashboard.html)")
         parsed = parser.parse_args(args)
         config, summaries = _do_fetch(parsed)
-        generate_dashboard(config, summaries, parsed.output)
+        jira_raw = _load_jira_raw(parsed.jira_data) if parsed.jira_data else None
+        cycle_time_data = jira_raw.get("cycle_times") if jira_raw else None
+        generate_dashboard(config, summaries, parsed.output, cycle_time_data=cycle_time_data)
         print(f"Dashboard written to {parsed.output}", file=sys.stderr)

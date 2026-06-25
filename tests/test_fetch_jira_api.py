@@ -210,10 +210,29 @@ class TestFetchCycleTimes:
                 "email", "token",
             )
 
-        assert result["CNV"]["Story"]["dev"] == []
+        assert result["CNV"]["Story"]["dev"] == [9.0]
         assert result["CNV"]["Story"]["build"] == []
         assert result["CNV"]["Story"]["qe"] == [4.0]
         assert result["CNV"]["Story"]["total"] == [9.0]
+
+    def test_missing_dev_end_no_qe(self):
+        """MTA-style: In Progress → Done with no intermediate statuses."""
+        issues = [
+            _make_issue("MTA", [
+                ("2025-01-06T10:00:00.000+0000", "In Progress"),
+            ], resolution_date="2025-01-10T10:00:00.000+0000"),
+        ]
+
+        with patch("teamdash.fetch_jira_api._jira_search_with_changelog", return_value=issues):
+            result = fetch_cycle_times(
+                "test.atlassian.net", ["MTA"], "2025-01-01", "2025-03-31",
+                "email", "token",
+            )
+
+        assert result["MTA"]["Story"]["dev"] == [4.0]
+        assert result["MTA"]["Story"]["build"] == []
+        assert result["MTA"]["Story"]["qe"] == []
+        assert result["MTA"]["Story"]["total"] == [4.0]
 
     def test_skips_no_dev_start(self):
         issues = [

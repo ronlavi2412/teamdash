@@ -116,13 +116,15 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
         {hasCycleTime && (
           <ChartCard
             title="Cycle Time by Project (Business Days)"
-            tooltip="Median cycle time per project broken down by phase: Dev (Assigned → Modified), Build (Modified → ON_QA), QE (ON_QA → Resolved)."
+            tooltip="Median total cycle time per project across quarters."
             testId="chart-project-cycle-time"
           >
             <ProjectCycleTimeChart
               cycleTimeData={cycleTimeData}
               cycleTimeProjects={cycleTimeProjects}
               quarterLabels={quarterLabels}
+              currentQuarterIndex={currentQuarterIndex}
+              isCurrentQuarter={isCurrentQuarter}
             />
           </ChartCard>
         )}

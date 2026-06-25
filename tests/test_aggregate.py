@@ -98,8 +98,8 @@ class TestCollectAllData:
         cached = {
             "2025-Q1": {
                 "_meta": {"fetched_date": "2025-04-01"},
-                "Alice": {"github_prs": 8, "gitlab_mrs": 4, "reviews": 6, "merge_time_days": 1.5},
-                "Bob": {"github_prs": 2, "gitlab_mrs": 1, "reviews": 3, "merge_time_days": 3.0},
+                "Alice": {"github_prs": 8, "gitlab_mrs": 4, "reviews": 6, "merge_time_days": 1.5, "story_points": 20, "xl_count": 0, "review_story_points": 10},
+                "Bob": {"github_prs": 2, "gitlab_mrs": 1, "reviews": 3, "merge_time_days": 3.0, "story_points": 5, "xl_count": 0, "review_story_points": 3},
             },
         }
         with (
