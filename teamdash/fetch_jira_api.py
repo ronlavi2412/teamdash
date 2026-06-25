@@ -22,6 +22,7 @@ ACTIVITY_TYPES = [
 
 DEFAULT_SP = 2
 SP_FIELD = "customfield_10028"
+ACTIVITY_TYPE_FIELD = "customfield_10464"
 QA_CONTACT_FIELD = "cf[10470]"
 MAX_RESULTS = 100
 
@@ -223,6 +224,39 @@ def fetch_activity_type_sps(
     return _sum_story_points(issues)
 
 
+def fetch_all_activity_type_sps(
+    cloud_id: str,
+    project_keys: list[str],
+    jira_account_id: str,
+    start_date: str,
+    end_date: str,
+    email: str,
+    token: str,
+) -> dict[str, int]:
+    jql = (
+        f'resolution in (Done, "Done-Errata")'
+        f" AND issuetype in (Bug, Task, Story, Vulnerability)"
+        f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
+        f' AND (assignee = "{jira_account_id}" OR {QA_CONTACT_FIELD} = "{jira_account_id}")'
+        f' AND "Activity Type" is not EMPTY'
+        f" AND {_project_clause(project_keys)}"
+    )
+    issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD, ACTIVITY_TYPE_FIELD], email, token)
+    by_type: dict[str, int] = {}
+    for issue in issues:
+        fields = issue.get("fields", {})
+        at_field = fields.get(ACTIVITY_TYPE_FIELD)
+        if not at_field or not isinstance(at_field, dict):
+            continue
+        at_name = at_field.get("value", "")
+        if not at_name:
+            continue
+        sp = fields.get(SP_FIELD)
+        points = int(sp) if sp and sp > 0 else DEFAULT_SP
+        by_type[at_name] = by_type.get(at_name, 0) + points
+    return by_type
+
+
 def _empty_phases() -> dict[str, list[float]]:
     return {"dev": [], "build": [], "qe": [], "total": []}
 
@@ -306,6 +340,67 @@ def fetch_cycle_times(
     return result
 
 
+def _fetch_quarter_jira(
+    q: Quarter,
+    cloud_id: str,
+    project_keys: list[str],
+    engineers_with_jira: list,
+    email: str,
+    token: str,
+) -> tuple[str, dict[str, int], dict[str, dict[str, int]], dict]:
+    print(f"  Fetching Jira data for {q.label}...", file=sys.stderr)
+    q_bugs: dict[str, int] = {}
+    q_activities: dict[str, dict[str, int]] = {}
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        bug_futures = {}
+        activity_futures = {}
+
+        cycle_time_future = pool.submit(
+            fetch_cycle_times,
+            cloud_id, project_keys, q.start, q.end, email, token,
+        )
+
+        for eng in engineers_with_jira:
+            bug_futures[pool.submit(
+                fetch_verified_bugs,
+                cloud_id, project_keys, eng.jira_account_id,
+                q.start, q.end, email, token,
+            )] = eng.name
+
+            activity_futures[pool.submit(
+                fetch_all_activity_type_sps,
+                cloud_id, project_keys, eng.jira_account_id,
+                q.start, q.end, email, token,
+            )] = eng.name
+
+        for fut in as_completed(bug_futures):
+            name = bug_futures[fut]
+            try:
+                q_bugs[name] = fut.result()
+            except Exception as exc:
+                print(f"[WARN] Bug fetch failed for {name}: {exc}", file=sys.stderr)
+                q_bugs[name] = 0
+
+        for fut in as_completed(activity_futures):
+            name = activity_futures[fut]
+            try:
+                eng_activities = fut.result()
+            except Exception as exc:
+                print(f"[WARN] Activity fetch failed for {name}: {exc}", file=sys.stderr)
+                eng_activities = {}
+            if eng_activities:
+                q_activities[name] = eng_activities
+
+        try:
+            q_cycle_times = cycle_time_future.result()
+        except Exception as exc:
+            print(f"[WARN] Cycle time fetch failed: {exc}", file=sys.stderr)
+            q_cycle_times = {}
+
+    return q.label, q_bugs, q_activities, q_cycle_times
+
+
 def fetch_all_jira_data(
     config: TeamConfig,
     quarters: list[Quarter],
@@ -325,62 +420,20 @@ def fetch_all_jira_data(
         e for e in config.engineers if e.jira_account_id
     ]
 
-    for q in quarters:
-        print(f"  Fetching Jira data for {q.label}...", file=sys.stderr)
-        q_bugs: dict[str, int] = {}
-        q_activities: dict[str, dict[str, int]] = {}
-
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            bug_futures = {}
-            activity_futures = {}
-
-            cycle_time_future = pool.submit(
-                fetch_cycle_times,
-                cloud_id, project_keys, q.start, q.end, email, token,
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [
+            pool.submit(
+                _fetch_quarter_jira, q, cloud_id, project_keys,
+                engineers_with_jira, email, token,
             )
-
-            for eng in engineers_with_jira:
-                bug_futures[pool.submit(
-                    fetch_verified_bugs,
-                    cloud_id, project_keys, eng.jira_account_id,
-                    q.start, q.end, email, token,
-                )] = eng.name
-
-                for at in ACTIVITY_TYPES:
-                    activity_futures[pool.submit(
-                        fetch_activity_type_sps,
-                        cloud_id, project_keys, eng.jira_account_id,
-                        q.start, q.end, at, email, token,
-                    )] = (eng.name, at)
-
-            for fut in as_completed(bug_futures):
-                name = bug_futures[fut]
-                try:
-                    q_bugs[name] = fut.result()
-                except Exception as exc:
-                    print(f"[WARN] Bug fetch failed for {name}: {exc}", file=sys.stderr)
-                    q_bugs[name] = 0
-
-            for fut in as_completed(activity_futures):
-                name, at = activity_futures[fut]
-                try:
-                    sp = fut.result()
-                except Exception as exc:
-                    print(f"[WARN] Activity fetch failed for {name}/{at}: {exc}", file=sys.stderr)
-                    sp = 0
-                if sp > 0:
-                    q_activities.setdefault(name, {})[at] = sp
-
-            try:
-                q_cycle_times = cycle_time_future.result()
-            except Exception as exc:
-                print(f"[WARN] Cycle time fetch failed: {exc}", file=sys.stderr)
-                q_cycle_times = {}
-
-        bugs[q.label] = q_bugs
-        if q_activities:
-            activity_types[q.label] = q_activities
-        if q_cycle_times:
-            cycle_times[q.label] = q_cycle_times
+            for q in quarters
+        ]
+        for fut in as_completed(futures):
+            label, q_bugs, q_activities, q_cycle_times = fut.result()
+            bugs[label] = q_bugs
+            if q_activities:
+                activity_types[label] = q_activities
+            if q_cycle_times:
+                cycle_times[label] = q_cycle_times
 
     return JiraData(bugs=bugs, activity_types=activity_types, cycle_times=cycle_times)

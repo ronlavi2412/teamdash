@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 from teamdash.models import PRDetail
@@ -244,7 +245,7 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
         gitlab_url,
         f"{host}/api/v4/projects/{project_id}/merge_requests/{iid}",
     )
-    time.sleep(0.5)
+    time.sleep(0.1)
 
     additions = 0
     deletions = 0
@@ -268,7 +269,7 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
             gitlab_url,
             f"{host}/api/v4/projects/{project_id}/merge_requests/{iid}/notes?per_page=100&page={page}",
         )
-        time.sleep(0.5)
+        time.sleep(0.1)
         if not isinstance(page_data, list) or not page_data:
             break
         all_notes.extend(page_data)
@@ -324,10 +325,12 @@ def fetch_mr_details(
 ) -> list[PRDetail]:
     mrs = _fetch_mr_list(gitlab_url, username, start, end)
     details: list[PRDetail] = []
-    for mr in mrs:
-        detail = _mr_to_detail(mr, gitlab_url, username)
-        if detail:
-            details.append(detail)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(_mr_to_detail, mr, gitlab_url, username) for mr in mrs]
+        for f in futures:
+            detail = f.result()
+            if detail:
+                details.append(detail)
     return details
 
 
@@ -377,10 +380,12 @@ def fetch_reviewed_mr_details(
 ) -> list[PRDetail]:
     mrs = _fetch_reviewed_mr_list(gitlab_url, username, start, end)
     details: list[PRDetail] = []
-    for mr in mrs:
-        detail = _mr_to_detail(mr, gitlab_url, username)
-        if detail:
-            details.append(detail)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(_mr_to_detail, mr, gitlab_url, username) for mr in mrs]
+        for f in futures:
+            detail = f.result()
+            if detail:
+                details.append(detail)
     return details
 
 

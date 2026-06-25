@@ -1,12 +1,13 @@
-Fetch all data and generate the teamdash dashboard. Default is 4 quarters.
+Generate the teamdash dashboard. Uses cached/existing data by default for speed.
 
 IMPORTANT: Always run commands from the project root directory. Use `python3 -m teamdash` (not the `teamdash` binary) to ensure you're running the latest source.
 
-## Step 1: Ask about current quarter
+## Step 1: Ask the user
 
-Ask the user: "Include the current (in-progress) quarter?" Default is yes.
+Use AskUserQuestion with two questions:
 
-Based on the answer, set the `--include-current` flag for the commands below.
+1. "Include the current (in-progress) quarter?" — options: Yes / No (default No)
+2. "Force refetch all data from scratch?" — options: Yes / No (default No)
 
 ## Step 2: Check config
 
@@ -14,28 +15,58 @@ Verify `config.json` exists. If not, tell the user to run `/setup` first and sto
 
 Read `config.json` to check if it has a `jira` section.
 
-## Step 3: Fetch Jira data (if configured)
+## Step 3: Fetch data (based on answers)
 
-If `config.json` has a `jira` section, run:
+### If force=Yes:
+
+Refetch everything from scratch.
+
+If Jira is configured:
 ```
-python3 -m python3 -m teamdash fetch-jira config.json -q 4 [--include-current] -o jira-data.json
-```
-
-If there's no `jira` section, skip this step.
-
-## Step 4: Fetch GitHub/GitLab data
-
-If Jira data was fetched:
-```
-python3 -m teamdash fetch config.json -q 4 [--include-current] --jira-data jira-data.json -o data.json
+python3 -m teamdash fetch-jira config.json -q 4 [--include-current] -o jira-data.json
+python3 -m teamdash fetch config.json -q 4 --no-cache [--include-current] --jira-data jira-data.json -o data.json
 ```
 
-Otherwise:
+Without Jira:
 ```
-python3 -m teamdash fetch config.json -q 4 [--include-current] -o data.json
+python3 -m teamdash fetch config.json -q 4 --no-cache [--include-current] -o data.json
 ```
 
-## Step 5: Generate summaries
+Add `--include-current` only if current=Yes.
+
+### If current=Yes (but not force):
+
+Fetch with `--include-current`. The cache automatically serves past quarters — only the current quarter is fetched fresh.
+
+If Jira is configured:
+```
+python3 -m teamdash fetch-jira config.json -q 4 --include-current -o jira-data.json
+python3 -m teamdash fetch config.json -q 4 --include-current --jira-data jira-data.json -o data.json
+```
+
+Without Jira:
+```
+python3 -m teamdash fetch config.json -q 4 --include-current -o data.json
+```
+
+### If both No (default):
+
+If `data.json` already exists, skip fetching entirely — just regenerate summaries and dashboard.
+
+If `data.json` does not exist, fetch completed quarters only:
+
+If Jira is configured:
+```
+python3 -m teamdash fetch-jira config.json -q 4 -o jira-data.json
+python3 -m teamdash fetch config.json -q 4 --jira-data jira-data.json -o data.json
+```
+
+Without Jira:
+```
+python3 -m teamdash fetch config.json -q 4 -o data.json
+```
+
+## Step 4: Generate summaries
 
 Follow the instructions in AGENTS.md under "Generating Summaries":
 1. Read `data.json` to get all engineer metrics across quarters
@@ -43,7 +74,7 @@ Follow the instructions in AGENTS.md under "Generating Summaries":
 3. Inject the summaries dict into `data.json` under the `"summaries"` key
 4. Save the updated `data.json`
 
-## Step 6: Generate dashboard
+## Step 5: Generate dashboard
 
 ```
 python3 -m teamdash generate data.json -o dashboard.html

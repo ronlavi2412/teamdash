@@ -412,7 +412,7 @@ def collect_all_data(
                 fetch_tasks.append((eng, q))
 
     fetched: dict[tuple[str, str], EngineerQuarterMetrics] = {}
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:
         future_to_key = {
             pool.submit(
                 _fetch_engineer_data, eng, config, gitlab_ok, q,

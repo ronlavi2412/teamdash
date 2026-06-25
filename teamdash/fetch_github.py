@@ -11,7 +11,7 @@ from teamdash.models import PRDetail
 
 _throttle_lock = threading.Lock()
 _request_times: list[float] = []
-_MAX_REQUESTS_PER_MINUTE = 25
+_MAX_REQUESTS_PER_MINUTE = 28
 
 
 def _throttle() -> None:

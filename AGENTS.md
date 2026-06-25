@@ -35,8 +35,8 @@ teamdash/
 ## Key Patterns
 
 - **Subprocess-based API calls**: `fetch_github.py` and `fetch_gitlab.py` call `gh api` and `glab api` as subprocesses, relying on the user's CLI auth sessions rather than HTTP libraries.
-- **Rate limit handling**: GitHub search API has a 30 req/min limit. On 403 or rate limit errors, `fetch_github.py` sleeps 60s and retries once. Individual PR detail fetches sleep 0.5s between requests.
-- **Parallelization**: `aggregate.py` uses `ThreadPoolExecutor` with 4 workers across engineer/quarter combinations. Within each engineer fetch, a nested `ThreadPoolExecutor` (up to 5 workers) parallelizes GitHub/GitLab/Jira API calls.
+- **Rate limit handling**: GitHub search API has a 30 req/min limit. On 403 or rate limit errors, `fetch_github.py` sleeps 60s and retries once. Individual PR detail fetches sleep 0.1s between requests.
+- **Parallelization**: `aggregate.py` uses `ThreadPoolExecutor` with 8 workers across engineer/quarter combinations. Within each engineer fetch, a nested `ThreadPoolExecutor` (up to 5 workers) parallelizes GitHub/GitLab/Jira API calls.
 - **Caching**: Daily cache keyed by config hash (MD5 of team name, orgs, engineers, scoring config) in `~/.cache/teamdash/`. `--no-cache` skips reading but still writes. `--refresh-gitlab` re-fetches only GitLab data while keeping cached GitHub data.
 - **Scoring engine**: 4 signals (diff size, files changed, review friction, merge time) classify PRs as XS/S/M/L/XL. PR labels can override the heuristic. Points are Fibonacci-like: XS=2, S=5, M=8, L=13, XL=21.
 - **Dashboard embedding**: `dashboard.py` serializes data as JSON into `window.__DASHBOARD_DATA__` and embeds the compiled React bundle (`dashboard/dist/dashboard.js` + `dashboard/dist/dashboard.css`) to produce a self-contained HTML file.
