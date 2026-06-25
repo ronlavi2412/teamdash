@@ -2,31 +2,120 @@
 
 ## Overview
 
-CLI tool that generates an interactive HTML dashboard showing team engineering metrics from GitHub and GitLab.
-
-Takes a YAML config file with team members' GitHub/GitLab usernames, fetches PR/MR and code review data via the `gh` and `glab` CLIs, and produces a self-contained HTML dashboard with Chart.js visualizations.
+Teamdash is a Python CLI that fetches engineering metrics from GitHub, GitLab, and Jira and generates a self-contained interactive HTML dashboard. The output is a single HTML file with embedded React, Chart.js, and all data — no server required. It tracks PRs, merge requests, code reviews, story points, verified bugs, cycle times, and more across quarterly time windows, with per-engineer breakdowns and AI-generated narrative summaries.
 
 ## Prerequisites
 
-- Python 3.10+
-- [GitHub CLI](https://cli.github.com/) (`gh`) authenticated via `gh auth login`
-- [GitLab CLI](https://gitlab.com/gitlab-org/cli) (`glab`) authenticated via `glab auth login --hostname <your-gitlab>`
+1. **Python 3.10+** and **Node.js 18+** (for building the dashboard frontend)
 
-## Quick Start
+2. **GitHub CLI** — install from [cli.github.com](https://cli.github.com/), then authenticate:
+   ```bash
+   gh auth login
+   ```
+
+3. **GitLab CLI** (optional, only if your team uses GitLab) — install from [gitlab.com/gitlab-org/cli](https://gitlab.com/gitlab-org/cli), then authenticate:
+   ```bash
+   glab auth login --hostname gitlab.example.com
+   ```
+
+4. **Jira API credentials** (optional, for bug tracking and cycle time metrics):
+   - `JIRA_EMAIL` — your Atlassian account email
+   - `JIRA_API_TOKEN` — create one at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+
+   Set them in your shell profile or before running:
+   ```bash
+   export JIRA_EMAIL="you@company.com"
+   export JIRA_API_TOKEN="your-token-here"
+   ```
+
+5. **Install teamdash**:
+   ```bash
+   pip install .
+   cd dashboard && npm install && npm run build && cd ..
+   ```
+
+## Setting Up Your Team Config
+
+Create a file `config/team.yaml` (this directory is git-ignored so your config stays local):
+
+```yaml
+team_name: "My Team"
+
+github:
+  orgs:
+    - my-github-org
+
+gitlab:
+  url: "https://gitlab.example.com"   # omit if not using GitLab
+
+jira:
+  cloud_id: "mycompany.atlassian.net"
+  project_keys: ["PROJ", "OPS"]       # omit if not using Jira
+
+engineers:
+  - name: "Jane Doe"
+    github: janedoe
+    gitlab: jdoe
+    jira_account_id: "712020:xxxx-xxxx-xxxx"
+
+  - name: "John Smith"
+    github: jsmith
+    # gitlab and jira_account_id are optional
+```
+
+### How to find the values
+
+| Field | How to find it |
+|-------|----------------|
+| **GitHub username** | The username in their GitHub profile URL: `github.com/<username>` |
+| **GitLab username** | The username in their GitLab profile URL: `gitlab.example.com/<username>` |
+| **GitHub orgs** | The organizations your team contributes to — visible at `github.com/orgs/<org>` |
+| **Jira cloud ID** | Your Atlassian site hostname, e.g. `mycompany.atlassian.net` |
+| **Jira project keys** | The prefix in issue IDs (e.g. `PROJ` from `PROJ-123`), visible in Jira board URLs |
+| **Jira account ID** | See below |
+
+**Finding Jira account IDs**: Open this URL in your browser (replace `<site>` with your Atlassian hostname and `<name>` with the person's name):
+
+```
+https://<site>.atlassian.net/rest/api/3/user/search?query=<name>
+```
+
+Look for the `accountId` field in the JSON response. It looks like `"712020:xxxx-xxxx-xxxx"` or `"5e9ff58b1f32260c13f717ca"`.
+
+## Generating Your Dashboard
+
+### Quick start (no Jira)
 
 ```bash
-# Install
-pip install .
+teamdash config/team.yaml --include-current
+```
 
-# Create a team.yaml config (see Configuration section below)
+### Full workflow (with Jira and summaries)
 
-# Generate the dashboard
-teamdash team.yaml
+```bash
+# Step 1: Fetch Jira data (verified bugs, activity types, cycle times)
+teamdash fetch-jira config/team.yaml -q 4 --include-current -o jira-data.json
+
+# Step 2: Fetch GitHub/GitLab data and combine with Jira data
+teamdash fetch config/team.yaml -q 4 --include-current --jira-data jira-data.json -o data.json
+
+# Step 3: Generate the dashboard
+teamdash generate data.json -o dashboard.html
 ```
 
 Open `dashboard.html` in a browser.
 
-## Usage
+### Using Claude Code for summaries
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) can generate narrative per-engineer summaries and embed them in the dashboard automatically. From the project directory:
+
+```bash
+claude
+```
+
+Then ask: *"regenerate the dashboard"* — Claude Code reads the project's `AGENTS.md` file and handles fetching data, generating narrative summaries for each engineer, and producing the final `dashboard.html`.
+
+## CLI Reference
 
 ```bash
 # Combined (fetch + generate in one step)
@@ -37,108 +126,37 @@ teamdash team.yaml --no-cache          # skip cache, fetch fresh data
 teamdash team.yaml --include-current   # include the current (in-progress) quarter
 teamdash team.yaml --no-scoring        # skip story point estimation (faster)
 teamdash team.yaml --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
-teamdash team.yaml --jira-data jira-data.json  # include Jira data (verified bugs, activity types, cycle time)
+teamdash team.yaml --jira-data jira-data.json  # include Jira data
 
 # Fetch only (write data.json, no dashboard generation)
 teamdash fetch team.yaml -o data.json
 teamdash fetch team.yaml --jira-data jira-data.json -o data.json
 
-# Fetch Jira only (requires JIRA_EMAIL and JIRA_API_TOKEN env vars)
+# Fetch Jira only (requires JIRA_EMAIL and JIRA_API_TOKEN)
 teamdash fetch-jira team.yaml -o jira-data.json
 
 # Generate only (read data.json, no API calls)
 teamdash generate data.json -o dashboard.html
 ```
 
-## Configuration
+## Dashboard
 
-Create a `team.yaml` file:
+The generated HTML file includes:
 
-```yaml
-team_name: "My Team"
+- **Summary cards** — Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
+- **Overall Team View** — Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter, story points, review complexity, cycle time trends
+- **Detailed View** — Per-engineer line charts: PRs+MRs trend, code reviews, complexity, merge time, verified bugs, cycle time by project
+- **Summaries** — AI-generated narrative summaries per engineer for the most recent quarter
+- **Full Table** — Sortable table with all metrics per engineer per quarter
+- **Configuration** — Shows the scoring config and thresholds used
 
-gitlab:
-  url: "https://gitlab.example.com"
+## Scoring
 
-github:
-  orgs:
-    - my-org
-    - another-org
+Story point estimation is enabled by default. Each PR/MR is sized XS–XL using four signals: diff size, files changed, review friction, and merge time. The final size is the maximum across all signals. PR labels (e.g. `size/m`) override the heuristic.
 
-engineers:
-  - name: "Jane Doe"
-    github: janedoe
-    gitlab: jdoe
+Points per size: XS=2, S=5, M=8, L=13, XL=21 (configurable).
 
-  - name: "John Smith"
-    github: jsmith
-    gitlab: johnsmith
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `team_name` | Yes | Displayed in the dashboard header |
-| `gitlab.url` | No | Self-hosted GitLab instance URL. Omit to skip GitLab fetching |
-| `github.orgs` | No | GitHub organizations to search for PRs. Omit to skip GitHub fetching |
-| `engineers[].name` | Yes | Display name |
-| `engineers[].github` | No | GitHub username |
-| `engineers[].gitlab` | No | GitLab username |
-| `engineers[].jira_account_id` | No | Atlassian Jira account ID (for Jira metrics: verified bugs, activity types, cycle time) |
-| `jira.cloud_id` | No | Atlassian cloud instance (e.g., `redhat.atlassian.net`) |
-| `jira.project_keys` | No | Jira project keys to query (e.g., `["CNV", "MTV"]`) |
-
-Each engineer needs at least one of `github` or `gitlab`.
-
-### Jira Configuration
-
-To track verified bugs, activity types, and cycle time from Jira, add a `jira` section and per-engineer `jira_account_id` fields:
-
-```yaml
-jira:
-  cloud_id: "redhat.atlassian.net"
-  project_keys: ["CNV", "MTV", "OCPBUGS"]
-
-engineers:
-  - name: "Jane Doe"
-    github: janedoe
-    gitlab: jdoe
-    jira_account_id: "712020:xxxx-xxxx-xxxx"
-```
-
-Fetch Jira data and pass the resulting JSON file to teamdash:
-
-```bash
-# Fetch Jira data (requires JIRA_EMAIL and JIRA_API_TOKEN env vars)
-teamdash fetch-jira team.yaml -o jira-data.json
-
-# Generate dashboard with Jira data
-teamdash team.yaml --jira-data jira-data.json
-```
-
-The JSON file maps quarters to per-engineer verified bug story point sums, with optional `activity_types` and `cycle_times` sections:
-
-```json
-{
-  "2025-Q1": {"Engineer Name": 5, ...},
-  "activity_types": {
-    "2025-Q1": {
-      "Engineer Name": {"Incidents & Support": 3, "Product / Portfolio Work": 2}
-    }
-  },
-  "cycle_times": {
-    "2025-Q1": {
-      "CNV": {
-        "Story": {"dev": [3.0, 5.0], "build": [1.0, 2.0], "qe": [2.0, 4.0], "total": [6.0, 11.0]},
-        "Bug": {"dev": [2.0], "build": [1.0], "qe": [3.0], "total": [6.0]}
-      }
-    }
-  }
-}
-```
-
-### Scoring Configuration
-
-Story point estimation is enabled by default. Customize the scoring behavior by adding a `scoring` section to your config:
+Customize by adding a `scoring` section to your config:
 
 ```yaml
 scoring:
@@ -148,10 +166,10 @@ scoring:
     M: 8
     L: 13
     XL: 21
-  diff_thresholds: [50, 200, 500, 1200]          # lines changed -> XS/S/M/L/XL
-  file_thresholds: [3, 8, 15, 30]                 # files changed -> XS/S/M/L/XL
-  merge_time_thresholds: [0.5, 2.0, 5.0, 10.0]   # days to merge -> XS/S/M/L/XL
-  size_label_patterns:                            # PR labels that override heuristic sizing
+  diff_thresholds: [50, 200, 500, 1200]
+  file_thresholds: [3, 8, 15, 30]
+  merge_time_thresholds: [0.5, 2.0, 5.0, 10.0]
+  size_label_patterns:
     XS: ["size/xs", "t-shirt/xs"]
     S: ["size/s", "t-shirt/s"]
     M: ["size/m", "t-shirt/m"]
@@ -159,48 +177,22 @@ scoring:
     XL: ["size/xl", "t-shirt/xl"]
 ```
 
-All scoring fields are optional; omitted fields use the defaults shown above. Use `--no-scoring` to skip story point estimation entirely.
-
-## Dashboard
-
-The generated HTML file includes:
-
-- **Summary cards** -- Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
-- **Overall Team View tab** -- Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter. When scoring is enabled, also shows total story points and review complexity per quarter
-- **Detailed View tab** -- Per-engineer line charts: PRs+MRs trend, code reviews trend, avg merge time. When scoring is enabled, also shows per-engineer complexity and review complexity trends
-- **Full Table tab** -- Sortable table with all metrics per engineer per quarter (includes story point columns when scoring is enabled, and verified bugs columns when Jira data is provided)
-
-## Story Points
-
-By default, teamdash estimates story points for each PR/MR using a multi-signal heuristic:
-
-1. **Diff size** -- total lines added + deleted
-2. **Files changed** -- number of files modified
-3. **Review friction** -- changes-requested count and high comment volume
-4. **Merge time** -- days from creation to merge
-
-Each signal maps to a t-shirt size (XS/S/M/L/XL) via configurable thresholds. The final size is the maximum across all signals. If a PR carries a recognized size label (e.g., `size/m`), the label overrides the heuristic.
-
-Points are assigned per size: XS=2, S=5, M=8, L=13, XL=21 (Fibonacci-like, configurable).
-
-Review complexity scores the PRs reviewed by each engineer using the same sizing logic. XL PRs are flagged with "should-split" as a suggestion to break them into smaller changesets.
-
-Use `--no-scoring` to skip estimation for faster runs with fewer API calls.
+Use `--no-scoring` to skip estimation for faster runs.
 
 ## Deployment
 
 Publish dashboards to GitHub Pages:
 
 ```bash
-./publish.sh dashboard.html                                    # single dashboard
-./publish.sh dashboard-team1.html dashboard-team2.html         # multiple dashboards
+./publish.sh dashboard.html                            # single dashboard
+./publish.sh dashboard-team1.html dashboard-team2.html # multiple dashboards
 ```
 
-This commits the HTML files to the `gh-pages` branch, generates an `index.html` listing all dashboards, and pushes to the remote.
+This commits the HTML files to the `gh-pages` branch, generates an index page, and pushes.
 
 ## Caching
 
-Fetched data is cached daily in `~/.cache/teamdash/`. Subsequent runs on the same day reuse cached data. Use `--no-cache` to force a fresh fetch.
+Fetched data is cached daily in `~/.cache/teamdash/`, keyed by your config. Subsequent runs on the same day reuse cached data. Past quarters are cached permanently (their data doesn't change). Use `--no-cache` to force a fresh fetch.
 
 ## Testing
 
@@ -209,47 +201,32 @@ pip install -e ".[dev]"
 pytest
 ```
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow, coding standards, and PR process.
-
 ## Project Structure
 
 ```
 teamdash/
-  teamdash/
+  teamdash/             # Python package
     __init__.py         # Package version
     __main__.py         # python -m teamdash entry point
-    cli.py              # CLI entry point (argparse)
-    config.py           # YAML config loading and validation
+    cli.py              # CLI entry point
+    config.py           # YAML config loading
     quarters.py         # Quarter date range calculation
-    models.py           # Data classes (PRDetail, ScoredPR, EngineerQuarterMetrics, etc.)
-    scoring.py          # Story point estimation engine
+    models.py           # Data classes
+    scoring.py          # Story point estimation
     fetch_github.py     # GitHub data fetching via gh CLI
     fetch_gitlab.py     # GitLab data fetching via glab CLI
-    fetch_jira.py       # Jira data loader (verified bugs, activity types, cycle times from pre-fetched JSON)
-    fetch_jira_api.py   # Jira REST API client (direct fetch with pagination)
-    aggregate.py        # Orchestration, caching, and parallelization
-    dashboard.py        # HTML dashboard generation (embeds React bundle)
-  dashboard/
-    src/                # React/TypeScript frontend (Chart.js charts)
-    e2e/                # Playwright end-to-end tests
-    vite.config.ts      # Vite build config
-  tests/
-    conftest.py
-    test_aggregate.py
-    test_config.py
-    test_dashboard.py
-    test_e2e.py
-    test_fetch_github.py
-    test_fetch_gitlab.py
-    test_fetch_jira.py
-    test_fetch_jira_api.py
-    test_models.py
-    test_quarters.py
-    test_scoring.py
+    fetch_jira.py       # Jira data loader (from pre-fetched JSON)
+    fetch_jira_api.py   # Jira REST API client
+    aggregate.py        # Orchestration, caching, parallelization
+    dashboard.py        # HTML dashboard generation
+  dashboard/            # React/TypeScript frontend (Chart.js)
+  tests/                # Python unit tests
   config/               # Team YAML configs (git-ignored)
-  publish.sh            # GitHub Pages deployment script
   pyproject.toml        # Package configuration
-  requirements.txt
+  requirements.txt      # Python dependencies
+  publish.sh            # GitHub Pages deployment
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, testing, and the PR process.

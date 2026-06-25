@@ -87,7 +87,7 @@ When reviewing changes to this project:
 
 ## Running
 
-See [README.md](README.md#usage) for CLI commands and [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+See [README.md](README.md#cli-reference) for CLI commands and [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
 
 ## Style
 

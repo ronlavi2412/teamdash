@@ -2,11 +2,11 @@
 
 ## Getting Started
 
-For installation, prerequisites, and basic usage, see [README.md](README.md#quick-start).
+For installation, prerequisites, and basic usage, see [README.md](README.md#prerequisites).
 
 ## Development Setup
 
-Follow [README.md](README.md#quick-start) to install, then add dev dependencies with `pip install -e ".[dev]"`.
+Follow [README.md](README.md#prerequisites) to install, then add dev dependencies with `pip install -e ".[dev]"`.
 
 For dashboard frontend work, install Node dependencies in `dashboard/` and use `npm run dev` for the Vite dev server. After changing frontend code, rebuild with `npm run build` so that `dashboard.py` embeds the updated bundle.
 
