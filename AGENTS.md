@@ -68,6 +68,8 @@ External CLIs: `gh` (GitHub CLI), `glab` (GitLab CLI).
 
 ### Generating Summaries
 
+The `/generate` command (`.claude/commands/generate.md`) automates this entire process. The steps below are for reference when modifying the summary generation logic.
+
 When regenerating the dashboard, generate narrative summaries for each engineer for the most recent quarter. Summaries are injected into `data.json` under the `"summaries"` key before regenerating the HTML.
 
 1. Read `data.json` to get all engineer metrics across quarters.

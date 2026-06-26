@@ -4,7 +4,40 @@
 
 Teamdash is a Python CLI that fetches engineering metrics from GitHub, GitLab, and Jira and generates a self-contained interactive HTML dashboard. The output is a single HTML file with embedded React, Chart.js, and all data — no server required. It tracks PRs, merge requests, code reviews, story points, verified bugs, cycle times, and more across quarterly time windows, with per-engineer breakdowns and AI-generated narrative summaries.
 
-## Prerequisites
+## Getting Started
+
+The fastest way to get started is with an AI coding assistant. The `/setup` command checks prerequisites, verifies authentication, installs dependencies, and interactively creates your `config.json` (including Jira account ID lookups). The `/generate` command fetches all data, validates usernames, generates per-engineer narrative summaries, and produces the dashboard.
+
+### Using Claude Code
+
+From the project directory, run `claude` and use the slash commands:
+
+```
+claude
+> /setup       # first time: prerequisites, auth, config
+> /generate    # fetch data + build dashboard
+```
+
+| Command | What it does |
+|---------|-------------|
+| `/setup` | Checks Python/Node/CLI versions, verifies GitHub/GitLab/Jira auth, installs dependencies, walks you through creating `config.json` with Jira account ID lookups |
+| `/generate` | Fetches Jira/GitHub/GitLab data, validates engineer usernames (catches typos), generates per-engineer narrative summaries, produces `dashboard.html` |
+
+### Using Cursor
+
+This repo includes [Cursor](https://cursor.com/) rules (in `.cursor/rules/`) for the same workflows. In Cursor's chat, mention the rule to activate it:
+
+| Rule | What it does |
+|------|-------------|
+| `@setup` | Interactive setup wizard — checks prerequisites, verifies auth, installs dependencies, helps create `config.json` |
+| `@generate` | Full pipeline — fetches data, validates usernames, generates summaries, produces `dashboard.html` |
+
+### Manual setup
+
+<details>
+<summary>Click to expand manual setup and CLI workflow</summary>
+
+#### Prerequisites
 
 1. **Python 3.10+** and **Node.js 18+** (for building the dashboard frontend)
 
@@ -34,7 +67,7 @@ Teamdash is a Python CLI that fetches engineering metrics from GitHub, GitLab, a
    cd dashboard && npm install && npm run build && cd ..
    ```
 
-## Setting Up Your Team Config
+#### Setting up your team config
 
 Copy the example and fill in your team's details (`config.json` is git-ignored so your config stays local):
 
@@ -70,7 +103,7 @@ cp config.example.json config.json
 }
 ```
 
-### How to find the values
+#### How to find the values
 
 | Field | How to find it |
 |-------|----------------|
@@ -89,18 +122,16 @@ https://<site>.atlassian.net/rest/api/3/user/search?query=<name>
 
 Look for the `accountId` field in the JSON response. It looks like `"712020:xxxx-xxxx-xxxx"` or `"5e9ff58b1f32260c13f717ca"`.
 
-## Generating Your Dashboard
+#### Generating your dashboard
 
-### Quick start (no Jira)
-
-Fetch GitHub and GitLab data for all configured engineers, estimate story points, and produce a self-contained `dashboard.html` file. The `--include-current` flag includes the in-progress quarter.
+**Quick start (no Jira):**
 
 ```bash
 teamdash config.json --include-current
 open dashboard.html
 ```
 
-### Full workflow (with Jira and summaries)
+**Full workflow (with Jira):**
 
 ```bash
 # Step 1: Fetch Jira data (verified bugs, activity types, cycle times)
@@ -115,35 +146,7 @@ teamdash generate data.json -o dashboard.html
 
 Open `dashboard.html` in a browser.
 
-### Using Claude Code
-
-This repo includes [Claude Code](https://docs.anthropic.com/en/docs/claude-code) slash commands to automate setup and dashboard generation. From the project directory, run `claude` and use:
-
-| Command | What it does |
-|---------|-------------|
-| `/setup` | Interactive setup wizard — checks prerequisites, verifies auth, installs dependencies, helps create `config.json` |
-| `/generate` | Full pipeline — fetches Jira/GitHub/GitLab data, generates per-engineer narrative summaries, produces `dashboard.html` |
-
-**First time setup:**
-```
-claude
-> /setup
-```
-
-**Generate your dashboard:**
-```
-claude
-> /generate
-```
-
-### Using Cursor
-
-This repo includes [Cursor](https://cursor.com/) rules (in `.cursor/rules/`) for the same workflows. In Cursor's chat, mention the rule to activate it:
-
-| Rule | What it does |
-|------|-------------|
-| `@setup` | Interactive setup wizard — checks prerequisites, verifies auth, installs dependencies, helps create `config.json` |
-| `@generate` | Full pipeline — fetches Jira/GitHub/GitLab data, generates per-engineer narrative summaries, produces `dashboard.html` |
+</details>
 
 ## CLI Reference
 
