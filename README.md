@@ -136,6 +136,15 @@ claude
 > /generate
 ```
 
+### Using Cursor
+
+This repo includes [Cursor](https://cursor.com/) rules (in `.cursor/rules/`) for the same workflows. In Cursor's chat, mention the rule to activate it:
+
+| Rule | What it does |
+|------|-------------|
+| `@setup` | Interactive setup wizard — checks prerequisites, verifies auth, installs dependencies, helps create `config.json` |
+| `@generate` | Full pipeline — fetches Jira/GitHub/GitLab data, generates per-engineer narrative summaries, produces `dashboard.html` |
+
 ## CLI Reference
 
 ```bash
