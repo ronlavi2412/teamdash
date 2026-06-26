@@ -1,3 +1,4 @@
+import type { ScriptableLineSegmentContext } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import type { CycleTimeQuarterData } from '../types';
 import { calculatePercentile, getQuarterLabel } from '../utils';
@@ -64,7 +65,7 @@ export function TeamCycleTimeChart({ cycleTimeData, quarterLabels, currentQuarte
           pointBackgroundColor: ISSUE_TYPE_COLORS[t] ?? '#6366f1',
           spanGaps: true,
           segment: {
-            borderDash: (ctx: any) => {
+            borderDash: (ctx: ScriptableLineSegmentContext) => {
               if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) return [5, 5];
               return [];
             },

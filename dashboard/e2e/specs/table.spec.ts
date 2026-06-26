@@ -29,7 +29,7 @@ test.describe('Full Table', () => {
 
     // Click to sort descending
     await firstNumHeader.click();
-    let arrow = firstNumHeader.locator('.sort-arrow');
+    const arrow = firstNumHeader.locator('.sort-arrow');
     await expect(arrow).toHaveText('▼');
 
     // Click again to sort ascending

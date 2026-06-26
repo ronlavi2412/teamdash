@@ -6,6 +6,7 @@ import sys
 import threading
 import time
 from datetime import datetime
+from urllib.parse import quote
 
 from teamdash.models import PRDetail
 
@@ -62,12 +63,12 @@ def _run_gh(cmd: list[str], retries: int = 3) -> subprocess.CompletedProcess | N
         if not _is_rate_limit(result.stderr.strip()):
             return result
 
-    print(f"[WARN] GitHub API still failing after {retries} retries: {stderr}", file=sys.stderr)
+    print(f"[WARN] GitHub API still failing after {retries} retries", file=sys.stderr)
     return result
 
 
 def _orgs_query(orgs: list[str]) -> str:
-    return "+".join(f"org:{org}" for org in orgs)
+    return "+".join(f"org:{quote(org, safe='')}" for org in orgs)
 
 
 def _gh_graphql(query: str, variables: dict | None = None) -> dict | None:
@@ -134,7 +135,8 @@ def _gh_search_items(query: str) -> list[dict]:
 
 
 def fetch_merge_times(username: str, orgs: list[str], start: str, end: str) -> list[float]:
-    query = f"type:pr+author:{username}+{_orgs_query(orgs)}+merged:{start}..{end}"
+    safe_user = quote(username, safe='')
+    query = f"type:pr+author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     items = _gh_search_items(query)
     merge_times: list[float] = []
     for item in items:
@@ -149,12 +151,14 @@ def fetch_merge_times(username: str, orgs: list[str], start: str, end: str) -> l
 
 
 def fetch_prs(username: str, orgs: list[str], start: str, end: str) -> int:
-    query = f"type:pr+author:{username}+{_orgs_query(orgs)}+merged:{start}..{end}"
+    safe_user = quote(username, safe='')
+    query = f"type:pr+author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     return _gh_search_count(query)
 
 
 def fetch_reviews(username: str, orgs: list[str], start: str, end: str) -> int:
-    query = f"type:pr+reviewed-by:{username}+{_orgs_query(orgs)}+-author:{username}+merged:{start}..{end}"
+    safe_user = quote(username, safe='')
+    query = f"type:pr+reviewed-by:{safe_user}+{_orgs_query(orgs)}+-author:{safe_user}+merged:{start}..{end}"
     return _gh_search_count(query)
 
 
@@ -250,14 +254,16 @@ def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
 def fetch_pr_details(
     username: str, orgs: list[str], start: str, end: str,
 ) -> list[PRDetail]:
-    query = f"type:pr+author:{username}+{_orgs_query(orgs)}+merged:{start}..{end}"
+    safe_user = quote(username, safe='')
+    query = f"type:pr+author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     return _fetch_details_for_query(query, author=username)
 
 
 def fetch_reviewed_pr_details(
     username: str, orgs: list[str], start: str, end: str,
 ) -> list[PRDetail]:
-    query = f"type:pr+reviewed-by:{username}+-author:{username}+{_orgs_query(orgs)}+merged:{start}..{end}"
+    safe_user = quote(username, safe='')
+    query = f"type:pr+reviewed-by:{safe_user}+-author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     return _fetch_details_for_query(query, author=username)
 
 

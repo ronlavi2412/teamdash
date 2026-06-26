@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
@@ -75,7 +76,7 @@ def _jira_search(
         resp = requests.post(url, json=body, auth=(email, token), timeout=30)
         if resp.status_code != 200:
             print(
-                f"[WARN] Jira search failed ({resp.status_code}): {resp.text[:200]}",
+                f"[WARN] Jira search failed (HTTP {resp.status_code})",
                 file=sys.stderr,
             )
             break
@@ -147,7 +148,14 @@ def _sum_story_points(issues: list[dict]) -> int:
     return total
 
 
+def _jql_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def _project_clause(project_keys: list[str]) -> str:
+    for key in project_keys:
+        if not re.match(r"^[A-Za-z][A-Za-z0-9_]+$", key):
+            raise ValueError(f"Invalid Jira project key: {key}")
     return "project in (" + ", ".join(project_keys) + ")"
 
 
@@ -192,10 +200,11 @@ def fetch_verified_bugs(
     email: str,
     token: str,
 ) -> int:
+    safe_id = _jql_escape(jira_account_id)
     jql = (
         f'issuetype = Bug AND resolution in (Done, "Done-Errata")'
         f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
-        f' AND {QA_CONTACT_FIELD} = "{jira_account_id}"'
+        f' AND {QA_CONTACT_FIELD} = "{safe_id}"'
         f" AND {_project_clause(project_keys)}"
     )
     issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD], email, token)
@@ -212,12 +221,14 @@ def fetch_activity_type_sps(
     email: str,
     token: str,
 ) -> int:
+    safe_id = _jql_escape(jira_account_id)
+    safe_at = _jql_escape(activity_type)
     jql = (
         f'resolution in (Done, "Done-Errata")'
         f" AND issuetype in (Bug, Task, Story, Vulnerability)"
         f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
-        f' AND (assignee = "{jira_account_id}" OR {QA_CONTACT_FIELD} = "{jira_account_id}")'
-        f' AND "Activity Type" = "{activity_type}"'
+        f' AND (assignee = "{safe_id}" OR {QA_CONTACT_FIELD} = "{safe_id}")'
+        f' AND "Activity Type" = "{safe_at}"'
         f" AND {_project_clause(project_keys)}"
     )
     issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD], email, token)
@@ -233,11 +244,12 @@ def fetch_all_activity_type_sps(
     email: str,
     token: str,
 ) -> dict[str, int]:
+    safe_id = _jql_escape(jira_account_id)
     jql = (
         f'resolution in (Done, "Done-Errata")'
         f" AND issuetype in (Bug, Task, Story, Vulnerability)"
         f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
-        f' AND (assignee = "{jira_account_id}" OR {QA_CONTACT_FIELD} = "{jira_account_id}")'
+        f' AND (assignee = "{safe_id}" OR {QA_CONTACT_FIELD} = "{safe_id}")'
         f' AND "Activity Type" is not EMPTY'
         f" AND {_project_clause(project_keys)}"
     )

@@ -6,6 +6,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from teamdash.models import PRDetail
 
@@ -38,7 +39,7 @@ def fetch_mrs(gitlab_url: str, username: str, start: str, end: str) -> int:
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
     base = (
-        f"{host}/api/v4/merge_requests?author_username={username}"
+        f"{host}/api/v4/merge_requests?author_username={quote(username, safe='')}"
         f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
         f"&scope=all&per_page=100"
     )
@@ -85,7 +86,7 @@ def fetch_reviews(gitlab_url: str, username: str, start: str, end: str) -> int:
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
     base = (
-        f"{host}/api/v4/merge_requests?reviewer_username={username}"
+        f"{host}/api/v4/merge_requests?reviewer_username={quote(username, safe='')}"
         f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
         f"&scope=all&per_page=100"
     )
@@ -134,7 +135,7 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
     base = (
-        f"{host}/api/v4/merge_requests?author_username={username}"
+        f"{host}/api/v4/merge_requests?author_username={quote(username, safe='')}"
         f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
         f"&scope=all&per_page=100"
     )
@@ -201,7 +202,7 @@ def _fetch_mr_list(
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
     base = (
-        f"{host}/api/v4/merge_requests?author_username={username}"
+        f"{host}/api/v4/merge_requests?author_username={quote(username, safe='')}"
         f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
         f"&scope=all&per_page=100"
     )
@@ -243,7 +244,7 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
     host = gitlab_url.rstrip("/")
     mr_detail = _glab_api_get(
         gitlab_url,
-        f"{host}/api/v4/projects/{project_id}/merge_requests/{iid}",
+        f"{host}/api/v4/projects/{quote(str(project_id), safe='')}/merge_requests/{quote(str(iid), safe='')}",
     )
     time.sleep(0.1)
 
@@ -267,7 +268,7 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
     while True:
         page_data = _glab_api_get(
             gitlab_url,
-            f"{host}/api/v4/projects/{project_id}/merge_requests/{iid}/notes?per_page=100&page={page}",
+            f"{host}/api/v4/projects/{quote(str(project_id), safe='')}/merge_requests/{quote(str(iid), safe='')}/notes?per_page=100&page={page}",
         )
         time.sleep(0.1)
         if not isinstance(page_data, list) or not page_data:
@@ -340,7 +341,7 @@ def _fetch_reviewed_mr_list(
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
     base = (
-        f"{host}/api/v4/merge_requests?reviewer_username={username}"
+        f"{host}/api/v4/merge_requests?reviewer_username={quote(username, safe='')}"
         f"&state=merged&updated_after={start}T00:00:00Z&updated_before={end}T23:59:59Z"
         f"&scope=all&per_page=100"
     )

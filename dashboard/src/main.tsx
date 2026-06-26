@@ -6,7 +6,7 @@ import { mockData } from './mockData';
 import type { DashboardData } from './types';
 
 const data: DashboardData =
-  (window as any).__DASHBOARD_DATA__ ?? mockData;
+  (window as unknown as { __DASHBOARD_DATA__?: DashboardData }).__DASHBOARD_DATA__ ?? mockData;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

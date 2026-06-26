@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import math
 import sys
@@ -139,7 +140,8 @@ def build_dashboard_data(
 
     first_q = summaries[0].quarter
     last_q = summaries[-1].quarter
-    title = f"{config.team_name} &mdash; {first_q.label} to {last_q.label}"
+    safe_name = html.escape(config.team_name)
+    title = f"{safe_name} &mdash; {first_q.label} to {last_q.label}"
     subtitle = f"{len(summaries)} quarters ({first_q.start} to {last_q.end})"
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
 

@@ -1,3 +1,4 @@
+import type { ScriptableLineSegmentContext } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import type { QuarterData } from '../types';
 import { calculateMedian, getQuarterLabel } from '../utils';
@@ -26,7 +27,7 @@ export function TeamLineChart({ quarters, currentQuarterIndex, isCurrentQuarter 
           pointBackgroundColor: '#ef4444',
           spanGaps: true,
           segment: {
-            borderDash: (ctx: any) => {
+            borderDash: (ctx: ScriptableLineSegmentContext) => {
               if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {
                 return [5, 5];
               }

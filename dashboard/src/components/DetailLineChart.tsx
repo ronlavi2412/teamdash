@@ -1,3 +1,4 @@
+import type { ScriptableLineSegmentContext } from 'chart.js';
 import { useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 import type { QuarterData } from '../types';
@@ -33,7 +34,7 @@ export function DetailLineChart({
       hidden: !selectedEngineers.has(name),
       spanGaps: true,
       segment: {
-        borderDash: (ctx: any) => {
+        borderDash: (ctx: ScriptableLineSegmentContext) => {
           if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) {
             return [5, 5];
           }

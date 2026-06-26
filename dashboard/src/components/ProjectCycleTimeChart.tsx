@@ -1,3 +1,4 @@
+import type { ScriptableLineSegmentContext, TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import type { CycleTimeQuarterData } from '../types';
 import { calculatePercentile, getQuarterLabel } from '../utils';
@@ -46,7 +47,7 @@ export function ProjectCycleTimeChart({
       pointBackgroundColor: color,
       spanGaps: true,
       segment: {
-        borderDash: (ctx: any) => {
+        borderDash: (ctx: ScriptableLineSegmentContext) => {
           if (isCurrentQuarter && ctx.p1DataIndex === currentQuarterIndex) return [5, 5];
           return [];
         },
@@ -64,7 +65,7 @@ export function ProjectCycleTimeChart({
           legend: { display: true, position: 'bottom' as const },
           tooltip: {
             callbacks: {
-              label: (context: any) =>
+              label: (context: TooltipItem<'line'>) =>
                 `${context.dataset.label}: ${context.parsed.y} days`,
             },
           },

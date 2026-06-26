@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
@@ -85,11 +86,12 @@ def _is_quarter_cache_fresh(
 
 
 def _save_cache(config: TeamConfig, quarters_data: dict) -> None:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     cache_file = CACHE_DIR / f"{_config_hash(config)}.json"
     cache_file.write_text(json.dumps({
         "quarters": quarters_data,
     }, indent=2))
+    os.chmod(cache_file, 0o600)
 
 
 def _fetch_engineer_data(
