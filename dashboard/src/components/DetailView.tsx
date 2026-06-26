@@ -94,8 +94,20 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
           </ChartCard>
         )}
       </div>
-      {hasActivityTypes && (
-        <div className="chart-row">
+      <div className="chart-row">
+        {hasJira && (
+          <ChartCard
+            title="Verified Bugs SP per Quarter"
+            tooltip="Story points of Jira bugs resolved as Done per engineer during the quarter."
+            testId="chart-verified-bugs-trend"
+          >
+            <DetailLineChart
+              {...commonProps}
+              getValues={q => q.verified_bugs}
+            />
+          </ChartCard>
+        )}
+        {hasActivityTypes && (
           <ChartCard
             title="Story Points by Activity Type"
             tooltip="Per-engineer Jira story points broken down by activity type for the selected quarter. Issues without story points default to 2 SP."
@@ -110,8 +122,8 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
               quarterLabels={quarterLabels}
             />
           </ChartCard>
-        </div>
-      )}
+        )}
+      </div>
       <div className="chart-row">
         {hasCycleTime && (
           <ChartCard
@@ -125,18 +137,6 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
               quarterLabels={quarterLabels}
               currentQuarterIndex={currentQuarterIndex}
               isCurrentQuarter={isCurrentQuarter}
-            />
-          </ChartCard>
-        )}
-        {hasJira && (
-          <ChartCard
-            title="Verified Bugs SP per Quarter"
-            tooltip="Story points of Jira bugs resolved as Done per engineer during the quarter."
-            testId="chart-verified-bugs-trend"
-          >
-            <DetailLineChart
-              {...commonProps}
-              getValues={q => q.verified_bugs}
             />
           </ChartCard>
         )}
