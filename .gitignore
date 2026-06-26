@@ -6,6 +6,7 @@ build/
 .venv/
 venv/
 *.html
+!dashboard/index.html
 *.csv
 config.json
 dashboard/.vite/
