@@ -66,6 +66,54 @@ Without Jira:
 python3 -m teamdash fetch config.json -q 4 -o data.json
 ```
 
+## Step 3.5: Validate fetched data
+
+After fetching, check for engineers with zero PR/MR/review contributions in the most recent quarter:
+
+```
+python3 -c "
+import json
+with open('data.json') as f:
+    d = json.load(f)
+names = d['names']
+last_q = d['quarters'][-1]
+label = d['quarterLabels'][-1]
+flagged = []
+for i, name in enumerate(names):
+    prs = last_q['gh_prs'][i]
+    mrs = last_q['gl_mrs'][i]
+    reviews = last_q['reviews'][i]
+    bugs = last_q['verified_bugs'][i]
+    has_jira = bugs > 0 or bool(last_q.get('activity_types', [{}])[i])
+    if prs == 0 and mrs == 0 and reviews == 0:
+        flagged.append({'name': name, 'has_jira': has_jira})
+if flagged:
+    for f in flagged:
+        tag = 'Jira-only' if f['has_jira'] else 'no activity'
+        print(f'{f[\"name\"]} ({tag})')
+else:
+    print('ALL_OK')
+"
+```
+
+If `ALL_OK`, proceed to Step 4.
+
+If engineers are flagged, **verify their usernames actually exist** before prompting:
+
+- **GitHub**: Run `gh api users/{username}` for each flagged engineer's GitHub username. A 404 means the username is wrong.
+- **GitLab**: Run `glab api "users?search={username}" --hostname {gitlab_url}` and check if the expected user appears.
+
+For any username that doesn't exist:
+- Search for the correct one: `gh api "search/users?q={engineer_name}" --jq '.items[:5] | .[] | "\(.login) - \(.html_url)"'`
+- If a likely match is found, suggest it to the user.
+
+Then use AskUserQuestion to show the findings:
+- "These engineers have 0 PRs/MRs in {quarter}: {list with details}. {Username} doesn't exist on GitHub — did you mean {suggestion}? What would you like to do?"
+- Options: "Fix config and re-fetch" / "Continue anyway"
+
+If "Fix config and re-fetch": update the username(s) in `config.json`, then go back to Step 3 to re-fetch data for the affected engineers.
+If "Continue anyway": proceed to Step 4.
+
 ## Step 4: Generate summaries
 
 Follow the instructions in AGENTS.md under "Generating Summaries":
