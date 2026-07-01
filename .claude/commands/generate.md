@@ -117,9 +117,13 @@ If "Continue anyway": proceed to Step 4.
 ## Step 4: Generate summaries
 
 Follow the instructions in AGENTS.md under "Generating Summaries":
-1. Read `data.json` to get all engineer metrics across quarters
-2. For each engineer, write a concise narrative summary (2-3 paragraphs) for the last quarter covering PR/MR output, complexity trends, code review activity, merge time, verified bugs (if applicable), and activity type breakdown (if available). Skip engineers with no activity across all quarters.
-3. Inject the summaries dict into `data.json` under the `"summaries"` key
+1. Read `data.json` to get all engineer metrics across quarters. The file includes a `pr_details` field with per-engineer per-quarter PR lists containing title, repo, size, and source.
+2. For the most recent quarter only, and for each engineer, write a comprehensive narrative summary (up to 3 paragraphs) that goes beyond raw numbers:
+   - **Paragraph 1 — What they worked on:** Group PRs by repo to describe which projects the engineer contributed to. Mention dominant themes from PR titles (bug fixes, new features, refactoring, i18n, CI/CD, testing, etc.). Highlight 1-2 notable or impactful PRs by name (especially XL-sized ones).
+   - **Paragraph 2 — Output and complexity:** Summarize quantitative metrics — total PRs/MRs, complexity points, size distribution, merge time. Compare against the previous quarter where available.
+   - **Paragraph 3 — Reviews, bugs, and Jira activity:** Cover code review volume and review complexity points. Include verified bugs and activity type breakdown (if available from Jira). Note any quarter-over-quarter trends.
+   - Skip engineers with no activity in that quarter.
+3. Inject the summaries dict into `data.json` under the `"summaries"` key, structured as `{"Q2'26": {"Engineer Name": "summary text", ...}}` (latest quarter only)
 4. Save the updated `data.json`
 
 ## Step 5: Generate dashboard
@@ -128,4 +132,4 @@ Follow the instructions in AGENTS.md under "Generating Summaries":
 python3 -m teamdash generate data.json -o dashboard.html
 ```
 
-Tell the user their dashboard is ready at `dashboard.html`.
+The dashboard will open automatically in the default browser. Tell the user their dashboard is ready at `dashboard.html`.

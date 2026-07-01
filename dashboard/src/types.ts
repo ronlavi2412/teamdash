@@ -89,5 +89,5 @@ export interface DashboardData {
   cycleTimeProjects: string[];
   config: ConfigData;
   tableRows: TableRowData[];
-  summaries?: Record<string, string>;
+  summaries?: Record<string, Record<string, string>>;
 }

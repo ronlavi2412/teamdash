@@ -70,11 +70,15 @@ External CLIs: `gh` (GitHub CLI), `glab` (GitLab CLI).
 
 The `/generate` command (`.claude/commands/generate.md`) automates this entire process. The steps below are for reference when modifying the summary generation logic.
 
-When regenerating the dashboard, generate narrative summaries for each engineer for the most recent quarter. Summaries are injected into `data.json` under the `"summaries"` key before regenerating the HTML.
+When regenerating the dashboard, generate comprehensive narrative summaries for each engineer for the most recent quarter only. Summaries are injected into `data.json` under the `"summaries"` key (nested by quarter) before regenerating the HTML. The `data.json` file includes a `pr_details` field with per-engineer per-quarter PR lists (title, repo, size, source) to enable content-aware summaries.
 
-1. Read `data.json` to get all engineer metrics across quarters.
-2. For each engineer, write a concise narrative (2-3 paragraphs) for the last quarter covering PR/MR output, complexity trends, code review activity, merge time, verified bugs (if applicable), and activity type breakdown (if available). Skip engineers with no activity across all quarters.
-3. Inject the summaries dict into `data.json`: `{"summaries": {"Engineer Name": "summary text", ...}}`
+1. Read `data.json` to get all engineer metrics and PR details across quarters.
+2. For the most recent quarter only, and for each engineer, write a comprehensive narrative (up to 3 paragraphs):
+   - **What they worked on:** Group PRs by repo, identify themes from titles (bugs, features, refactoring, i18n, etc.), highlight notable PRs.
+   - **Output and complexity:** Total PRs/MRs, complexity points, size distribution, merge time, quarter-over-quarter trends.
+   - **Reviews, bugs, Jira:** Code review volume, verified bugs, activity type breakdown.
+   - Skip engineers with no activity in that quarter.
+3. Inject the summaries dict into `data.json`: `{"summaries": {"Q2'26": {"Engineer Name": "summary text", ...}}}` (latest quarter only)
 4. Regenerate: `teamdash generate data.json -o dashboard.html`
 
 ### Review Guidelines

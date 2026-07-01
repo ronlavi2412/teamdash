@@ -61,6 +61,20 @@ def _percentile(values: list[float], p: float) -> float | None:
     return round(s[f] * (c - k) + s[c] * (k - f), 1)
 
 
+def _extract_repo(url: str) -> str:
+    parts = url.rstrip("/").split("/")
+    try:
+        idx = parts.index("github.com") if "github.com" in parts else parts.index("gitlab.com")
+    except ValueError:
+        for i, p in enumerate(parts):
+            if "gitlab" in p or "github" in p:
+                idx = i
+                break
+        else:
+            return "/".join(parts[-2:])
+    return "/".join(parts[idx + 1 : idx + 3])
+
+
 def _zero(name: str, quarter: str) -> EngineerQuarterMetrics:
     return EngineerQuarterMetrics(name=name, quarter=quarter)
 
@@ -132,7 +146,7 @@ def build_dashboard_data(
     config: TeamConfig,
     summaries: list[QuarterSummary],
     jira_raw: dict | None = None,
-    engineer_summaries: dict[str, str] | None = None,
+    engineer_summaries: dict[str, dict[str, str]] | None = None,
     cycle_time_data: dict | None = None,
 ) -> dict:
     names = [e.name for e in summaries[0].engineers]
@@ -211,6 +225,26 @@ def build_dashboard_data(
         "config": _build_config_data(config, has_scoring),
         "tableRows": _build_table_row_data(summaries, names, has_scoring),
     }
+    pr_details: dict[str, dict[str, list[dict]]] = {}
+    for s in summaries:
+        by_name = {e.name: e for e in s.engineers}
+        q_details: dict[str, list[dict]] = {}
+        for n in names:
+            eng = by_name.get(n)
+            if not eng or not eng.scored_prs:
+                continue
+            q_details[n] = [
+                {
+                    "title": sp.detail.title,
+                    "repo": _extract_repo(sp.detail.url),
+                    "size": sp.size,
+                    "source": sp.detail.source,
+                }
+                for sp in eng.scored_prs
+            ]
+        pr_details[s.quarter.short_label] = q_details
+    result["pr_details"] = pr_details
+
     if jira_raw is not None:
         result["jiraData"] = jira_raw
     if engineer_summaries:
@@ -243,9 +277,10 @@ def generate_dashboard_from_data(data: dict, output_path: str) -> None:
     js_bundle = js_path.read_text()
     css_bundle = css_path.read_text() if css_path.exists() else ""
 
+    embedded = {k: v for k, v in data.items() if k != "pr_details"}
     html = _REACT_HTML_TEMPLATE.format(
         title_text=data["title"],
-        dashboard_data_json=json.dumps(data),
+        dashboard_data_json=json.dumps(embedded),
         css_bundle=css_bundle,
         js_bundle=js_bundle,
     )

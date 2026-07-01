@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,6 +31,16 @@ interface AppProps {
 
 export default function App({ data }: AppProps) {
   const [activeTab, setActiveTab] = useState('team');
+
+  const normalizedSummaries = useMemo(() => {
+    const raw = data.summaries ?? {};
+    const firstVal = Object.values(raw)[0];
+    if (typeof firstVal === 'string') {
+      const latestQ = data.quarterLabels[data.quarterLabels.length - 1];
+      return { [latestQ]: raw as unknown as Record<string, string> };
+    }
+    return raw;
+  }, [data.summaries, data.quarterLabels]);
 
   return (
     <>
@@ -89,8 +99,9 @@ export default function App({ data }: AppProps) {
         )}
         {activeTab === 'summaries' && (
           <SummariesView
-            summaries={data.summaries ?? {}}
+            summaries={normalizedSummaries}
             names={data.names}
+            quarterLabels={data.quarterLabels}
           />
         )}
       </div>

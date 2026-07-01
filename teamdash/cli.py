@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import webbrowser
+from pathlib import Path
 
 from teamdash.aggregate import collect_all_data
 from teamdash.config import load_config
@@ -13,6 +15,13 @@ from teamdash.dashboard import (
 )
 from teamdash.fetch_github import check_auth
 from teamdash.quarters import get_quarters
+
+
+def _open_in_browser(path: str) -> None:
+    try:
+        webbrowser.open(Path(path).resolve().as_uri())
+    except Exception:
+        pass
 
 
 def _add_fetch_args(parser: argparse.ArgumentParser) -> None:
@@ -58,7 +67,6 @@ def _do_fetch(args: argparse.Namespace) -> tuple:
 
 
 def _load_jira_raw(path: str) -> dict | None:
-    from pathlib import Path
     try:
         data = json.loads(Path(path).read_text())
     except (json.JSONDecodeError, FileNotFoundError):
@@ -123,6 +131,7 @@ def _cmd_generate(args: argparse.Namespace) -> None:
     output = args.output or "dashboard.html"
     generate_dashboard_from_data(data, output)
     print(f"Dashboard written to {output}", file=sys.stderr)
+    _open_in_browser(output)
 
 
 def main() -> None:
@@ -176,3 +185,4 @@ def main() -> None:
         cycle_time_data = jira_raw.get("cycle_times") if jira_raw else None
         generate_dashboard(config, summaries, parsed.output, cycle_time_data=cycle_time_data)
         print(f"Dashboard written to {parsed.output}", file=sys.stderr)
+        _open_in_browser(parsed.output)
