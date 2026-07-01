@@ -280,12 +280,16 @@ def fetch_cycle_times(
     end_date: str,
     email: str,
     token: str,
+    account_ids: list[str] | None = None,
 ) -> dict[str, dict[str, dict[str, list[float]]]]:
     jql = (
         f'issuetype in (Story, Bug, Vulnerability) AND resolution in (Done, "Done-Errata")'
         f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
         f" AND {_project_clause(project_keys)}"
     )
+    if account_ids:
+        ids_clause = ", ".join(f'"{_jql_escape(aid)}"' for aid in account_ids)
+        jql += f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
     issues = _jira_search_with_changelog(
         cloud_id, jql, ["summary", "project", "issuetype", "resolutiondate"], email, token,
     )
@@ -368,9 +372,11 @@ def _fetch_quarter_jira(
         bug_futures = {}
         activity_futures = {}
 
+        account_ids = [e.jira_account_id for e in engineers_with_jira if e.jira_account_id]
         cycle_time_future = pool.submit(
             fetch_cycle_times,
             cloud_id, project_keys, q.start, q.end, email, token,
+            account_ids=account_ids,
         )
 
         for eng in engineers_with_jira:

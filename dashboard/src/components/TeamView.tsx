@@ -123,8 +123,8 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
         )}
         {hasCycleTime && (
           <ChartCard
-            title="Cycle Time per Quarter (Business Days)"
-            tooltip="Median (P50) and P90 cycle time in business days across all team members. Cycle time = first In Progress transition to resolution date."
+            title="Team Cycle Time per Quarter (Business Days)"
+            tooltip="Median (P50) and P90 cycle time in business days for issues assigned to or QA'd by team members. Cycle time = first In Progress transition to resolution date."
             testId="chart-team-cycle-time"
           >
             <TeamCycleTimeChart

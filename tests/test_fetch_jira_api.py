@@ -277,3 +277,25 @@ class TestFetchCycleTimes:
             )
 
         assert result == {}
+
+    def test_account_ids_filter_in_jql(self):
+        with patch("teamdash.fetch_jira_api._jira_search_with_changelog", return_value=[]) as mock_search:
+            fetch_cycle_times(
+                "test.atlassian.net", ["CNV"], "2025-01-01", "2025-03-31",
+                "email", "token",
+                account_ids=["abc123", "def456"],
+            )
+
+        jql = mock_search.call_args[0][1]
+        assert 'assignee IN ("abc123", "def456")' in jql
+        assert 'cf[10470] IN ("abc123", "def456")' in jql
+
+    def test_no_account_ids_no_filter(self):
+        with patch("teamdash.fetch_jira_api._jira_search_with_changelog", return_value=[]) as mock_search:
+            fetch_cycle_times(
+                "test.atlassian.net", ["CNV"], "2025-01-01", "2025-03-31",
+                "email", "token",
+            )
+
+        jql = mock_search.call_args[0][1]
+        assert "assignee" not in jql

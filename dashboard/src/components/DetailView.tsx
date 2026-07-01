@@ -127,8 +127,8 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
       <div className="chart-row">
         {hasCycleTime && (
           <ChartCard
-            title="Cycle Time by Project (Business Days)"
-            tooltip="Median total cycle time per project across quarters."
+            title="Team Cycle Time by Project (Business Days)"
+            tooltip="Median total cycle time per project for issues assigned to or QA'd by team members."
             testId="chart-project-cycle-time"
           >
             <ProjectCycleTimeChart
