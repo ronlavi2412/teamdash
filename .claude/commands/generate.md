@@ -118,6 +118,7 @@ If "Continue anyway": proceed to Step 4.
 
 Follow the instructions in AGENTS.md under "Generating Summaries":
 1. Read `data.json` to get all engineer metrics across quarters. The file includes a `pr_details` field with per-engineer per-quarter PR lists containing title, repo, size, and source.
+   The quarter object fields are: `gh_prs`, `gl_mrs`, `reviews`, `merge_time` (hours), `cp` (complexity points), `xl_count`, `review_cp`, `size_dist` (object with XS/S/M/L/XL counts), `verified_bugs`, `activity_types` (object mapping category to count), `pr_details` (list of objects with title/repo/size/source).
 2. For the most recent quarter only, and for each engineer, write a comprehensive narrative summary (up to 3 paragraphs) that goes beyond raw numbers:
    - **Paragraph 1 — What they worked on:** Group PRs by repo to describe which projects the engineer contributed to. Mention dominant themes from PR titles (bug fixes, new features, refactoring, i18n, CI/CD, testing, etc.). Highlight 1-2 notable or impactful PRs by name (especially XL-sized ones).
    - **Paragraph 2 — Output and complexity:** Summarize quantitative metrics — total PRs/MRs, complexity points, size distribution, merge time. Compare against the previous quarter where available.
@@ -132,4 +133,4 @@ Follow the instructions in AGENTS.md under "Generating Summaries":
 python3 -m teamdash generate data.json -o dashboard.html
 ```
 
-The dashboard will open automatically in the default browser. Tell the user their dashboard is ready at `dashboard.html`.
+Tell the user their dashboard is ready at `dashboard.html`. Ask if they'd like to open it in the browser before running `xdg-open`.
