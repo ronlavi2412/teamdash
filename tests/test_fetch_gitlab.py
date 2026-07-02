@@ -24,7 +24,10 @@ class TestExtractHostname:
         assert _extract_hostname("https://gitlab.example.com") == "gitlab.example.com"
 
     def test_url_with_path(self):
-        assert _extract_hostname("https://gitlab.example.com/api/v4") == "gitlab.example.com"
+        assert (
+            _extract_hostname("https://gitlab.example.com/api/v4")
+            == "gitlab.example.com"
+        )
 
     def test_http_url(self):
         assert _extract_hostname("http://gitlab.local") == "gitlab.local"
@@ -35,171 +38,274 @@ class TestExtractHostname:
 
 class TestIsOwnNamespace:
     def test_matches_username(self):
-        assert _is_own_namespace(
-            "https://gitlab.example.com/alice/my-project/-/merge_requests/1",
-            "https://gitlab.example.com",
-            "alice",
-        ) is True
+        assert (
+            _is_own_namespace(
+                "https://gitlab.example.com/alice/my-project/-/merge_requests/1",
+                "https://gitlab.example.com",
+                "alice",
+            )
+            is True
+        )
 
     def test_case_insensitive(self):
-        assert _is_own_namespace(
-            "https://gitlab.example.com/Alice/my-project/-/merge_requests/1",
-            "https://gitlab.example.com",
-            "alice",
-        ) is True
+        assert (
+            _is_own_namespace(
+                "https://gitlab.example.com/Alice/my-project/-/merge_requests/1",
+                "https://gitlab.example.com",
+                "alice",
+            )
+            is True
+        )
 
     def test_different_namespace(self):
-        assert _is_own_namespace(
-            "https://gitlab.example.com/org/my-project/-/merge_requests/1",
-            "https://gitlab.example.com",
-            "alice",
-        ) is False
+        assert (
+            _is_own_namespace(
+                "https://gitlab.example.com/org/my-project/-/merge_requests/1",
+                "https://gitlab.example.com",
+                "alice",
+            )
+            is False
+        )
 
     def test_empty_web_url(self):
         assert _is_own_namespace("", "https://gitlab.example.com", "alice") is False
 
     def test_trailing_slash_on_gitlab_url(self):
-        assert _is_own_namespace(
-            "https://gitlab.example.com/alice/repo/-/merge_requests/1",
-            "https://gitlab.example.com/",
-            "alice",
-        ) is True
+        assert (
+            _is_own_namespace(
+                "https://gitlab.example.com/alice/repo/-/merge_requests/1",
+                "https://gitlab.example.com/",
+                "alice",
+            )
+            is True
+        )
 
     def test_subgroup_namespace(self):
-        assert _is_own_namespace(
-            "https://gitlab.example.com/org/subgroup/project/-/merge_requests/1",
-            "https://gitlab.example.com",
-            "alice",
-        ) is False
+        assert (
+            _is_own_namespace(
+                "https://gitlab.example.com/org/subgroup/project/-/merge_requests/1",
+                "https://gitlab.example.com",
+                "alice",
+            )
+            is False
+        )
 
 
 class TestFetchMrs:
     def test_single_page(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([
-                {"id": 1, "merged_at": "2025-02-01T10:00:00Z"},
-                {"id": 2, "merged_at": "2025-03-15T14:30:00Z"},
-            ]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {"id": 1, "merged_at": "2025-02-01T10:00:00Z"},
+                    {"id": 2, "merged_at": "2025-03-15T14:30:00Z"},
+                ]
+            ),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mrs(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == 2
 
     def test_pagination(self):
         page1 = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([{"id": i, "merged_at": "2025-02-15T12:00:00Z"} for i in range(100)]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [{"id": i, "merged_at": "2025-02-15T12:00:00Z"} for i in range(100)]
+            ),
         )
         page2 = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([
-                {"id": 100, "merged_at": "2025-02-16T12:00:00Z"},
-                {"id": 101, "merged_at": "2025-02-17T12:00:00Z"},
-            ]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {"id": 100, "merged_at": "2025-02-16T12:00:00Z"},
+                    {"id": 101, "merged_at": "2025-02-17T12:00:00Z"},
+                ]
+            ),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", side_effect=[page1, page2]):
-            result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mrs(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == 102
 
     def test_glab_not_found(self):
-        with patch("teamdash.fetch_gitlab.subprocess.run", side_effect=FileNotFoundError):
+        with patch(
+            "teamdash.fetch_gitlab.subprocess.run", side_effect=FileNotFoundError
+        ):
             with pytest.raises(SystemExit):
-                fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+                fetch_mrs(
+                    "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+                )
 
     def test_timeout_returns_partial(self):
         page1 = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([{"id": i, "merged_at": "2025-02-15T12:00:00Z"} for i in range(100)]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [{"id": i, "merged_at": "2025-02-15T12:00:00Z"} for i in range(100)]
+            ),
         )
-        with patch("teamdash.fetch_gitlab.subprocess.run", side_effect=[page1, subprocess.TimeoutExpired(cmd="glab", timeout=30)]):
-            result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+        with patch(
+            "teamdash.fetch_gitlab.subprocess.run",
+            side_effect=[page1, subprocess.TimeoutExpired(cmd="glab", timeout=30)],
+        ):
+            result = fetch_mrs(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == 100
 
     def test_api_error_returns_partial(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=1, stdout="", stderr="error",
+            args=[],
+            returncode=1,
+            stdout="",
+            stderr="error",
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            assert fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31") == 0
+            assert (
+                fetch_mrs(
+                    "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+                )
+                == 0
+            )
 
     def test_invalid_json(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="not json",
+            args=[],
+            returncode=0,
+            stdout="not json",
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            assert fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31") == 0
+            assert (
+                fetch_mrs(
+                    "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+                )
+                == 0
+            )
 
     def test_excludes_own_namespace(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([
-                {"id": 1, "merged_at": "2025-02-01T10:00:00Z",
-                 "web_url": "https://gitlab.example.com/alice/my-repo/-/merge_requests/1"},
-                {"id": 2, "merged_at": "2025-03-15T14:30:00Z",
-                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
-            ]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {
+                        "id": 1,
+                        "merged_at": "2025-02-01T10:00:00Z",
+                        "web_url": "https://gitlab.example.com/alice/my-repo/-/merge_requests/1",
+                    },
+                    {
+                        "id": 2,
+                        "merged_at": "2025-03-15T14:30:00Z",
+                        "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2",
+                    },
+                ]
+            ),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_mrs("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mrs(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == 1
 
 
 class TestFetchReviews:
     def test_counts_reviewed_mrs(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([
-                {"id": 1, "merged_at": "2025-02-01T10:00:00Z",
-                 "author": {"username": "bob"},
-                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/1"},
-                {"id": 2, "merged_at": "2025-03-15T14:30:00Z",
-                 "author": {"username": "carol"},
-                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
-            ]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {
+                        "id": 1,
+                        "merged_at": "2025-02-01T10:00:00Z",
+                        "author": {"username": "bob"},
+                        "web_url": "https://gitlab.example.com/org/project/-/merge_requests/1",
+                    },
+                    {
+                        "id": 2,
+                        "merged_at": "2025-03-15T14:30:00Z",
+                        "author": {"username": "carol"},
+                        "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2",
+                    },
+                ]
+            ),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_reviews(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == 2
 
     def test_excludes_self_authored(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([
-                {"id": 1, "merged_at": "2025-02-01T10:00:00Z",
-                 "author": {"username": "alice"},
-                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/1"},
-                {"id": 2, "merged_at": "2025-03-15T14:30:00Z",
-                 "author": {"username": "bob"},
-                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
-            ]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {
+                        "id": 1,
+                        "merged_at": "2025-02-01T10:00:00Z",
+                        "author": {"username": "alice"},
+                        "web_url": "https://gitlab.example.com/org/project/-/merge_requests/1",
+                    },
+                    {
+                        "id": 2,
+                        "merged_at": "2025-03-15T14:30:00Z",
+                        "author": {"username": "bob"},
+                        "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2",
+                    },
+                ]
+            ),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_reviews(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == 1
 
     def test_excludes_own_namespace(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
-            stdout=json.dumps([
-                {"id": 1, "merged_at": "2025-02-01T10:00:00Z",
-                 "author": {"username": "bob"},
-                 "web_url": "https://gitlab.example.com/alice/personal/-/merge_requests/1"},
-                {"id": 2, "merged_at": "2025-03-15T14:30:00Z",
-                 "author": {"username": "bob"},
-                 "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
-            ]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(
+                [
+                    {
+                        "id": 1,
+                        "merged_at": "2025-02-01T10:00:00Z",
+                        "author": {"username": "bob"},
+                        "web_url": "https://gitlab.example.com/alice/personal/-/merge_requests/1",
+                    },
+                    {
+                        "id": 2,
+                        "merged_at": "2025-03-15T14:30:00Z",
+                        "author": {"username": "bob"},
+                        "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2",
+                    },
+                ]
+            ),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_reviews(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == 1
 
     def test_uses_reviewer_username_param(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout=json.dumps([]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps([]),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake) as mock:
-            fetch_reviews("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            fetch_reviews(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         cmd = mock.call_args[0][0]
         endpoint = cmd[2]
         assert "reviewer_username=alice" in endpoint
@@ -213,20 +319,28 @@ class TestFetchMrMergeTimes:
             {"created_at": "2025-01-10T00:00:00Z", "merged_at": "2025-01-10T12:00:00Z"},
         ]
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout=json.dumps(mrs),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(mrs),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_mr_merge_times("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mr_merge_times(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert len(result) == 2
         assert result[0] == 3.0
         assert result[1] == 0.5
 
     def test_empty_when_no_merged_mrs(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout=json.dumps([]),
+            args=[],
+            returncode=0,
+            stdout=json.dumps([]),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_mr_merge_times("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mr_merge_times(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == []
 
     def test_skips_items_without_merged_at(self):
@@ -235,25 +349,39 @@ class TestFetchMrMergeTimes:
             {"created_at": "2025-01-02T00:00:00Z", "merged_at": "2025-01-03T00:00:00Z"},
         ]
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout=json.dumps(mrs),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(mrs),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_mr_merge_times("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mr_merge_times(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert len(result) == 1
         assert result[0] == 1.0
 
     def test_excludes_own_namespace(self):
         mrs = [
-            {"created_at": "2025-01-01T00:00:00Z", "merged_at": "2025-01-04T00:00:00Z",
-             "web_url": "https://gitlab.example.com/alice/personal/-/merge_requests/1"},
-            {"created_at": "2025-01-10T00:00:00Z", "merged_at": "2025-01-10T12:00:00Z",
-             "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2"},
+            {
+                "created_at": "2025-01-01T00:00:00Z",
+                "merged_at": "2025-01-04T00:00:00Z",
+                "web_url": "https://gitlab.example.com/alice/personal/-/merge_requests/1",
+            },
+            {
+                "created_at": "2025-01-10T00:00:00Z",
+                "merged_at": "2025-01-10T12:00:00Z",
+                "web_url": "https://gitlab.example.com/org/project/-/merge_requests/2",
+            },
         ]
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout=json.dumps(mrs),
+            args=[],
+            returncode=0,
+            stdout=json.dumps(mrs),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = fetch_mr_merge_times("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mr_merge_times(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert len(result) == 1
         assert result[0] == 0.5
 
@@ -261,15 +389,20 @@ class TestFetchMrMergeTimes:
 class TestGlabApiGet:
     def test_success(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
+            args=[],
+            returncode=0,
             stdout=json.dumps({"changes_count": "5"}),
         )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
-            result = _glab_api_get("https://gitlab.example.com", "/api/v4/projects/1/merge_requests/1")
+            result = _glab_api_get(
+                "https://gitlab.example.com", "/api/v4/projects/1/merge_requests/1"
+            )
         assert result == {"changes_count": "5"}
 
     def test_returns_none_on_error(self):
-        fake = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="error")
+        fake = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="error"
+        )
         with patch("teamdash.fetch_gitlab.subprocess.run", return_value=fake):
             assert _glab_api_get("https://gitlab.example.com", "/endpoint") is None
 
@@ -296,10 +429,14 @@ class TestFetchMrDetails:
         ]
         with (
             patch("teamdash.fetch_gitlab._fetch_mr_list", return_value=mr_list),
-            patch("teamdash.fetch_gitlab._glab_api_get", side_effect=[mr_detail, notes]),
+            patch(
+                "teamdash.fetch_gitlab._glab_api_get", side_effect=[mr_detail, notes]
+            ),
             patch("teamdash.fetch_gitlab.time.sleep"),
         ):
-            result = fetch_mr_details("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mr_details(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
 
         assert len(result) == 1
         d = result[0]
@@ -313,34 +450,55 @@ class TestFetchMrDetails:
 
     def test_empty_mr_list(self):
         with patch("teamdash.fetch_gitlab._fetch_mr_list", return_value=[]):
-            result = fetch_mr_details("https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31")
+            result = fetch_mr_details(
+                "https://gitlab.example.com", "alice", "2025-01-01", "2025-03-31"
+            )
         assert result == []
 
 
 class TestInDateRange:
     def test_z_suffix(self):
-        assert _in_date_range("2025-02-15T12:00:00Z", "2025-01-01", "2025-03-31") is True
+        assert (
+            _in_date_range("2025-02-15T12:00:00Z", "2025-01-01", "2025-03-31") is True
+        )
 
     def test_offset_suffix(self):
-        assert _in_date_range("2025-02-15T12:00:00+00:00", "2025-01-01", "2025-03-31") is True
+        assert (
+            _in_date_range("2025-02-15T12:00:00+00:00", "2025-01-01", "2025-03-31")
+            is True
+        )
 
     def test_fractional_seconds(self):
-        assert _in_date_range("2025-02-15T12:00:00.123Z", "2025-01-01", "2025-03-31") is True
+        assert (
+            _in_date_range("2025-02-15T12:00:00.123Z", "2025-01-01", "2025-03-31")
+            is True
+        )
 
     def test_before_range(self):
-        assert _in_date_range("2024-12-31T23:59:59Z", "2025-01-01", "2025-03-31") is False
+        assert (
+            _in_date_range("2024-12-31T23:59:59Z", "2025-01-01", "2025-03-31") is False
+        )
 
     def test_after_range(self):
-        assert _in_date_range("2025-04-01T00:00:00Z", "2025-01-01", "2025-03-31") is False
+        assert (
+            _in_date_range("2025-04-01T00:00:00Z", "2025-01-01", "2025-03-31") is False
+        )
 
     def test_at_start_boundary(self):
-        assert _in_date_range("2025-01-01T00:00:00Z", "2025-01-01", "2025-03-31") is True
+        assert (
+            _in_date_range("2025-01-01T00:00:00Z", "2025-01-01", "2025-03-31") is True
+        )
 
     def test_at_end_boundary(self):
-        assert _in_date_range("2025-03-31T23:59:59Z", "2025-01-01", "2025-03-31") is True
+        assert (
+            _in_date_range("2025-03-31T23:59:59Z", "2025-01-01", "2025-03-31") is True
+        )
 
     def test_end_boundary_fractional_seconds(self):
-        assert _in_date_range("2025-03-31T23:59:59.999Z", "2025-01-01", "2025-03-31") is True
+        assert (
+            _in_date_range("2025-03-31T23:59:59.999Z", "2025-01-01", "2025-03-31")
+            is True
+        )
 
 
 class TestCheckAuth:
@@ -355,5 +513,7 @@ class TestCheckAuth:
             assert check_auth("https://gitlab.example.com") is False
 
     def test_glab_not_found(self):
-        with patch("teamdash.fetch_gitlab.subprocess.run", side_effect=FileNotFoundError):
+        with patch(
+            "teamdash.fetch_gitlab.subprocess.run", side_effect=FileNotFoundError
+        ):
             assert check_auth("https://gitlab.example.com") is False

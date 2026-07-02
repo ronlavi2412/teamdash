@@ -58,11 +58,11 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
           <ChartCard
             title="Total Complexity per Quarter"
             tooltip="Sum of complexity scores across all team members. Each merged PR is sized XS–XL based on diff size, files changed, review friction, and merge time, then mapped to points (XS=2, S=5, M=8, L=13, XL=21)."
-            testId="chart-team-sp"
+            testId="chart-team-cp"
           >
             <TeamBarChart
               quarters={quarters}
-              getData={q => q.sp.reduce((a, b) => a + b, 0)}
+              getData={q => q.cp.reduce((a, b) => a + b, 0)}
               color="#10b981"
               borderColor="#059669"
               label="Total Complexity"
@@ -76,11 +76,11 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
           <ChartCard
             title="Total Review Complexity per Quarter"
             tooltip="Sum of complexity scores for merged PRs reviewed by team members, scored the same way as authored PRs."
-            testId="chart-team-review-sp"
+            testId="chart-team-review-cp"
           >
             <TeamBarChart
               quarters={quarters}
-              getData={q => q.review_sp.reduce((a, b) => a + b, 0)}
+              getData={q => q.review_cp.reduce((a, b) => a + b, 0)}
               color="#f59e0b"
               borderColor="#d97706"
               label="Total Reviews Complexity"

@@ -54,10 +54,10 @@ class EngineerQuarterMetrics:
     reviews: int = 0
     github_reviews: int = 0
     merge_time_days: float | None = None
-    story_points: int = 0
+    complexity_points: int = 0
     scored_prs: list[ScoredPR] = field(default_factory=list)
     xl_count: int = 0
-    review_story_points: int = 0
+    review_complexity_points: int = 0
     scored_reviews: list[ScoredPR] = field(default_factory=list)
     github_merge_times: list[float] = field(default_factory=list)
     gitlab_merge_times: list[float] = field(default_factory=list)
@@ -67,7 +67,6 @@ class EngineerQuarterMetrics:
     @property
     def total(self) -> int:
         return self.github_prs + self.gitlab_mrs
-
 
 
 @dataclass
@@ -93,7 +92,9 @@ class QuarterSummary:
 
     @property
     def median_merge_time_days(self) -> float | None:
-        vals = sorted(e.merge_time_days for e in self.engineers if e.merge_time_days is not None)
+        vals = sorted(
+            e.merge_time_days for e in self.engineers if e.merge_time_days is not None
+        )
         if not vals:
             return None
         n = len(vals)
@@ -101,12 +102,12 @@ class QuarterSummary:
         return round((vals[mid] if n % 2 else (vals[mid - 1] + vals[mid]) / 2), 1)
 
     @property
-    def total_story_points(self) -> int:
-        return sum(e.story_points for e in self.engineers)
+    def total_complexity_points(self) -> int:
+        return sum(e.complexity_points for e in self.engineers)
 
     @property
-    def total_review_story_points(self) -> int:
-        return sum(e.review_story_points for e in self.engineers)
+    def total_review_complexity_points(self) -> int:
+        return sum(e.review_complexity_points for e in self.engineers)
 
     @property
     def total_xl_count(self) -> int:

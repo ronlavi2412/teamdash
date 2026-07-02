@@ -19,7 +19,8 @@ def _in_date_range(timestamp: str, start: str, end: str) -> bool:
 
 
 def _glab_api_get(
-    gitlab_url: str, endpoint: str,
+    gitlab_url: str,
+    endpoint: str,
 ) -> dict | list | None:
     hostname = _extract_hostname(gitlab_url)
     cmd = ["glab", "api", endpoint, "--hostname", hostname]
@@ -52,14 +53,20 @@ def fetch_mrs(gitlab_url: str, username: str, start: str, end: str) -> int:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         except FileNotFoundError:
-            print("[ERROR] 'glab' CLI not found. Install it: https://gitlab.com/gitlab-org/cli", file=sys.stderr)
+            print(
+                "[ERROR] 'glab' CLI not found. Install it: https://gitlab.com/gitlab-org/cli",
+                file=sys.stderr,
+            )
             sys.exit(1)
         except subprocess.TimeoutExpired:
             print(f"[WARN] GitLab API timed out for {username}", file=sys.stderr)
             return total
 
         if result.returncode != 0:
-            print(f"[WARN] GitLab API error for {username}: {result.stderr.strip()}", file=sys.stderr)
+            print(
+                f"[WARN] GitLab API error for {username}: {result.stderr.strip()}",
+                file=sys.stderr,
+            )
             return total
 
         try:
@@ -76,7 +83,9 @@ def fetch_mrs(gitlab_url: str, username: str, start: str, end: str) -> int:
                 break
             page += 1
         except json.JSONDecodeError:
-            print(f"[WARN] Invalid JSON from GitLab API for {username}", file=sys.stderr)
+            print(
+                f"[WARN] Invalid JSON from GitLab API for {username}", file=sys.stderr
+            )
             return total
 
     return total
@@ -99,14 +108,20 @@ def fetch_reviews(gitlab_url: str, username: str, start: str, end: str) -> int:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         except FileNotFoundError:
-            print("[ERROR] 'glab' CLI not found. Install it: https://gitlab.com/gitlab-org/cli", file=sys.stderr)
+            print(
+                "[ERROR] 'glab' CLI not found. Install it: https://gitlab.com/gitlab-org/cli",
+                file=sys.stderr,
+            )
             sys.exit(1)
         except subprocess.TimeoutExpired:
             print(f"[WARN] GitLab API timed out for {username}", file=sys.stderr)
             return total
 
         if result.returncode != 0:
-            print(f"[WARN] GitLab API error for {username}: {result.stderr.strip()}", file=sys.stderr)
+            print(
+                f"[WARN] GitLab API error for {username}: {result.stderr.strip()}",
+                file=sys.stderr,
+            )
             return total
 
         try:
@@ -116,7 +131,10 @@ def fetch_reviews(gitlab_url: str, username: str, start: str, end: str) -> int:
             for mr in data:
                 merged = mr.get("merged_at")
                 if merged and _in_date_range(merged, start, end):
-                    if mr.get("author", {}).get("username", "").lower() == username.lower():
+                    if (
+                        mr.get("author", {}).get("username", "").lower()
+                        == username.lower()
+                    ):
                         continue
                     if _is_own_namespace(mr.get("web_url", ""), host, username):
                         continue
@@ -125,13 +143,17 @@ def fetch_reviews(gitlab_url: str, username: str, start: str, end: str) -> int:
                 break
             page += 1
         except json.JSONDecodeError:
-            print(f"[WARN] Invalid JSON from GitLab API for {username}", file=sys.stderr)
+            print(
+                f"[WARN] Invalid JSON from GitLab API for {username}", file=sys.stderr
+            )
             return total
 
     return total
 
 
-def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -> list[float]:
+def fetch_mr_merge_times(
+    gitlab_url: str, username: str, start: str, end: str
+) -> list[float]:
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
     base = (
@@ -148,14 +170,20 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         except FileNotFoundError:
-            print("[ERROR] 'glab' CLI not found. Install it: https://gitlab.com/gitlab-org/cli", file=sys.stderr)
+            print(
+                "[ERROR] 'glab' CLI not found. Install it: https://gitlab.com/gitlab-org/cli",
+                file=sys.stderr,
+            )
             sys.exit(1)
         except subprocess.TimeoutExpired:
             print(f"[WARN] GitLab API timed out for {username}", file=sys.stderr)
             return merge_times
 
         if result.returncode != 0:
-            print(f"[WARN] GitLab API error for {username}: {result.stderr.strip()}", file=sys.stderr)
+            print(
+                f"[WARN] GitLab API error for {username}: {result.stderr.strip()}",
+                file=sys.stderr,
+            )
             return merge_times
 
         try:
@@ -176,7 +204,9 @@ def fetch_mr_merge_times(gitlab_url: str, username: str, start: str, end: str) -
                 break
             page += 1
         except json.JSONDecodeError:
-            print(f"[WARN] Invalid JSON from GitLab API for {username}", file=sys.stderr)
+            print(
+                f"[WARN] Invalid JSON from GitLab API for {username}", file=sys.stderr
+            )
             return merge_times
 
     return merge_times
@@ -190,14 +220,17 @@ def _is_own_namespace(web_url: str, gitlab_url: str, username: str) -> bool:
     host = gitlab_url.rstrip("/")
     if not web_url.startswith(host):
         return False
-    path = web_url[len(host):].lstrip("/")
+    path = web_url[len(host) :].lstrip("/")
     if not path:
         return False
     return path.split("/")[0].lower() == username.lower()
 
 
 def _fetch_mr_list(
-    gitlab_url: str, username: str, start: str, end: str,
+    gitlab_url: str,
+    username: str,
+    start: str,
+    end: str,
 ) -> list[dict]:
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
@@ -284,7 +317,8 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
     if isinstance(notes_data, list):
         author_user = mr.get("author", {}).get("username", "")
         non_author_notes = [
-            n for n in notes_data
+            n
+            for n in notes_data
             if n.get("author", {}).get("username") != author_user
             and not n.get("system", False)
         ]
@@ -299,9 +333,7 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
     if created and closed:
         dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
         dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
-        merge_time = round(
-            (dt_closed - dt_created).total_seconds() / 86400, 1
-        )
+        merge_time = round((dt_closed - dt_created).total_seconds() / 86400, 1)
 
     return PRDetail(
         url=mr.get("web_url", ""),
@@ -322,7 +354,10 @@ def _mr_to_detail(mr: dict, gitlab_url: str, username: str) -> PRDetail | None:
 
 
 def fetch_mr_details(
-    gitlab_url: str, username: str, start: str, end: str,
+    gitlab_url: str,
+    username: str,
+    start: str,
+    end: str,
 ) -> list[PRDetail]:
     mrs = _fetch_mr_list(gitlab_url, username, start, end)
     details: list[PRDetail] = []
@@ -336,7 +371,10 @@ def fetch_mr_details(
 
 
 def _fetch_reviewed_mr_list(
-    gitlab_url: str, username: str, start: str, end: str,
+    gitlab_url: str,
+    username: str,
+    start: str,
+    end: str,
 ) -> list[dict]:
     host = gitlab_url.rstrip("/")
     hostname = _extract_hostname(host)
@@ -363,7 +401,10 @@ def _fetch_reviewed_mr_list(
             for mr in data:
                 merged = mr.get("merged_at")
                 if merged and _in_date_range(merged, start, end):
-                    if mr.get("author", {}).get("username", "").lower() == username.lower():
+                    if (
+                        mr.get("author", {}).get("username", "").lower()
+                        == username.lower()
+                    ):
                         continue
                     if _is_own_namespace(mr.get("web_url", ""), host, username):
                         continue
@@ -377,7 +418,10 @@ def _fetch_reviewed_mr_list(
 
 
 def fetch_reviewed_mr_details(
-    gitlab_url: str, username: str, start: str, end: str,
+    gitlab_url: str,
+    username: str,
+    start: str,
+    end: str,
 ) -> list[PRDetail]:
     mrs = _fetch_reviewed_mr_list(gitlab_url, username, start, end)
     details: list[PRDetail] = []
@@ -395,7 +439,9 @@ def check_auth(gitlab_url: str) -> bool:
     try:
         result = subprocess.run(
             ["glab", "auth", "status", "--hostname", hostname],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):

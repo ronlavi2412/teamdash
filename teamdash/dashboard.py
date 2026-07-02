@@ -12,9 +12,18 @@ from teamdash.models import EngineerQuarterMetrics, QuarterSummary
 
 
 COLORS = [
-    "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899",
-    "#06b6d4", "#10b981", "#ef4444", "#14b8a6",
-    "#6366f1", "#d946ef", "#0ea5e9", "#84cc16",
+    "#f59e0b",
+    "#3b82f6",
+    "#8b5cf6",
+    "#ec4899",
+    "#06b6d4",
+    "#10b981",
+    "#ef4444",
+    "#14b8a6",
+    "#6366f1",
+    "#d946ef",
+    "#0ea5e9",
+    "#84cc16",
 ]
 
 
@@ -64,7 +73,11 @@ def _percentile(values: list[float], p: float) -> float | None:
 def _extract_repo(url: str) -> str:
     parts = url.rstrip("/").split("/")
     try:
-        idx = parts.index("github.com") if "github.com" in parts else parts.index("gitlab.com")
+        idx = (
+            parts.index("github.com")
+            if "github.com" in parts
+            else parts.index("gitlab.com")
+        )
     except ValueError:
         for i, p in enumerate(parts):
             if "gitlab" in p or "github" in p:
@@ -93,17 +106,21 @@ def _build_table_row_data(
         for s in summaries:
             by_name = {e.name: e for e in s.engineers}
             eng = by_name.get(name)
-            quarters.append({
-                "total": eng.total if eng else 0,
-                "github_prs": eng.github_prs if eng else 0,
-                "gitlab_mrs": eng.gitlab_mrs if eng else 0,
-                "reviews": eng.reviews if eng else 0,
-                "merge_time": eng.merge_time_days if eng else None,
-                "story_points": eng.story_points if eng else 0,
-                "review_story_points": eng.review_story_points if eng else 0,
-                "verified_bugs": eng.verified_bugs if eng else 0,
-                "activity_type_counts": eng.activity_type_counts if eng else {},
-            })
+            quarters.append(
+                {
+                    "total": eng.total if eng else 0,
+                    "github_prs": eng.github_prs if eng else 0,
+                    "gitlab_mrs": eng.gitlab_mrs if eng else 0,
+                    "reviews": eng.reviews if eng else 0,
+                    "merge_time": eng.merge_time_days if eng else None,
+                    "complexity_points": eng.complexity_points if eng else 0,
+                    "review_complexity_points": eng.review_complexity_points
+                    if eng
+                    else 0,
+                    "verified_bugs": eng.verified_bugs if eng else 0,
+                    "activity_type_counts": eng.activity_type_counts if eng else {},
+                }
+            )
 
         cur_eng = {e.name: e for e in cur.engineers}.get(name)
         prev_eng = {e.name: e for e in prev.engineers}.get(name)
@@ -111,11 +128,13 @@ def _build_table_row_data(
         prev_total = prev_eng.total if prev_eng else 0
         growth = _pct(cur_total, prev_total) if prev != cur else "-"
 
-        rows.append({
-            "name": name,
-            "quarters": quarters,
-            "growth": growth,
-        })
+        rows.append(
+            {
+                "name": name,
+                "quarters": quarters,
+                "growth": growth,
+            }
+        )
     return rows
 
 
@@ -159,16 +178,15 @@ def build_dashboard_data(
     subtitle = f"{len(summaries)} quarters ({first_q.start} to {last_q.end})"
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    has_scoring = any(s.total_story_points > 0 for s in summaries)
+    has_scoring = any(s.total_complexity_points > 0 for s in summaries)
     has_jira = any(e.verified_bugs > 0 for s in summaries for e in s.engineers)
     has_cycle_time = bool(cycle_time_data and any(cycle_time_data.values()))
     has_activity_types = any(
         e.activity_type_counts for s in summaries for e in s.engineers
     )
-    activity_type_names = sorted({
-        at for s in summaries for e in s.engineers
-        for at in e.activity_type_counts
-    })
+    activity_type_names = sorted(
+        {at for s in summaries for e in s.engineers for at in e.activity_type_counts}
+    )
 
     today = date.today()
     is_current_quarter = date.fromisoformat(last_q.end) >= today
@@ -177,19 +195,46 @@ def build_dashboard_data(
     quarters = []
     for s in summaries:
         by_name = {e.name: e for e in s.engineers}
-        quarters.append({
-            "label": s.quarter.short_label,
-            "gh_prs": [by_name.get(n, _zero(n, s.quarter.label)).github_prs for n in names],
-            "gl_mrs": [by_name.get(n, _zero(n, s.quarter.label)).gitlab_mrs for n in names],
-            "reviews": [by_name.get(n, _zero(n, s.quarter.label)).reviews for n in names],
-            "merge_time": [by_name.get(n, _zero(n, s.quarter.label)).merge_time_days for n in names],
-            "sp": [by_name.get(n, _zero(n, s.quarter.label)).story_points for n in names],
-            "xl_count": [by_name.get(n, _zero(n, s.quarter.label)).xl_count for n in names],
-            "review_sp": [by_name.get(n, _zero(n, s.quarter.label)).review_story_points for n in names],
-            "size_dist": [_size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names],
-            "verified_bugs": [by_name.get(n, _zero(n, s.quarter.label)).verified_bugs for n in names],
-            "activity_types": [by_name.get(n, _zero(n, s.quarter.label)).activity_type_counts for n in names],
-        })
+        quarters.append(
+            {
+                "label": s.quarter.short_label,
+                "gh_prs": [
+                    by_name.get(n, _zero(n, s.quarter.label)).github_prs for n in names
+                ],
+                "gl_mrs": [
+                    by_name.get(n, _zero(n, s.quarter.label)).gitlab_mrs for n in names
+                ],
+                "reviews": [
+                    by_name.get(n, _zero(n, s.quarter.label)).reviews for n in names
+                ],
+                "merge_time": [
+                    by_name.get(n, _zero(n, s.quarter.label)).merge_time_days
+                    for n in names
+                ],
+                "cp": [
+                    by_name.get(n, _zero(n, s.quarter.label)).complexity_points
+                    for n in names
+                ],
+                "xl_count": [
+                    by_name.get(n, _zero(n, s.quarter.label)).xl_count for n in names
+                ],
+                "review_cp": [
+                    by_name.get(n, _zero(n, s.quarter.label)).review_complexity_points
+                    for n in names
+                ],
+                "size_dist": [
+                    _size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names
+                ],
+                "verified_bugs": [
+                    by_name.get(n, _zero(n, s.quarter.label)).verified_bugs
+                    for n in names
+                ],
+                "activity_types": [
+                    by_name.get(n, _zero(n, s.quarter.label)).activity_type_counts
+                    for n in names
+                ],
+            }
+        )
 
     ct_by_quarter: dict = {}
     ct_projects: set[str] = set()

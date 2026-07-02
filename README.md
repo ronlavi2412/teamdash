@@ -2,7 +2,7 @@
 
 ## Overview
 
-Teamdash is a Python CLI that fetches engineering metrics from GitHub, GitLab, and Jira and generates a self-contained interactive HTML dashboard. The output is a single HTML file with embedded React, Chart.js, and all data — no server required. It tracks PRs, merge requests, code reviews, story points, verified bugs, cycle times, and more across quarterly time windows, with per-engineer breakdowns and AI-generated narrative summaries.
+Teamdash is a Python CLI that fetches engineering metrics from GitHub, GitLab, and Jira and generates a self-contained interactive HTML dashboard. The output is a single HTML file with embedded React, Chart.js, and all data — no server required. It tracks PRs, merge requests, code reviews, complexity points, verified bugs, cycle times, and more across quarterly time windows, with per-engineer breakdowns and AI-generated narrative summaries.
 
 ## Getting Started
 
@@ -157,7 +157,7 @@ teamdash team.json -o report.html      # custom output path
 teamdash team.json -q 6               # last 6 quarters
 teamdash team.json --no-cache          # skip cache, fetch fresh data
 teamdash team.json --include-current   # include the current (in-progress) quarter
-teamdash team.json --no-scoring        # skip story point estimation (faster)
+teamdash team.json --no-scoring        # skip complexity point estimation (faster)
 teamdash team.json --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
 teamdash team.json --jira-data jira-data.json  # include Jira data
 
@@ -177,7 +177,7 @@ teamdash generate data.json -o dashboard.html
 The generated HTML file includes:
 
 - **Summary cards** — Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
-- **Overall Team View** — Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter, story points, review complexity, cycle time trends
+- **Overall Team View** — Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter, complexity points, review complexity, cycle time trends
 - **Detailed View** — Per-engineer line charts: PRs+MRs trend, code reviews, complexity, merge time, verified bugs, cycle time by project
 - **Summaries** — AI-generated narrative summaries per engineer for the most recent quarter
 - **Full Table** — Sortable table with all metrics per engineer per quarter

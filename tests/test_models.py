@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from teamdash.models import EngineerQuarterMetrics, PRDetail, Quarter, QuarterSummary, ScoredPR
+from teamdash.models import (
+    EngineerQuarterMetrics,
+    PRDetail,
+    Quarter,
+    QuarterSummary,
+    ScoredPR,
+)
 
 
 class TestQuarter:
@@ -17,17 +23,38 @@ class TestQuarter:
 
 class TestPRDetail:
     def test_total_lines(self):
-        d = PRDetail(url="", source="github", author="a", additions=100, deletions=50, changed_files=3)
+        d = PRDetail(
+            url="",
+            source="github",
+            author="a",
+            additions=100,
+            deletions=50,
+            changed_files=3,
+        )
         assert d.total_lines == 150
 
     def test_total_lines_zero(self):
-        d = PRDetail(url="", source="github", author="a", additions=0, deletions=0, changed_files=0)
+        d = PRDetail(
+            url="",
+            source="github",
+            author="a",
+            additions=0,
+            deletions=0,
+            changed_files=0,
+        )
         assert d.total_lines == 0
 
 
 class TestScoredPR:
     def test_defaults(self):
-        detail = PRDetail(url="", source="github", author="a", additions=0, deletions=0, changed_files=0)
+        detail = PRDetail(
+            url="",
+            source="github",
+            author="a",
+            additions=0,
+            deletions=0,
+            changed_files=0,
+        )
         sp = ScoredPR(detail=detail, size="M", points=8)
         assert sp.flags == []
 
@@ -40,13 +67,13 @@ class TestEngineerQuarterMetrics:
         m = EngineerQuarterMetrics(name="X", quarter="Q1")
         assert m.total == 0
 
-    def test_story_points(self):
-        m = EngineerQuarterMetrics(name="X", quarter="Q1", story_points=15)
-        assert m.story_points == 15
+    def test_complexity_points(self):
+        m = EngineerQuarterMetrics(name="X", quarter="Q1", complexity_points=15)
+        assert m.complexity_points == 15
 
-    def test_story_points_default_zero(self):
+    def test_complexity_points_default_zero(self):
         m = EngineerQuarterMetrics(name="X", quarter="Q1")
-        assert m.story_points == 0
+        assert m.complexity_points == 0
 
 
 class TestQuarterSummary:
@@ -91,13 +118,13 @@ class TestQuarterSummary:
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
         assert s.median_merge_time_days is None
 
-    def test_total_story_points(self, sample_quarter):
+    def test_total_complexity_points(self, sample_quarter):
         engineers = [
-            EngineerQuarterMetrics(name="A", quarter="Q1", story_points=15),
-            EngineerQuarterMetrics(name="B", quarter="Q1", story_points=8),
+            EngineerQuarterMetrics(name="A", quarter="Q1", complexity_points=15),
+            EngineerQuarterMetrics(name="B", quarter="Q1", complexity_points=8),
         ]
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
-        assert s.total_story_points == 23
+        assert s.total_complexity_points == 23
 
     def test_total_xl_count(self, sample_quarter):
         engineers = [
@@ -126,12 +153,20 @@ class TestQuarterSummary:
     def test_total_activity_type_counts(self, sample_quarter):
         engineers = [
             EngineerQuarterMetrics(
-                name="A", quarter="Q1",
-                activity_type_counts={"Incidents & Support": 3, "Security & Compliance": 1},
+                name="A",
+                quarter="Q1",
+                activity_type_counts={
+                    "Incidents & Support": 3,
+                    "Security & Compliance": 1,
+                },
             ),
             EngineerQuarterMetrics(
-                name="B", quarter="Q1",
-                activity_type_counts={"Incidents & Support": 2, "Product / Portfolio Work": 4},
+                name="B",
+                quarter="Q1",
+                activity_type_counts={
+                    "Incidents & Support": 2,
+                    "Product / Portfolio Work": 4,
+                },
             ),
         ]
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
@@ -149,4 +184,3 @@ class TestQuarterSummary:
         ]
         s = QuarterSummary(quarter=sample_quarter, engineers=engineers)
         assert s.total_activity_type_counts == {}
-

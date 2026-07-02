@@ -22,6 +22,7 @@ from teamdash.fetch_github import (
 @pytest.fixture(autouse=True)
 def reset_throttle():
     import teamdash.fetch_github as mod
+
     mod._request_times.clear()
     yield
     mod._request_times.clear()
@@ -44,8 +45,12 @@ class TestRunGh:
         assert result.returncode == 0
 
     def test_retries_on_rate_limit(self):
-        fail = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="403 rate limit exceeded")
-        success = subprocess.CompletedProcess(args=[], returncode=0, stdout='{"ok": true}')
+        fail = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="403 rate limit exceeded"
+        )
+        success = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout='{"ok": true}'
+        )
         with (
             patch("teamdash.fetch_github.subprocess.run", side_effect=[fail, success]),
             patch("teamdash.fetch_github.time.sleep"),
@@ -54,7 +59,9 @@ class TestRunGh:
         assert result.returncode == 0
 
     def test_gives_up_after_retries(self):
-        fail = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="403 rate limit exceeded")
+        fail = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="403 rate limit exceeded"
+        )
         with (
             patch("teamdash.fetch_github.subprocess.run", return_value=fail),
             patch("teamdash.fetch_github.time.sleep"),
@@ -63,28 +70,36 @@ class TestRunGh:
         assert result.returncode != 0
 
     def test_no_retry_on_non_rate_limit_error(self):
-        fail = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="not found")
+        fail = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="", stderr="not found"
+        )
         with patch("teamdash.fetch_github.subprocess.run", return_value=fail) as mock:
             result = _run_gh(["gh", "api", "/test"])
         assert mock.call_count == 1
         assert result.returncode != 0
 
     def test_returns_none_on_file_not_found(self):
-        with patch("teamdash.fetch_github.subprocess.run", side_effect=FileNotFoundError):
+        with patch(
+            "teamdash.fetch_github.subprocess.run", side_effect=FileNotFoundError
+        ):
             assert _run_gh(["gh", "api", "/test"]) is None
 
 
 class TestGhSearchCount:
     def test_success(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout=json.dumps({"total_count": 42}),
+            args=[],
+            returncode=0,
+            stdout=json.dumps({"total_count": 42}),
         )
         with patch("teamdash.fetch_github._run_gh", return_value=fake):
             assert _gh_search_count("test+query") == 42
 
     def test_zero_count(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout=json.dumps({"total_count": 0}),
+            args=[],
+            returncode=0,
+            stdout=json.dumps({"total_count": 0}),
         )
         with patch("teamdash.fetch_github._run_gh", return_value=fake):
             assert _gh_search_count("test") == 0
@@ -96,14 +111,19 @@ class TestGhSearchCount:
 
     def test_api_error(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=1, stdout="", stderr="some error",
+            args=[],
+            returncode=1,
+            stdout="",
+            stderr="some error",
         )
         with patch("teamdash.fetch_github._run_gh", return_value=fake):
             assert _gh_search_count("test") == 0
 
     def test_invalid_json(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="not json",
+            args=[],
+            returncode=0,
+            stdout="not json",
         )
         with patch("teamdash.fetch_github._run_gh", return_value=fake):
             assert _gh_search_count("test") == 0
@@ -124,7 +144,9 @@ class TestFetchPrs:
 class TestFetchReviews:
     def test_combined_query(self):
         with patch("teamdash.fetch_github._gh_search_count", return_value=10) as mock:
-            result = fetch_reviews("alice", ["org1", "org2"], "2025-01-01", "2025-03-31")
+            result = fetch_reviews(
+                "alice", ["org1", "org2"], "2025-01-01", "2025-03-31"
+            )
         assert result == 10
         assert mock.call_count == 1
         query = mock.call_args[0][0]
@@ -136,7 +158,8 @@ class TestFetchReviews:
 class TestGhSearchItems:
     def test_returns_items(self):
         fake = subprocess.CompletedProcess(
-            args=[], returncode=0,
+            args=[],
+            returncode=0,
             stdout=json.dumps({"total_count": 2, "items": [{"id": 1}, {"id": 2}]}),
         )
         with patch("teamdash.fetch_github._run_gh", return_value=fake):
@@ -145,11 +168,13 @@ class TestGhSearchItems:
 
     def test_pagination(self):
         page1 = subprocess.CompletedProcess(
-            args=[], returncode=0,
+            args=[],
+            returncode=0,
             stdout=json.dumps({"items": [{"id": i} for i in range(100)]}),
         )
         page2 = subprocess.CompletedProcess(
-            args=[], returncode=0,
+            args=[],
+            returncode=0,
             stdout=json.dumps({"items": [{"id": 100}]}),
         )
         with patch("teamdash.fetch_github._run_gh", side_effect=[page1, page2]):
@@ -218,7 +243,10 @@ class TestFetchPrDetails:
                 },
             },
         ]
-        with patch("teamdash.fetch_github._gh_graphql", return_value=self._graphql_response(nodes)):
+        with patch(
+            "teamdash.fetch_github._gh_graphql",
+            return_value=self._graphql_response(nodes),
+        ):
             result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
 
         assert len(result) == 1
@@ -239,35 +267,71 @@ class TestFetchPrDetails:
         assert result == []
 
     def test_empty_search_results(self):
-        with patch("teamdash.fetch_github._gh_graphql", return_value=self._graphql_response([])):
+        with patch(
+            "teamdash.fetch_github._gh_graphql", return_value=self._graphql_response([])
+        ):
             result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
         assert result == []
 
     def test_skips_empty_nodes(self):
-        nodes = [None, {}, {"url": "https://github.com/org/repo/pull/1",
-                            "additions": 10, "deletions": 5, "changedFiles": 1,
-                            "createdAt": "2025-01-01T00:00:00Z", "closedAt": "2025-01-02T00:00:00Z",
-                            "labels": {"nodes": []}, "comments": {"totalCount": 0},
-                            "reviews": {"totalCount": 0, "nodes": []}}]
-        with patch("teamdash.fetch_github._gh_graphql", return_value=self._graphql_response(nodes)):
+        nodes = [
+            None,
+            {},
+            {
+                "url": "https://github.com/org/repo/pull/1",
+                "additions": 10,
+                "deletions": 5,
+                "changedFiles": 1,
+                "createdAt": "2025-01-01T00:00:00Z",
+                "closedAt": "2025-01-02T00:00:00Z",
+                "labels": {"nodes": []},
+                "comments": {"totalCount": 0},
+                "reviews": {"totalCount": 0, "nodes": []},
+            },
+        ]
+        with patch(
+            "teamdash.fetch_github._gh_graphql",
+            return_value=self._graphql_response(nodes),
+        ):
             result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
         assert len(result) == 1
 
     def test_pagination(self):
         page1 = self._graphql_response(
-            [{"url": "https://github.com/org/repo/pull/1", "additions": 1, "deletions": 0,
-              "changedFiles": 1, "createdAt": "2025-01-01T00:00:00Z", "closedAt": "2025-01-02T00:00:00Z",
-              "labels": {"nodes": []}, "comments": {"totalCount": 0},
-              "reviews": {"totalCount": 0, "nodes": []}}],
-            has_next=True, cursor="abc123",
+            [
+                {
+                    "url": "https://github.com/org/repo/pull/1",
+                    "additions": 1,
+                    "deletions": 0,
+                    "changedFiles": 1,
+                    "createdAt": "2025-01-01T00:00:00Z",
+                    "closedAt": "2025-01-02T00:00:00Z",
+                    "labels": {"nodes": []},
+                    "comments": {"totalCount": 0},
+                    "reviews": {"totalCount": 0, "nodes": []},
+                }
+            ],
+            has_next=True,
+            cursor="abc123",
         )
         page2 = self._graphql_response(
-            [{"url": "https://github.com/org/repo/pull/2", "additions": 2, "deletions": 0,
-              "changedFiles": 1, "createdAt": "2025-01-01T00:00:00Z", "closedAt": "2025-01-02T00:00:00Z",
-              "labels": {"nodes": []}, "comments": {"totalCount": 0},
-              "reviews": {"totalCount": 0, "nodes": []}}],
+            [
+                {
+                    "url": "https://github.com/org/repo/pull/2",
+                    "additions": 2,
+                    "deletions": 0,
+                    "changedFiles": 1,
+                    "createdAt": "2025-01-01T00:00:00Z",
+                    "closedAt": "2025-01-02T00:00:00Z",
+                    "labels": {"nodes": []},
+                    "comments": {"totalCount": 0},
+                    "reviews": {"totalCount": 0, "nodes": []},
+                }
+            ],
         )
-        with patch("teamdash.fetch_github._gh_graphql", side_effect=[page1, page2]) as mock:
+        with patch(
+            "teamdash.fetch_github._gh_graphql", side_effect=[page1, page2]
+        ) as mock:
             result = fetch_pr_details("alice", ["org"], "2025-01-01", "2025-03-31")
         assert len(result) == 2
         assert mock.call_count == 2
@@ -285,5 +349,7 @@ class TestCheckAuth:
             assert check_auth() is False
 
     def test_gh_not_found(self):
-        with patch("teamdash.fetch_github.subprocess.run", side_effect=FileNotFoundError):
+        with patch(
+            "teamdash.fetch_github.subprocess.run", side_effect=FileNotFoundError
+        ):
             assert check_auth() is False

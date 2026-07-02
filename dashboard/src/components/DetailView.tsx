@@ -75,7 +75,7 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
           >
             <DetailLineChart
               {...commonProps}
-              getValues={q => q.sp}
+              getValues={q => q.cp}
               yAxisLabel="Complexity Points"
             />
           </ChartCard>
@@ -88,7 +88,7 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
           >
             <DetailLineChart
               {...commonProps}
-              getValues={q => q.review_sp}
+              getValues={q => q.review_cp}
               yAxisLabel="Complexity Points"
             />
           </ChartCard>

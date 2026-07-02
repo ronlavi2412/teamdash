@@ -4,9 +4,9 @@ export interface QuarterData {
   gl_mrs: number[];
   reviews: number[];
   merge_time: (number | null)[];
-  sp: number[];
+  cp: number[];
   xl_count: number[];
-  review_sp: number[];
+  review_cp: number[];
   size_dist: SizeDistribution[];
   verified_bugs: number[];
   activity_types: Record<string, number>[];
@@ -54,8 +54,8 @@ export interface QuarterMetrics {
   gitlab_mrs: number;
   reviews: number;
   merge_time: number | null;
-  story_points: number;
-  review_story_points: number;
+  complexity_points: number;
+  review_complexity_points: number;
   verified_bugs: number;
   activity_type_counts: Record<string, number>;
 }

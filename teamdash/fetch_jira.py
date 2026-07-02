@@ -10,7 +10,9 @@ from pathlib import Path
 class JiraData:
     bugs: dict[str, dict[str, int]] = field(default_factory=dict)
     activity_types: dict[str, dict[str, dict[str, int]]] = field(default_factory=dict)
-    cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = field(default_factory=dict)
+    cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = field(
+        default_factory=dict
+    )
 
 
 def load_jira_data(path: str) -> JiraData | None:
@@ -36,7 +38,10 @@ def load_jira_data(path: str) -> JiraData | None:
         return None
 
     if not isinstance(data, dict):
-        print(f"[WARN] Jira data must be a JSON object, got {type(data).__name__}", file=sys.stderr)
+        print(
+            f"[WARN] Jira data must be a JSON object, got {type(data).__name__}",
+            file=sys.stderr,
+        )
         return None
 
     if "jiraData" in data:

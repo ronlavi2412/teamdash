@@ -51,7 +51,10 @@ def _run_gh(cmd: list[str], retries: int = 3) -> subprocess.CompletedProcess | N
     delays = [30, 60, 120]
     for attempt in range(retries):
         delay = delays[min(attempt, len(delays) - 1)]
-        print(f"[WARN] GitHub rate limit hit, retrying in {delay}s (attempt {attempt + 1}/{retries})...", file=sys.stderr)
+        print(
+            f"[WARN] GitHub rate limit hit, retrying in {delay}s (attempt {attempt + 1}/{retries})...",
+            file=sys.stderr,
+        )
         time.sleep(delay)
         _throttle()
         try:
@@ -134,8 +137,10 @@ def _gh_search_items(query: str) -> list[dict]:
     return items
 
 
-def fetch_merge_times(username: str, orgs: list[str], start: str, end: str) -> list[float]:
-    safe_user = quote(username, safe='')
+def fetch_merge_times(
+    username: str, orgs: list[str], start: str, end: str
+) -> list[float]:
+    safe_user = quote(username, safe="")
     query = f"type:pr+author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     items = _gh_search_items(query)
     merge_times: list[float] = []
@@ -151,13 +156,13 @@ def fetch_merge_times(username: str, orgs: list[str], start: str, end: str) -> l
 
 
 def fetch_prs(username: str, orgs: list[str], start: str, end: str) -> int:
-    safe_user = quote(username, safe='')
+    safe_user = quote(username, safe="")
     query = f"type:pr+author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     return _gh_search_count(query)
 
 
 def fetch_reviews(username: str, orgs: list[str], start: str, end: str) -> int:
-    safe_user = quote(username, safe='')
+    safe_user = quote(username, safe="")
     query = f"type:pr+reviewed-by:{safe_user}+{_orgs_query(orgs)}+-author:{safe_user}+merged:{start}..{end}"
     return _gh_search_count(query)
 
@@ -212,9 +217,7 @@ def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
             if created and closed:
                 dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
                 dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
-                merge_time = round(
-                    (dt_closed - dt_created).total_seconds() / 86400, 1
-                )
+                merge_time = round((dt_closed - dt_created).total_seconds() / 86400, 1)
 
             reviews = node.get("reviews", {})
             review_nodes = reviews.get("nodes", [])
@@ -223,24 +226,28 @@ def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
                 1 for r in review_nodes if r.get("state") == "CHANGES_REQUESTED"
             )
 
-            labels = [l.get("name", "") for l in node.get("labels", {}).get("nodes", [])]
+            labels = [
+                lbl.get("name", "") for lbl in node.get("labels", {}).get("nodes", [])
+            ]
 
-            details.append(PRDetail(
-                url=node["url"],
-                source="github",
-                author=author,
-                additions=node.get("additions", 0),
-                title=node.get("title", ""),
-                deletions=node.get("deletions", 0),
-                changed_files=node.get("changedFiles", 0),
-                labels=labels,
-                review_count=review_count,
-                changes_requested_count=changes_requested,
-                comments_count=node.get("comments", {}).get("totalCount", 0),
-                merge_time_days=merge_time,
-                created_at=created,
-                closed_at=closed,
-            ))
+            details.append(
+                PRDetail(
+                    url=node["url"],
+                    source="github",
+                    author=author,
+                    additions=node.get("additions", 0),
+                    title=node.get("title", ""),
+                    deletions=node.get("deletions", 0),
+                    changed_files=node.get("changedFiles", 0),
+                    labels=labels,
+                    review_count=review_count,
+                    changes_requested_count=changes_requested,
+                    comments_count=node.get("comments", {}).get("totalCount", 0),
+                    merge_time_days=merge_time,
+                    created_at=created,
+                    closed_at=closed,
+                )
+            )
 
         page_info = search.get("pageInfo", {})
         if page_info.get("hasNextPage"):
@@ -252,17 +259,23 @@ def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
 
 
 def fetch_pr_details(
-    username: str, orgs: list[str], start: str, end: str,
+    username: str,
+    orgs: list[str],
+    start: str,
+    end: str,
 ) -> list[PRDetail]:
-    safe_user = quote(username, safe='')
+    safe_user = quote(username, safe="")
     query = f"type:pr+author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     return _fetch_details_for_query(query, author=username)
 
 
 def fetch_reviewed_pr_details(
-    username: str, orgs: list[str], start: str, end: str,
+    username: str,
+    orgs: list[str],
+    start: str,
+    end: str,
 ) -> list[PRDetail]:
-    safe_user = quote(username, safe='')
+    safe_user = quote(username, safe="")
     query = f"type:pr+reviewed-by:{safe_user}+-author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
     return _fetch_details_for_query(query, author=username)
 
@@ -271,7 +284,9 @@ def check_auth() -> bool:
     try:
         result = subprocess.run(
             ["gh", "auth", "status"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):

@@ -7,11 +7,13 @@ import pytest
 from teamdash.config import load_config
 
 
-VALID_CONFIG = json.dumps({
-    "team_name": "Test Team",
-    "github": {"orgs": ["test-org"]},
-    "engineers": [{"name": "Alice", "github": "alice"}],
-})
+VALID_CONFIG = json.dumps(
+    {
+        "team_name": "Test Team",
+        "github": {"orgs": ["test-org"]},
+        "engineers": [{"name": "Alice", "github": "alice"}],
+    }
+)
 
 
 class TestLoadConfig:
@@ -28,15 +30,19 @@ class TestLoadConfig:
 
     def test_full_config(self, tmp_path):
         f = tmp_path / "team.json"
-        f.write_text(json.dumps({
-            "team_name": "Full Team",
-            "gitlab": {"url": "https://gitlab.example.com"},
-            "github": {"orgs": ["org1", "org2"]},
-            "engineers": [
-                {"name": "Alice", "github": "alice", "gitlab": "alice_gl"},
-                {"name": "Bob", "gitlab": "bob_gl"},
-            ],
-        }))
+        f.write_text(
+            json.dumps(
+                {
+                    "team_name": "Full Team",
+                    "gitlab": {"url": "https://gitlab.example.com"},
+                    "github": {"orgs": ["org1", "org2"]},
+                    "engineers": [
+                        {"name": "Alice", "github": "alice", "gitlab": "alice_gl"},
+                        {"name": "Bob", "gitlab": "bob_gl"},
+                    ],
+                }
+            )
+        )
         config = load_config(str(f))
         assert config.gitlab_url == "https://gitlab.example.com"
         assert config.github_orgs == ["org1", "org2"]
@@ -74,13 +80,17 @@ class TestLoadConfig:
 
     def test_engineer_missing_name(self, tmp_path):
         f = tmp_path / "team.json"
-        f.write_text(json.dumps({"team_name": "Test", "engineers": [{"github": "alice"}]}))
+        f.write_text(
+            json.dumps({"team_name": "Test", "engineers": [{"github": "alice"}]})
+        )
         with pytest.raises(SystemExit):
             load_config(str(f))
 
     def test_engineer_no_github_or_gitlab(self, tmp_path):
         f = tmp_path / "team.json"
-        f.write_text(json.dumps({"team_name": "Test", "engineers": [{"name": "Alice"}]}))
+        f.write_text(
+            json.dumps({"team_name": "Test", "engineers": [{"name": "Alice"}]})
+        )
         with pytest.raises(SystemExit):
             load_config(str(f))
 
@@ -116,7 +126,10 @@ class TestLoadConfig:
     def test_jira_config(self, tmp_path):
         f = tmp_path / "team.json"
         data = json.loads(VALID_CONFIG)
-        data["jira"] = {"cloud_id": "redhat.atlassian.net", "project_keys": ["CNV", "MTV"]}
+        data["jira"] = {
+            "cloud_id": "redhat.atlassian.net",
+            "project_keys": ["CNV", "MTV"],
+        }
         f.write_text(json.dumps(data))
         config = load_config(str(f))
         assert config.jira is not None
@@ -131,11 +144,21 @@ class TestLoadConfig:
 
     def test_engineer_jira_account_id(self, tmp_path):
         f = tmp_path / "team.json"
-        f.write_text(json.dumps({
-            "team_name": "Test",
-            "github": {"orgs": ["org"]},
-            "engineers": [{"name": "Alice", "github": "alice", "jira_account_id": "712020:abc-123"}],
-        }))
+        f.write_text(
+            json.dumps(
+                {
+                    "team_name": "Test",
+                    "github": {"orgs": ["org"]},
+                    "engineers": [
+                        {
+                            "name": "Alice",
+                            "github": "alice",
+                            "jira_account_id": "712020:abc-123",
+                        }
+                    ],
+                }
+            )
+        )
         config = load_config(str(f))
         assert config.engineers[0].jira_account_id == "712020:abc-123"
 

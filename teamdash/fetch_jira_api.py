@@ -93,7 +93,10 @@ def _jira_search(
 
 
 def _fetch_changelog(
-    cloud_id: str, issue_key: str, email: str, token: str,
+    cloud_id: str,
+    issue_key: str,
+    email: str,
+    token: str,
 ) -> dict:
     url = f"https://{cloud_id}/rest/api/3/issue/{issue_key}/changelog"
     histories: list[dict] = []
@@ -101,8 +104,10 @@ def _fetch_changelog(
 
     while True:
         resp = requests.get(
-            url, params={"startAt": start_at, "maxResults": MAX_RESULTS},
-            auth=(email, token), timeout=30,
+            url,
+            params={"startAt": start_at, "maxResults": MAX_RESULTS},
+            auth=(email, token),
+            timeout=30,
         )
         if resp.status_code != 200:
             break
@@ -172,7 +177,8 @@ def _business_days(start: datetime, end: datetime) -> float:
 
 
 def _find_first_transition_to(
-    changelog: dict, target_statuses: list[str],
+    changelog: dict,
+    target_statuses: list[str],
 ) -> str | None:
     histories = changelog.get("histories", [])
     if not histories:
@@ -253,7 +259,9 @@ def fetch_all_activity_type_sps(
         f' AND "Activity Type" is not EMPTY'
         f" AND {_project_clause(project_keys)}"
     )
-    issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD, ACTIVITY_TYPE_FIELD], email, token)
+    issues = _jira_search(
+        cloud_id, jql, ["summary", SP_FIELD, ACTIVITY_TYPE_FIELD], email, token
+    )
     by_type: dict[str, int] = {}
     for issue in issues:
         fields = issue.get("fields", {})
@@ -289,9 +297,15 @@ def fetch_cycle_times(
     )
     if account_ids:
         ids_clause = ", ".join(f'"{_jql_escape(aid)}"' for aid in account_ids)
-        jql += f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+        jql += (
+            f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+        )
     issues = _jira_search_with_changelog(
-        cloud_id, jql, ["summary", "project", "issuetype", "resolutiondate"], email, token,
+        cloud_id,
+        jql,
+        ["summary", "project", "issuetype", "resolutiondate"],
+        email,
+        token,
     )
 
     result: dict[str, dict[str, dict[str, list[float]]]] = {}
@@ -316,10 +330,14 @@ def fetch_cycle_times(
         qe_start = _find_first_transition_to(changelog, QE_START_STATUSES)
         resolved = datetime.fromisoformat(resolution_date_str.replace("Z", "+00:00"))
 
-        type_data = result.setdefault(project_key, {}).setdefault(issue_type, _empty_phases())
+        type_data = result.setdefault(project_key, {}).setdefault(
+            issue_type, _empty_phases()
+        )
 
         effective_dev_end_dt = (
-            datetime.fromisoformat(dev_end.replace("Z", "+00:00")) if dev_end else resolved
+            datetime.fromisoformat(dev_end.replace("Z", "+00:00"))
+            if dev_end
+            else resolved
         )
         if dev_start:
             d = _business_days(
@@ -372,25 +390,46 @@ def _fetch_quarter_jira(
         bug_futures = {}
         activity_futures = {}
 
-        account_ids = [e.jira_account_id for e in engineers_with_jira if e.jira_account_id]
+        account_ids = [
+            e.jira_account_id for e in engineers_with_jira if e.jira_account_id
+        ]
         cycle_time_future = pool.submit(
             fetch_cycle_times,
-            cloud_id, project_keys, q.start, q.end, email, token,
+            cloud_id,
+            project_keys,
+            q.start,
+            q.end,
+            email,
+            token,
             account_ids=account_ids,
         )
 
         for eng in engineers_with_jira:
-            bug_futures[pool.submit(
-                fetch_verified_bugs,
-                cloud_id, project_keys, eng.jira_account_id,
-                q.start, q.end, email, token,
-            )] = eng.name
+            bug_futures[
+                pool.submit(
+                    fetch_verified_bugs,
+                    cloud_id,
+                    project_keys,
+                    eng.jira_account_id,
+                    q.start,
+                    q.end,
+                    email,
+                    token,
+                )
+            ] = eng.name
 
-            activity_futures[pool.submit(
-                fetch_all_activity_type_sps,
-                cloud_id, project_keys, eng.jira_account_id,
-                q.start, q.end, email, token,
-            )] = eng.name
+            activity_futures[
+                pool.submit(
+                    fetch_all_activity_type_sps,
+                    cloud_id,
+                    project_keys,
+                    eng.jira_account_id,
+                    q.start,
+                    q.end,
+                    email,
+                    token,
+                )
+            ] = eng.name
 
         for fut in as_completed(bug_futures):
             name = bug_futures[fut]
@@ -405,7 +444,9 @@ def _fetch_quarter_jira(
             try:
                 eng_activities = fut.result()
             except Exception as exc:
-                print(f"[WARN] Activity fetch failed for {name}: {exc}", file=sys.stderr)
+                print(
+                    f"[WARN] Activity fetch failed for {name}: {exc}", file=sys.stderr
+                )
                 eng_activities = {}
             if eng_activities:
                 q_activities[name] = eng_activities
@@ -434,15 +475,18 @@ def fetch_all_jira_data(
     activity_types: dict[str, dict[str, dict[str, int]]] = {}
     cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = {}
 
-    engineers_with_jira = [
-        e for e in config.engineers if e.jira_account_id
-    ]
+    engineers_with_jira = [e for e in config.engineers if e.jira_account_id]
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         futures = [
             pool.submit(
-                _fetch_quarter_jira, q, cloud_id, project_keys,
-                engineers_with_jira, email, token,
+                _fetch_quarter_jira,
+                q,
+                cloud_id,
+                project_keys,
+                engineers_with_jira,
+                email,
+                token,
             )
             for q in quarters
         ]

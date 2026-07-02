@@ -26,7 +26,7 @@ from teamdash.fetch_gitlab import (
 from teamdash.fetch_gitlab import fetch_reviews as fetch_gitlab_reviews
 from teamdash.fetch_jira import JiraData
 from teamdash.models import EngineerQuarterMetrics, Quarter, QuarterSummary
-from teamdash.scoring import ScoringConfig, score_prs
+from teamdash.scoring import score_prs
 
 CACHE_DIR = Path.home() / ".cache" / "teamdash"
 
@@ -49,12 +49,15 @@ def _config_hash(config: TeamConfig) -> str:
             "file_thresholds": list(config.scoring.file_thresholds),
             "merge_time_thresholds": list(config.scoring.merge_time_thresholds),
         }
-    key = json.dumps({
-        "team": config.team_name,
-        "orgs": sorted(config.github_orgs),
-        "engineers": [(e.name, e.github, e.gitlab) for e in config.engineers],
-        "scoring": scoring_key,
-    }, sort_keys=True)
+    key = json.dumps(
+        {
+            "team": config.team_name,
+            "orgs": sorted(config.github_orgs),
+            "engineers": [(e.name, e.github, e.gitlab) for e in config.engineers],
+            "scoring": scoring_key,
+        },
+        sort_keys=True,
+    )
     return hashlib.md5(key.encode()).hexdigest()[:12]
 
 
@@ -69,7 +72,9 @@ def _load_cache(config: TeamConfig) -> dict:
 
 
 def _is_quarter_cache_fresh(
-    quarter_data: dict, quarter_end: str, enable_scoring: bool = False,
+    quarter_data: dict,
+    quarter_end: str,
+    enable_scoring: bool = False,
 ) -> bool:
     fetched = quarter_data.get("_meta", {}).get("fetched_date")
     if not fetched:
@@ -78,7 +83,7 @@ def _is_quarter_cache_fresh(
         for key, val in quarter_data.items():
             if key == "_meta":
                 continue
-            if isinstance(val, dict) and "story_points" not in val:
+            if isinstance(val, dict) and "complexity_points" not in val:
                 return False
     if quarter_end < date.today().isoformat():
         return True
@@ -88,14 +93,22 @@ def _is_quarter_cache_fresh(
 def _save_cache(config: TeamConfig, quarters_data: dict) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     cache_file = CACHE_DIR / f"{_config_hash(config)}.json"
-    cache_file.write_text(json.dumps({
-        "quarters": quarters_data,
-    }, indent=2))
+    cache_file.write_text(
+        json.dumps(
+            {
+                "quarters": quarters_data,
+            },
+            indent=2,
+        )
+    )
     os.chmod(cache_file, 0o600)
 
 
 def _fetch_engineer_data(
-    eng, config: TeamConfig, gitlab_ok: bool, q: Quarter,
+    eng,
+    config: TeamConfig,
+    gitlab_ok: bool,
+    q: Quarter,
     enable_scoring: bool = False,
 ) -> EngineerQuarterMetrics:
     print(f"  Fetching {q.label} for {eng.name}...", file=sys.stderr)
@@ -106,13 +119,25 @@ def _fetch_engineer_data(
     futures: dict[str, object] = {}
     with ThreadPoolExecutor(max_workers=5) as pool:
         if eng.github and config.github_orgs:
-            futures["prs"] = pool.submit(fetch_prs, eng.github, config.github_orgs, q.start, q.end)
-            futures["reviews"] = pool.submit(fetch_reviews, eng.github, config.github_orgs, q.start, q.end)
-            futures["gh_mt"] = pool.submit(fetch_merge_times, eng.github, config.github_orgs, q.start, q.end)
+            futures["prs"] = pool.submit(
+                fetch_prs, eng.github, config.github_orgs, q.start, q.end
+            )
+            futures["reviews"] = pool.submit(
+                fetch_reviews, eng.github, config.github_orgs, q.start, q.end
+            )
+            futures["gh_mt"] = pool.submit(
+                fetch_merge_times, eng.github, config.github_orgs, q.start, q.end
+            )
         if eng.gitlab and config.gitlab_url and gitlab_ok:
-            futures["mrs"] = pool.submit(fetch_mrs, config.gitlab_url, eng.gitlab, q.start, q.end)
-            futures["gl_mt"] = pool.submit(fetch_mr_merge_times, config.gitlab_url, eng.gitlab, q.start, q.end)
-            futures["gl_reviews"] = pool.submit(fetch_gitlab_reviews, config.gitlab_url, eng.gitlab, q.start, q.end)
+            futures["mrs"] = pool.submit(
+                fetch_mrs, config.gitlab_url, eng.gitlab, q.start, q.end
+            )
+            futures["gl_mt"] = pool.submit(
+                fetch_mr_merge_times, config.gitlab_url, eng.gitlab, q.start, q.end
+            )
+            futures["gl_reviews"] = pool.submit(
+                fetch_gitlab_reviews, config.gitlab_url, eng.gitlab, q.start, q.end
+            )
 
     gh_prs = futures["prs"].result() if "prs" in futures else 0
     gh_reviews = futures["reviews"].result() if "reviews" in futures else 0
@@ -137,20 +162,39 @@ def _fetch_engineer_data(
 
 
 def _fetch_engineer_data_scored(
-    eng, config: TeamConfig, gitlab_ok: bool, q: Quarter,
+    eng,
+    config: TeamConfig,
+    gitlab_ok: bool,
+    q: Quarter,
 ) -> EngineerQuarterMetrics:
     from teamdash.models import PRDetail
 
     futures: dict[str, object] = {}
     with ThreadPoolExecutor(max_workers=5) as pool:
         if eng.github and config.github_orgs:
-            futures["gh_details"] = pool.submit(fetch_pr_details, eng.github, config.github_orgs, q.start, q.end)
-            futures["gh_reviews"] = pool.submit(fetch_reviews, eng.github, config.github_orgs, q.start, q.end)
-            futures["gh_reviewed"] = pool.submit(fetch_reviewed_pr_details, eng.github, config.github_orgs, q.start, q.end)
+            futures["gh_details"] = pool.submit(
+                fetch_pr_details, eng.github, config.github_orgs, q.start, q.end
+            )
+            futures["gh_reviews"] = pool.submit(
+                fetch_reviews, eng.github, config.github_orgs, q.start, q.end
+            )
+            futures["gh_reviewed"] = pool.submit(
+                fetch_reviewed_pr_details,
+                eng.github,
+                config.github_orgs,
+                q.start,
+                q.end,
+            )
         if eng.gitlab and config.gitlab_url and gitlab_ok:
-            futures["gl_details"] = pool.submit(fetch_mr_details, config.gitlab_url, eng.gitlab, q.start, q.end)
-            futures["gl_reviews"] = pool.submit(fetch_gitlab_reviews, config.gitlab_url, eng.gitlab, q.start, q.end)
-            futures["gl_reviewed"] = pool.submit(fetch_reviewed_gl_details, config.gitlab_url, eng.gitlab, q.start, q.end)
+            futures["gl_details"] = pool.submit(
+                fetch_mr_details, config.gitlab_url, eng.gitlab, q.start, q.end
+            )
+            futures["gl_reviews"] = pool.submit(
+                fetch_gitlab_reviews, config.gitlab_url, eng.gitlab, q.start, q.end
+            )
+            futures["gl_reviewed"] = pool.submit(
+                fetch_reviewed_gl_details, config.gitlab_url, eng.gitlab, q.start, q.end
+            )
 
     all_details: list[PRDetail] = []
     if "gh_details" in futures:
@@ -170,8 +214,16 @@ def _fetch_engineer_data_scored(
     gh_prs = sum(1 for d in all_details if d.source == "github")
     gl_mrs = sum(1 for d in all_details if d.source == "gitlab")
 
-    gh_mt = [d.merge_time_days for d in all_details if d.source == "github" and d.merge_time_days is not None]
-    gl_mt = [d.merge_time_days for d in all_details if d.source == "gitlab" and d.merge_time_days is not None]
+    gh_mt = [
+        d.merge_time_days
+        for d in all_details
+        if d.source == "github" and d.merge_time_days is not None
+    ]
+    gl_mt = [
+        d.merge_time_days
+        for d in all_details
+        if d.source == "gitlab" and d.merge_time_days is not None
+    ]
     all_merge_times = gh_mt + gl_mt
 
     scored = score_prs(all_details, config.scoring)
@@ -189,10 +241,10 @@ def _fetch_engineer_data_scored(
         reviews=gh_reviews + gl_reviews,
         github_reviews=gh_reviews,
         merge_time_days=_median(all_merge_times),
-        story_points=sp,
+        complexity_points=sp,
         scored_prs=scored,
         xl_count=xl,
-        review_story_points=review_sp,
+        review_complexity_points=review_sp,
         scored_reviews=scored_reviews,
         github_merge_times=gh_mt,
         gitlab_merge_times=gl_mt,
@@ -200,7 +252,9 @@ def _fetch_engineer_data_scored(
 
 
 def _metrics_from_cache(
-    name: str, quarter: str, cached_eng: dict,
+    name: str,
+    quarter: str,
+    cached_eng: dict,
 ) -> EngineerQuarterMetrics:
     return EngineerQuarterMetrics(
         name=name,
@@ -210,9 +264,9 @@ def _metrics_from_cache(
         reviews=cached_eng["reviews"],
         github_reviews=cached_eng.get("_github_reviews", 0),
         merge_time_days=cached_eng.get("merge_time_days"),
-        story_points=cached_eng.get("story_points", 0),
+        complexity_points=cached_eng.get("complexity_points", 0),
         xl_count=cached_eng.get("xl_count", 0),
-        review_story_points=cached_eng.get("review_story_points", 0),
+        review_complexity_points=cached_eng.get("review_complexity_points", 0),
         github_merge_times=cached_eng.get("_github_merge_times", []),
         gitlab_merge_times=cached_eng.get("_gitlab_merge_times", []),
         verified_bugs=cached_eng.get("verified_bugs", 0),
@@ -220,8 +274,12 @@ def _metrics_from_cache(
 
 
 def _refresh_engineer_gitlab(
-    eng, config: TeamConfig, gitlab_ok: bool, q: Quarter,
-    cached_eng: dict, enable_scoring: bool,
+    eng,
+    config: TeamConfig,
+    gitlab_ok: bool,
+    q: Quarter,
+    cached_eng: dict,
+    enable_scoring: bool,
 ) -> EngineerQuarterMetrics:
     print(f"  Refreshing GitLab {q.label} for {eng.name}...", file=sys.stderr)
 
@@ -232,12 +290,18 @@ def _refresh_engineer_gitlab(
     if not enable_scoring:
         if eng.gitlab and config.gitlab_url and gitlab_ok:
             gl_mrs = fetch_mrs(config.gitlab_url, eng.gitlab, q.start, q.end)
-            gl_mt: list[float] = fetch_mr_merge_times(config.gitlab_url, eng.gitlab, q.start, q.end)
-            gl_reviews = fetch_gitlab_reviews(config.gitlab_url, eng.gitlab, q.start, q.end)
+            gl_mt: list[float] = fetch_mr_merge_times(
+                config.gitlab_url, eng.gitlab, q.start, q.end
+            )
+            gl_reviews = fetch_gitlab_reviews(
+                config.gitlab_url, eng.gitlab, q.start, q.end
+            )
         else:
             gl_mrs = cached_eng.get("gitlab_mrs", 0)
             gl_mt = cached_eng.get("_gitlab_merge_times", [])
-            gl_reviews = max(0, cached_eng.get("reviews", 0) - cached_eng.get("_github_reviews", 0))
+            gl_reviews = max(
+                0, cached_eng.get("reviews", 0) - cached_eng.get("_github_reviews", 0)
+            )
 
         all_mt = gh_mt + gl_mt
 
@@ -248,7 +312,9 @@ def _refresh_engineer_gitlab(
             gitlab_mrs=gl_mrs,
             reviews=gh_reviews + gl_reviews,
             github_reviews=gh_reviews,
-            merge_time_days=_median(all_mt) if all_mt else cached_eng.get("merge_time_days"),
+            merge_time_days=_median(all_mt)
+            if all_mt
+            else cached_eng.get("merge_time_days"),
             github_merge_times=gh_mt,
             gitlab_merge_times=gl_mt,
         )
@@ -256,12 +322,13 @@ def _refresh_engineer_gitlab(
     from teamdash.models import PRDetail
 
     gh_scored_summary = [
-        s for s in cached_eng.get("scored_prs_summary", [])
+        s
+        for s in cached_eng.get("scored_prs_summary", [])
         if "github.com" in s.get("url", "")
     ]
     gh_sp = sum(s["points"] for s in gh_scored_summary)
     gh_xl = sum(1 for s in gh_scored_summary if s.get("size") == "XL")
-    gh_review_sp = cached_eng.get("review_story_points", 0)
+    gh_review_sp = cached_eng.get("review_complexity_points", 0)
 
     gl_details: list[PRDetail] = []
     gl_reviews = 0
@@ -273,11 +340,14 @@ def _refresh_engineer_gitlab(
         gl_scored = score_prs(gl_details, config.scoring)
         gl_sp = sum(s.points for s in gl_scored)
         gl_xl = sum(1 for s in gl_scored if s.size == "XL")
-        gl_mt_scored = [d.merge_time_days for d in gl_details if d.merge_time_days is not None]
+        gl_mt_scored = [
+            d.merge_time_days for d in gl_details if d.merge_time_days is not None
+        ]
         gl_mrs_count = len(gl_details)
     elif not gitlab_ok:
         gl_scored_summary = [
-            s for s in cached_eng.get("scored_prs_summary", [])
+            s
+            for s in cached_eng.get("scored_prs_summary", [])
             if "github.com" not in s.get("url", "")
         ]
         gl_scored = []
@@ -285,7 +355,9 @@ def _refresh_engineer_gitlab(
         gl_xl = sum(1 for s in gl_scored_summary if s.get("size") == "XL")
         gl_mt_scored = cached_eng.get("_gitlab_merge_times", [])
         gl_mrs_count = cached_eng.get("gitlab_mrs", 0)
-        gl_reviews = max(0, cached_eng.get("reviews", 0) - cached_eng.get("_github_reviews", 0))
+        gl_reviews = max(
+            0, cached_eng.get("reviews", 0) - cached_eng.get("_github_reviews", 0)
+        )
     else:
         gl_scored = []
         gl_sp = 0
@@ -302,18 +374,22 @@ def _refresh_engineer_gitlab(
         gitlab_mrs=gl_mrs_count,
         reviews=gh_reviews + gl_reviews,
         github_reviews=gh_reviews,
-        merge_time_days=_median(all_mt) if all_mt else cached_eng.get("merge_time_days"),
-        story_points=gh_sp + gl_sp,
+        merge_time_days=_median(all_mt)
+        if all_mt
+        else cached_eng.get("merge_time_days"),
+        complexity_points=gh_sp + gl_sp,
         scored_prs=gl_scored,
         xl_count=gh_xl + gl_xl,
-        review_story_points=gh_review_sp,
+        review_complexity_points=gh_review_sp,
         github_merge_times=gh_mt,
         gitlab_merge_times=gl_mt_scored,
     )
 
 
 def _merge_cached_gitlab(
-    metrics: EngineerQuarterMetrics, old: dict, enable_scoring: bool,
+    metrics: EngineerQuarterMetrics,
+    old: dict,
+    enable_scoring: bool,
 ) -> list[dict]:
     """Patch freshly-fetched metrics with GitLab values from old cache entry.
 
@@ -329,16 +405,18 @@ def _merge_cached_gitlab(
     gl_scored_summary: list[dict] = []
     if enable_scoring:
         gl_scored_summary = [
-            s for s in old.get("scored_prs_summary", [])
+            s
+            for s in old.get("scored_prs_summary", [])
             if "github.com" not in s.get("url", "")
         ]
-        metrics.story_points += sum(s["points"] for s in gl_scored_summary)
+        metrics.complexity_points += sum(s["points"] for s in gl_scored_summary)
         metrics.xl_count += sum(1 for s in gl_scored_summary if s.get("size") == "XL")
     return gl_scored_summary
 
 
 def _build_cache_entry(
-    metrics: EngineerQuarterMetrics, enable_scoring: bool,
+    metrics: EngineerQuarterMetrics,
+    enable_scoring: bool,
     extra_scored_summary: list[dict] | None = None,
 ) -> dict:
     entry: dict = {
@@ -352,9 +430,9 @@ def _build_cache_entry(
         "verified_bugs": metrics.verified_bugs,
     }
     if enable_scoring:
-        entry["story_points"] = metrics.story_points
+        entry["complexity_points"] = metrics.complexity_points
         entry["xl_count"] = metrics.xl_count
-        entry["review_story_points"] = metrics.review_story_points
+        entry["review_complexity_points"] = metrics.review_complexity_points
         summary = [
             {
                 "url": s.detail.url,
@@ -384,11 +462,20 @@ def collect_all_data(
     if config.gitlab_url:
         gitlab_ok = check_gitlab_auth(config.gitlab_url)
         if not gitlab_ok:
-            print("[WARN] glab not authenticated for " + config.gitlab_url + ", GitLab MR counts will be 0", file=sys.stderr)
+            print(
+                "[WARN] glab not authenticated for "
+                + config.gitlab_url
+                + ", GitLab MR counts will be 0",
+                file=sys.stderr,
+            )
 
     if refresh_gitlab:
         return _collect_refresh_gitlab(
-            config, quarters, cache, gitlab_ok, enable_scoring,
+            config,
+            quarters,
+            cache,
+            gitlab_ok,
+            enable_scoring,
             jira_data=jira_data,
         )
 
@@ -405,7 +492,9 @@ def collect_all_data(
                 cached_eng = cached_quarter.get(eng.name)
                 if cached_eng:
                     quarter_cached[q.label][eng.name] = _metrics_from_cache(
-                        eng.name, q.label, cached_eng,
+                        eng.name,
+                        q.label,
+                        cached_eng,
                     )
                 else:
                     fetch_tasks.append((eng, q))
@@ -417,7 +506,11 @@ def collect_all_data(
     with ThreadPoolExecutor(max_workers=8) as pool:
         future_to_key = {
             pool.submit(
-                _fetch_engineer_data, eng, config, gitlab_ok, q,
+                _fetch_engineer_data,
+                eng,
+                config,
+                gitlab_ok,
+                q,
                 enable_scoring=enable_scoring,
             ): (q.label, eng.name)
             for eng, q in fetch_tasks
@@ -439,16 +532,23 @@ def collect_all_data(
                 if not gitlab_ok:
                     old_eng = cache.get(q.label, {}).get(eng.name)
                     if old_eng:
-                        extra_scored = _merge_cached_gitlab(metrics, old_eng, enable_scoring) or None
+                        extra_scored = (
+                            _merge_cached_gitlab(metrics, old_eng, enable_scoring)
+                            or None
+                        )
                 cache_entry = _build_cache_entry(
-                    metrics, enable_scoring, extra_scored_summary=extra_scored,
+                    metrics,
+                    enable_scoring,
+                    extra_scored_summary=extra_scored,
                 )
                 q_cache = updated_cache.setdefault(q.label, {})
                 q_cache[eng.name] = cache_entry
                 q_cache["_meta"] = {"fetched_date": date.today().isoformat()}
             if jira_data:
                 metrics.verified_bugs = jira_data.bugs.get(q.label, {}).get(eng.name, 0)
-                metrics.activity_type_counts = jira_data.activity_types.get(q.label, {}).get(eng.name, {})
+                metrics.activity_type_counts = jira_data.activity_types.get(
+                    q.label, {}
+                ).get(eng.name, {})
             engineer_metrics.append(metrics)
         if q.label in updated_cache and "_meta" not in updated_cache[q.label]:
             updated_cache[q.label]["_meta"] = {"fetched_date": date.today().isoformat()}
@@ -478,27 +578,39 @@ def _collect_refresh_gitlab(
 
             if cached_eng and eng.gitlab:
                 metrics = _refresh_engineer_gitlab(
-                    eng, config, gitlab_ok, q, cached_eng, enable_scoring,
+                    eng,
+                    config,
+                    gitlab_ok,
+                    q,
+                    cached_eng,
+                    enable_scoring,
                 )
                 gh_scored_summary = [
-                    s for s in cached_eng.get("scored_prs_summary", [])
+                    s
+                    for s in cached_eng.get("scored_prs_summary", [])
                     if "github.com" in s.get("url", "")
                 ]
                 cache_entry = _build_cache_entry(
-                    metrics, enable_scoring,
+                    metrics,
+                    enable_scoring,
                     extra_scored_summary=gh_scored_summary,
                 )
             elif cached_eng:
                 metrics = _metrics_from_cache(eng.name, q.label, cached_eng)
                 cache_entry = cached_eng
             else:
-                print(f"  [WARN] No cached data for {eng.name} {q.label}, skipping", file=sys.stderr)
+                print(
+                    f"  [WARN] No cached data for {eng.name} {q.label}, skipping",
+                    file=sys.stderr,
+                )
                 metrics = EngineerQuarterMetrics(name=eng.name, quarter=q.label)
                 cache_entry = _build_cache_entry(metrics, enable_scoring)
 
             if jira_data:
                 metrics.verified_bugs = jira_data.bugs.get(q.label, {}).get(eng.name, 0)
-                metrics.activity_type_counts = jira_data.activity_types.get(q.label, {}).get(eng.name, {})
+                metrics.activity_type_counts = jira_data.activity_types.get(
+                    q.label, {}
+                ).get(eng.name, {})
             engineer_metrics.append(metrics)
             q_cache = updated_cache.setdefault(q.label, {})
             q_cache[eng.name] = cache_entry

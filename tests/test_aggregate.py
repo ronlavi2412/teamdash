@@ -3,7 +3,15 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from teamdash.aggregate import _build_cache_entry, _config_hash, _is_quarter_cache_fresh, _load_cache, _metrics_from_cache, _save_cache, collect_all_data
+from teamdash.aggregate import (
+    _build_cache_entry,
+    _config_hash,
+    _is_quarter_cache_fresh,
+    _load_cache,
+    _metrics_from_cache,
+    _save_cache,
+    collect_all_data,
+)
 from teamdash.config import EngineerConfig, TeamConfig
 from teamdash.fetch_jira import JiraData
 from teamdash.models import EngineerQuarterMetrics, Quarter
@@ -30,7 +38,12 @@ class TestConfigHash:
 
 class TestCache:
     def test_save_and_load(self, tmp_path, sample_config):
-        data = {"2025-Q1": {"_meta": {"fetched_date": "2026-05-01"}, "Alice": {"github_prs": 5, "gitlab_mrs": 3, "reviews": 2}}}
+        data = {
+            "2025-Q1": {
+                "_meta": {"fetched_date": "2026-05-01"},
+                "Alice": {"github_prs": 5, "gitlab_mrs": 3, "reviews": 2},
+            }
+        }
         with patch("teamdash.aggregate.CACHE_DIR", tmp_path):
             _save_cache(sample_config, data)
             loaded = _load_cache(sample_config)
@@ -42,7 +55,11 @@ class TestCache:
 
     def test_load_returns_quarters_regardless_of_date(self, tmp_path, sample_config):
         cache_file = tmp_path / f"{_config_hash(sample_config)}.json"
-        cache_file.write_text(json.dumps({"quarters": {"2025-Q1": {"_meta": {"fetched_date": "2020-01-01"}}}}))
+        cache_file.write_text(
+            json.dumps(
+                {"quarters": {"2025-Q1": {"_meta": {"fetched_date": "2020-01-01"}}}}
+            )
+        )
         with patch("teamdash.aggregate.CACHE_DIR", tmp_path):
             loaded = _load_cache(sample_config)
         assert "2025-Q1" in loaded
@@ -55,6 +72,7 @@ class TestIsQuarterCacheFresh:
 
     def test_current_quarter_fresh_if_fetched_today(self):
         from datetime import date
+
         today = date.today().isoformat()
         data = {"_meta": {"fetched_date": today}}
         assert _is_quarter_cache_fresh(data, "2099-12-31") is True
@@ -82,7 +100,9 @@ class TestCollectAllData:
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
-            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=False)
+            summaries = collect_all_data(
+                sample_config, quarters, use_cache=False, enable_scoring=False
+            )
 
         assert len(summaries) == 1
         assert len(summaries[0].engineers) == 2
@@ -98,8 +118,24 @@ class TestCollectAllData:
         cached = {
             "2025-Q1": {
                 "_meta": {"fetched_date": "2025-04-01"},
-                "Alice": {"github_prs": 8, "gitlab_mrs": 4, "reviews": 6, "merge_time_days": 1.5, "story_points": 20, "xl_count": 0, "review_story_points": 10},
-                "Bob": {"github_prs": 2, "gitlab_mrs": 1, "reviews": 3, "merge_time_days": 3.0, "story_points": 5, "xl_count": 0, "review_story_points": 3},
+                "Alice": {
+                    "github_prs": 8,
+                    "gitlab_mrs": 4,
+                    "reviews": 6,
+                    "merge_time_days": 1.5,
+                    "complexity_points": 20,
+                    "xl_count": 0,
+                    "review_complexity_points": 10,
+                },
+                "Bob": {
+                    "github_prs": 2,
+                    "gitlab_mrs": 1,
+                    "reviews": 3,
+                    "merge_time_days": 3.0,
+                    "complexity_points": 5,
+                    "xl_count": 0,
+                    "review_complexity_points": 3,
+                },
             },
         }
         with (
@@ -132,7 +168,9 @@ class TestCollectAllData:
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
-            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=False)
+            summaries = collect_all_data(
+                sample_config, quarters, use_cache=False, enable_scoring=False
+            )
 
         mock_mrs.assert_not_called()
         mock_gl_mt.assert_not_called()
@@ -147,16 +185,22 @@ class TestCollectAllData:
         gh_details = [
             PRDetail(
                 url="https://github.com/org/repo/pull/1",
-                source="github", author="alice",
-                additions=100, deletions=20, changed_files=4,
+                source="github",
+                author="alice",
+                additions=100,
+                deletions=20,
+                changed_files=4,
                 merge_time_days=1.5,
             ),
         ]
         gl_details = [
             PRDetail(
                 url="https://gitlab.example.com/mr/1",
-                source="gitlab", author="alice_gl",
-                additions=50, deletions=10, changed_files=2,
+                source="gitlab",
+                author="alice_gl",
+                additions=50,
+                deletions=10,
+                changed_files=2,
                 merge_time_days=2.0,
             ),
         ]
@@ -169,12 +213,14 @@ class TestCollectAllData:
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
-            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=True)
+            summaries = collect_all_data(
+                sample_config, quarters, use_cache=False, enable_scoring=True
+            )
 
         alice = summaries[0].engineers[0]
         assert alice.github_prs == 1
         assert alice.gitlab_mrs == 1
-        assert alice.story_points > 0
+        assert alice.complexity_points > 0
         assert len(alice.scored_prs) == 2
 
     def test_no_scoring_skips_detail_fetchers(self, sample_config):
@@ -191,10 +237,12 @@ class TestCollectAllData:
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
         ):
-            summaries = collect_all_data(sample_config, quarters, use_cache=False, enable_scoring=False)
+            summaries = collect_all_data(
+                sample_config, quarters, use_cache=False, enable_scoring=False
+            )
 
         mock_details.assert_not_called()
-        assert summaries[0].engineers[0].story_points == 0
+        assert summaries[0].engineers[0].complexity_points == 0
 
     def test_jira_data_merges_verified_bugs(self, sample_config):
         quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
@@ -211,8 +259,11 @@ class TestCollectAllData:
             patch("teamdash.aggregate._save_cache"),
         ):
             summaries = collect_all_data(
-                sample_config, quarters, use_cache=False,
-                enable_scoring=False, jira_data=jira_data,
+                sample_config,
+                quarters,
+                use_cache=False,
+                enable_scoring=False,
+                jira_data=jira_data,
             )
 
         assert summaries[0].engineers[0].verified_bugs == 5
@@ -233,8 +284,11 @@ class TestCollectAllData:
             patch("teamdash.aggregate._save_cache"),
         ):
             summaries = collect_all_data(
-                sample_config, quarters, use_cache=False,
-                enable_scoring=False, jira_data=jira_data,
+                sample_config,
+                quarters,
+                use_cache=False,
+                enable_scoring=False,
+                jira_data=jira_data,
             )
 
         assert summaries[0].engineers[0].verified_bugs == 5
@@ -254,7 +308,10 @@ class TestCollectAllData:
             patch("teamdash.aggregate._save_cache"),
         ):
             summaries = collect_all_data(
-                sample_config, quarters, use_cache=False, enable_scoring=False,
+                sample_config,
+                quarters,
+                use_cache=False,
+                enable_scoring=False,
             )
 
         assert summaries[0].engineers[0].verified_bugs == 0
@@ -263,7 +320,11 @@ class TestCollectAllData:
         quarters = [Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")]
         jira_data = JiraData(
             bugs={"2025-Q1": {"Alice": 5}},
-            activity_types={"2025-Q1": {"Alice": {"Incidents & Support": 3, "Security & Compliance": 2}}},
+            activity_types={
+                "2025-Q1": {
+                    "Alice": {"Incidents & Support": 3, "Security & Compliance": 2}
+                }
+            },
         )
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
@@ -277,18 +338,28 @@ class TestCollectAllData:
             patch("teamdash.aggregate._save_cache"),
         ):
             summaries = collect_all_data(
-                sample_config, quarters, use_cache=False,
-                enable_scoring=False, jira_data=jira_data,
+                sample_config,
+                quarters,
+                use_cache=False,
+                enable_scoring=False,
+                jira_data=jira_data,
             )
 
-        assert summaries[0].engineers[0].activity_type_counts == {"Incidents & Support": 3, "Security & Compliance": 2}
+        assert summaries[0].engineers[0].activity_type_counts == {
+            "Incidents & Support": 3,
+            "Security & Compliance": 2,
+        }
         assert summaries[0].engineers[1].activity_type_counts == {}
+
 
 class TestCacheEntries:
     def test_build_cache_entry_basic(self):
         metrics = EngineerQuarterMetrics(
-            name="Alice", quarter="2025-Q1",
-            github_prs=10, gitlab_mrs=5, reviews=8,
+            name="Alice",
+            quarter="2025-Q1",
+            github_prs=10,
+            gitlab_mrs=5,
+            reviews=8,
         )
         entry = _build_cache_entry(metrics, enable_scoring=False)
         assert entry["github_prs"] == 10
@@ -296,7 +367,9 @@ class TestCacheEntries:
 
     def test_metrics_from_cache_basic(self):
         cached = {
-            "github_prs": 10, "gitlab_mrs": 5, "reviews": 8,
+            "github_prs": 10,
+            "gitlab_mrs": 5,
+            "reviews": 8,
         }
         metrics = _metrics_from_cache("Alice", "2025-Q1", cached)
         assert metrics.github_prs == 10

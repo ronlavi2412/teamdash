@@ -9,19 +9,27 @@ SIZES = ("XS", "S", "M", "L", "XL")
 
 @dataclass
 class ScoringConfig:
-    size_points: dict[str, int] = field(default_factory=lambda: {
-        "XS": 2, "S": 5, "M": 8, "L": 13, "XL": 21,
-    })
+    size_points: dict[str, int] = field(
+        default_factory=lambda: {
+            "XS": 2,
+            "S": 5,
+            "M": 8,
+            "L": 13,
+            "XL": 21,
+        }
+    )
     diff_thresholds: tuple[int, ...] = (50, 200, 500, 1200)
     file_thresholds: tuple[int, ...] = (3, 8, 15, 30)
     merge_time_thresholds: tuple[float, ...] = (0.5, 2.0, 5.0, 10.0)
-    size_label_patterns: dict[str, list[str]] = field(default_factory=lambda: {
-        "XS": ["size/xs", "t-shirt/xs"],
-        "S": ["size/s", "t-shirt/s"],
-        "M": ["size/m", "t-shirt/m"],
-        "L": ["size/l", "t-shirt/l"],
-        "XL": ["size/xl", "t-shirt/xl"],
-    })
+    size_label_patterns: dict[str, list[str]] = field(
+        default_factory=lambda: {
+            "XS": ["size/xs", "t-shirt/xs"],
+            "S": ["size/s", "t-shirt/s"],
+            "M": ["size/m", "t-shirt/m"],
+            "L": ["size/l", "t-shirt/l"],
+            "XL": ["size/xl", "t-shirt/xl"],
+        }
+    )
 
 
 def _classify(value: int | float, thresholds: tuple[int | float, ...]) -> str:
@@ -56,10 +64,8 @@ def _signal_merge_time(days: float | None, thresholds: tuple[float, ...]) -> str
     return _classify(days, thresholds)
 
 
-def _detect_label_size(
-    labels: list[str], patterns: dict[str, list[str]]
-) -> str | None:
-    lower_labels = [l.lower() for l in labels]
+def _detect_label_size(labels: list[str], patterns: dict[str, list[str]]) -> str | None:
+    lower_labels = [lbl.lower() for lbl in labels]
     for size in SIZES:
         for pattern in patterns.get(size, []):
             if pattern.lower() in lower_labels:

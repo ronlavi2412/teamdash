@@ -30,11 +30,13 @@ def get_quarters(
         end_month = start_month + 2
         last_day = monthrange(y, end_month)[1]
 
-        quarters.append(Quarter(
-            label=f"{y}-Q{q}",
-            start=date(y, start_month, 1).isoformat(),
-            end=date(y, end_month, last_day).isoformat(),
-        ))
+        quarters.append(
+            Quarter(
+                label=f"{y}-Q{q}",
+                start=date(y, start_month, 1).isoformat(),
+                end=date(y, end_month, last_day).isoformat(),
+            )
+        )
 
         q -= 1
         if q == 0:

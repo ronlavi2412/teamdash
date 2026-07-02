@@ -14,9 +14,9 @@ export const mockData: DashboardData = {
       gl_mrs: [4, 1],
       reviews: [6, 3],
       merge_time: [2.5, 3.1],
-      sp: [35, 10],
+      cp: [35, 10],
       xl_count: [0, 0],
-      review_sp: [18, 10],
+      review_cp: [18, 10],
       size_dist: [
         { XS: 2, S: 4, M: 3, L: 2, XL: 0 },
         { XS: 1, S: 1, M: 1, L: 0, XL: 0 },
@@ -33,9 +33,9 @@ export const mockData: DashboardData = {
       gl_mrs: [5, 2],
       reviews: [8, 4],
       merge_time: [1.8, 2.4],
-      sp: [34, 16],
+      cp: [34, 16],
       xl_count: [1, 0],
-      review_sp: [21, 13],
+      review_cp: [21, 13],
       size_dist: [
         { XS: 3, S: 3, M: 4, L: 2, XL: 1 },
         { XS: 1, S: 2, M: 1, L: 1, XL: 0 },
@@ -104,16 +104,16 @@ export const mockData: DashboardData = {
     {
       name: "Alice",
       quarters: [
-        { total: 12, github_prs: 8, gitlab_mrs: 4, reviews: 6, merge_time: 2.5, story_points: 35, review_story_points: 18, verified_bugs: 6, activity_type_counts: { "Incidents & Support": 10, "Product / Portfolio Work": 18, "Quality / Stability / Reliability": 5 } },
-        { total: 15, github_prs: 10, gitlab_mrs: 5, reviews: 8, merge_time: 1.8, story_points: 34, review_story_points: 21, verified_bugs: 10, activity_type_counts: { "Incidents & Support": 14, "Product / Portfolio Work": 22, "Quality / Stability / Reliability": 8 } },
+        { total: 12, github_prs: 8, gitlab_mrs: 4, reviews: 6, merge_time: 2.5, complexity_points: 35, review_complexity_points: 18, verified_bugs: 6, activity_type_counts: { "Incidents & Support": 10, "Product / Portfolio Work": 18, "Quality / Stability / Reliability": 5 } },
+        { total: 15, github_prs: 10, gitlab_mrs: 5, reviews: 8, merge_time: 1.8, complexity_points: 34, review_complexity_points: 21, verified_bugs: 10, activity_type_counts: { "Incidents & Support": 14, "Product / Portfolio Work": 22, "Quality / Stability / Reliability": 8 } },
       ],
       growth: "+25%",
     },
     {
       name: "Bob",
       quarters: [
-        { total: 3, github_prs: 2, gitlab_mrs: 1, reviews: 3, merge_time: 3.1, story_points: 10, review_story_points: 10, verified_bugs: 2, activity_type_counts: { "Incidents & Support": 2, "Security & Compliance": 3 } },
-        { total: 5, github_prs: 3, gitlab_mrs: 2, reviews: 4, merge_time: 2.4, story_points: 16, review_story_points: 13, verified_bugs: 4, activity_type_counts: { "Product / Portfolio Work": 10, "Quality / Stability / Reliability": 2 } },
+        { total: 3, github_prs: 2, gitlab_mrs: 1, reviews: 3, merge_time: 3.1, complexity_points: 10, review_complexity_points: 10, verified_bugs: 2, activity_type_counts: { "Incidents & Support": 2, "Security & Compliance": 3 } },
+        { total: 5, github_prs: 3, gitlab_mrs: 2, reviews: 4, merge_time: 2.4, complexity_points: 16, review_complexity_points: 13, verified_bugs: 4, activity_type_counts: { "Product / Portfolio Work": 10, "Quality / Stability / Reliability": 2 } },
       ],
       growth: "+67%",
     },

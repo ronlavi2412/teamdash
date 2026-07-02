@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from teamdash.models import PRDetail, ScoredPR
+from teamdash.models import PRDetail
 from teamdash.scoring import (
     ScoringConfig,
     _classify,
@@ -53,19 +53,39 @@ class TestClassify:
 
 
 class TestSignalDiffSize:
-    @pytest.mark.parametrize("lines,expected", [
-        (0, "XS"), (50, "XS"), (51, "S"), (200, "S"),
-        (201, "M"), (500, "M"), (501, "L"), (1200, "L"), (1201, "XL"),
-    ])
+    @pytest.mark.parametrize(
+        "lines,expected",
+        [
+            (0, "XS"),
+            (50, "XS"),
+            (51, "S"),
+            (200, "S"),
+            (201, "M"),
+            (500, "M"),
+            (501, "L"),
+            (1200, "L"),
+            (1201, "XL"),
+        ],
+    )
     def test_thresholds(self, lines, expected):
         assert _signal_diff_size(lines, (50, 200, 500, 1200)) == expected
 
 
 class TestSignalFilesChanged:
-    @pytest.mark.parametrize("files,expected", [
-        (1, "XS"), (3, "XS"), (4, "S"), (8, "S"),
-        (9, "M"), (15, "M"), (16, "L"), (30, "L"), (31, "XL"),
-    ])
+    @pytest.mark.parametrize(
+        "files,expected",
+        [
+            (1, "XS"),
+            (3, "XS"),
+            (4, "S"),
+            (8, "S"),
+            (9, "M"),
+            (15, "M"),
+            (16, "L"),
+            (30, "L"),
+            (31, "XL"),
+        ],
+    )
     def test_thresholds(self, files, expected):
         assert _signal_files_changed(files, (3, 8, 15, 30)) == expected
 
@@ -91,10 +111,20 @@ class TestSignalReviewFriction:
 
 
 class TestSignalMergeTime:
-    @pytest.mark.parametrize("days,expected", [
-        (0.0, "XS"), (0.5, "XS"), (0.6, "S"), (2.0, "S"),
-        (2.1, "M"), (5.0, "M"), (5.1, "L"), (10.0, "L"), (10.1, "XL"),
-    ])
+    @pytest.mark.parametrize(
+        "days,expected",
+        [
+            (0.0, "XS"),
+            (0.5, "XS"),
+            (0.6, "S"),
+            (2.0, "S"),
+            (2.1, "M"),
+            (5.0, "M"),
+            (5.1, "L"),
+            (10.0, "L"),
+            (10.1, "XL"),
+        ],
+    )
     def test_thresholds(self, days, expected):
         assert _signal_merge_time(days, (0.5, 2.0, 5.0, 10.0)) == expected
 
@@ -158,7 +188,9 @@ class TestScorePr:
 
     def test_label_override(self, config):
         detail = _make_detail(
-            additions=1000, deletions=500, changed_files=35,
+            additions=1000,
+            deletions=500,
+            changed_files=35,
             labels=["size/xs"],
         )
         result = score_pr(detail, config)
@@ -167,8 +199,10 @@ class TestScorePr:
 
     def test_review_friction_elevates_size(self, config):
         detail = _make_detail(
-            additions=10, deletions=5,
-            changes_requested_count=3, comments_count=10,
+            additions=10,
+            deletions=5,
+            changes_requested_count=3,
+            comments_count=10,
         )
         result = score_pr(detail, config)
         assert result.size in ("L", "XL")
@@ -180,8 +214,11 @@ class TestScorePr:
 
     def test_max_of_all_signals(self, config):
         detail = _make_detail(
-            additions=100, deletions=50, changed_files=10,
-            merge_time_days=3.0, changes_requested_count=1,
+            additions=100,
+            deletions=50,
+            changed_files=10,
+            merge_time_days=3.0,
+            changes_requested_count=1,
         )
         result = score_pr(detail, config)
         assert result.size == "M"

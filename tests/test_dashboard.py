@@ -77,11 +77,15 @@ class TestBuildDashboardData:
         assert "reviews" in q
         assert "merge_time" in q
 
-    def test_has_scoring_false_without_scoring(self, two_quarter_summaries, sample_config):
+    def test_has_scoring_false_without_scoring(
+        self, two_quarter_summaries, sample_config
+    ):
         data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["hasScoring"] is False
 
-    def test_has_scoring_true_with_scoring(self, two_quarter_summaries_with_scoring, sample_config):
+    def test_has_scoring_true_with_scoring(
+        self, two_quarter_summaries_with_scoring, sample_config
+    ):
         data = build_dashboard_data(sample_config, two_quarter_summaries_with_scoring)
         assert data["hasScoring"] is True
 
@@ -125,17 +129,23 @@ class TestBuildConfigData:
 
 class TestBuildTableRowData:
     def test_contains_engineer_names(self, two_quarter_summaries):
-        rows = _build_table_row_data(two_quarter_summaries, ["Alice", "Bob"], has_scoring=False)
+        rows = _build_table_row_data(
+            two_quarter_summaries, ["Alice", "Bob"], has_scoring=False
+        )
         assert rows[0]["name"] == "Alice"
         assert rows[1]["name"] == "Bob"
 
     def test_quarters_data(self, two_quarter_summaries):
-        rows = _build_table_row_data(two_quarter_summaries, ["Alice", "Bob"], has_scoring=False)
+        rows = _build_table_row_data(
+            two_quarter_summaries, ["Alice", "Bob"], has_scoring=False
+        )
         assert len(rows[0]["quarters"]) == 2
         assert rows[0]["quarters"][1]["total"] == 15
 
     def test_growth(self, two_quarter_summaries):
-        rows = _build_table_row_data(two_quarter_summaries, ["Alice", "Bob"], has_scoring=False)
+        rows = _build_table_row_data(
+            two_quarter_summaries, ["Alice", "Bob"], has_scoring=False
+        )
         assert "%" in rows[0]["growth"]
 
 
@@ -148,20 +158,26 @@ class TestGenerateDashboard:
         assert "<!DOCTYPE html>" in content
         assert "Test Team" in content
 
-    def test_contains_dashboard_data(self, tmp_path, two_quarter_summaries, sample_config):
+    def test_contains_dashboard_data(
+        self, tmp_path, two_quarter_summaries, sample_config
+    ):
         out = str(tmp_path / "test.html")
         generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert "window.__DASHBOARD_DATA__" in content
 
-    def test_contains_engineer_names(self, tmp_path, two_quarter_summaries, sample_config):
+    def test_contains_engineer_names(
+        self, tmp_path, two_quarter_summaries, sample_config
+    ):
         out = str(tmp_path / "test.html")
         generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
         assert "Alice" in content
         assert "Bob" in content
 
-    def test_contains_react_bundle(self, tmp_path, two_quarter_summaries, sample_config):
+    def test_contains_react_bundle(
+        self, tmp_path, two_quarter_summaries, sample_config
+    ):
         out = str(tmp_path / "test.html")
         generate_dashboard(sample_config, two_quarter_summaries, out)
         content = open(out).read()
@@ -173,63 +189,146 @@ class TestJiraDashboard:
         data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["hasJira"] is False
 
-    def test_has_jira_true_with_bugs(self, sample_config, sample_quarter, sample_quarter_prev):
-        from teamdash.models import EngineerQuarterMetrics
+    def test_has_jira_true_with_bugs(
+        self, sample_config, sample_quarter, sample_quarter_prev
+    ):
         summaries = [
             QuarterSummary(
                 quarter=sample_quarter_prev,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6),
-                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2024-Q4",
+                        github_prs=8,
+                        gitlab_mrs=4,
+                        reviews=6,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2024-Q4",
+                        github_prs=2,
+                        gitlab_mrs=1,
+                        reviews=3,
+                    ),
                 ],
             ),
             QuarterSummary(
                 quarter=sample_quarter,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8, verified_bugs=5),
-                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4, verified_bugs=3),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2025-Q1",
+                        github_prs=10,
+                        gitlab_mrs=5,
+                        reviews=8,
+                        verified_bugs=5,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2025-Q1",
+                        github_prs=3,
+                        gitlab_mrs=2,
+                        reviews=4,
+                        verified_bugs=3,
+                    ),
                 ],
             ),
         ]
         data = build_dashboard_data(sample_config, summaries)
         assert data["hasJira"] is True
 
-    def test_verified_bugs_in_quarter_data(self, sample_config, sample_quarter, sample_quarter_prev):
-        from teamdash.models import EngineerQuarterMetrics
+    def test_verified_bugs_in_quarter_data(
+        self, sample_config, sample_quarter, sample_quarter_prev
+    ):
         summaries = [
             QuarterSummary(
                 quarter=sample_quarter_prev,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6, verified_bugs=2),
-                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3, verified_bugs=1),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2024-Q4",
+                        github_prs=8,
+                        gitlab_mrs=4,
+                        reviews=6,
+                        verified_bugs=2,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2024-Q4",
+                        github_prs=2,
+                        gitlab_mrs=1,
+                        reviews=3,
+                        verified_bugs=1,
+                    ),
                 ],
             ),
             QuarterSummary(
                 quarter=sample_quarter,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8, verified_bugs=5),
-                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4, verified_bugs=3),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2025-Q1",
+                        github_prs=10,
+                        gitlab_mrs=5,
+                        reviews=8,
+                        verified_bugs=5,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2025-Q1",
+                        github_prs=3,
+                        gitlab_mrs=2,
+                        reviews=4,
+                        verified_bugs=3,
+                    ),
                 ],
             ),
         ]
         data = build_dashboard_data(sample_config, summaries)
         assert data["quarters"][1]["verified_bugs"] == [5, 3]
 
-    def test_verified_bugs_in_table_rows(self, sample_config, sample_quarter, sample_quarter_prev):
-        from teamdash.models import EngineerQuarterMetrics
+    def test_verified_bugs_in_table_rows(
+        self, sample_config, sample_quarter, sample_quarter_prev
+    ):
         summaries = [
             QuarterSummary(
                 quarter=sample_quarter_prev,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6, verified_bugs=2),
-                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2024-Q4",
+                        github_prs=8,
+                        gitlab_mrs=4,
+                        reviews=6,
+                        verified_bugs=2,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2024-Q4",
+                        github_prs=2,
+                        gitlab_mrs=1,
+                        reviews=3,
+                    ),
                 ],
             ),
             QuarterSummary(
                 quarter=sample_quarter,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8, verified_bugs=5),
-                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2025-Q1",
+                        github_prs=10,
+                        gitlab_mrs=5,
+                        reviews=8,
+                        verified_bugs=5,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2025-Q1",
+                        github_prs=3,
+                        gitlab_mrs=2,
+                        reviews=4,
+                    ),
                 ],
             ),
         ]
@@ -241,12 +340,15 @@ class TestJiraDashboard:
 class TestJiraConfigData:
     def test_jira_config_present(self):
         from teamdash.config import JiraConfig
+
         config = TeamConfig(
             team_name="Test",
             gitlab_url=None,
             github_orgs=["org"],
             engineers=[EngineerConfig(name="A", github="a")],
-            jira=JiraConfig(cloud_id="redhat.atlassian.net", project_keys=["CNV", "MTV"]),
+            jira=JiraConfig(
+                cloud_id="redhat.atlassian.net", project_keys=["CNV", "MTV"]
+            ),
         )
         data = _build_config_data(config, has_scoring=False)
         assert data["jira_cloud_id"] == "redhat.atlassian.net"
@@ -259,19 +361,23 @@ class TestJiraConfigData:
 
 
 class TestScoringDashboard:
-    def test_scoring_data_present(self, two_quarter_summaries_with_scoring, sample_config):
+    def test_scoring_data_present(
+        self, two_quarter_summaries_with_scoring, sample_config
+    ):
         data = build_dashboard_data(sample_config, two_quarter_summaries_with_scoring)
         q = data["quarters"][1]
-        assert q["sp"] == [34, 16]
+        assert q["cp"] == [34, 16]
         assert q["xl_count"] == [1, 0]
-        assert q["review_sp"] == [21, 13]
+        assert q["review_cp"] == [21, 13]
         assert q["size_dist"][0]["XL"] == 1
 
     def test_scoring_table_rows(self, two_quarter_summaries_with_scoring):
         rows = _build_table_row_data(
-            two_quarter_summaries_with_scoring, ["Alice", "Bob"], has_scoring=True,
+            two_quarter_summaries_with_scoring,
+            ["Alice", "Bob"],
+            has_scoring=True,
         )
-        assert rows[0]["quarters"][1]["story_points"] == 34
+        assert rows[0]["quarters"][1]["complexity_points"] == 34
 
     def test_scoring_config_data(self, sample_config):
         data = _build_config_data(sample_config, has_scoring=True)
@@ -279,29 +385,57 @@ class TestScoringDashboard:
 
 
 class TestActivityTypeDashboard:
-    def test_has_activity_types_false_without_data(self, two_quarter_summaries, sample_config):
+    def test_has_activity_types_false_without_data(
+        self, two_quarter_summaries, sample_config
+    ):
         data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["hasActivityTypes"] is False
         assert data["activityTypeNames"] == []
 
-    def test_has_activity_types_true_with_data(self, sample_config, sample_quarter, sample_quarter_prev):
-        from teamdash.models import EngineerQuarterMetrics
+    def test_has_activity_types_true_with_data(
+        self, sample_config, sample_quarter, sample_quarter_prev
+    ):
         summaries = [
             QuarterSummary(
                 quarter=sample_quarter_prev,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6),
-                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2024-Q4",
+                        github_prs=8,
+                        gitlab_mrs=4,
+                        reviews=6,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2024-Q4",
+                        github_prs=2,
+                        gitlab_mrs=1,
+                        reviews=3,
+                    ),
                 ],
             ),
             QuarterSummary(
                 quarter=sample_quarter,
                 engineers=[
                     EngineerQuarterMetrics(
-                        name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8,
-                        activity_type_counts={"Incidents & Support": 3, "Security & Compliance": 1},
+                        name="Alice",
+                        quarter="2025-Q1",
+                        github_prs=10,
+                        gitlab_mrs=5,
+                        reviews=8,
+                        activity_type_counts={
+                            "Incidents & Support": 3,
+                            "Security & Compliance": 1,
+                        },
                     ),
-                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2025-Q1",
+                        github_prs=3,
+                        gitlab_mrs=2,
+                        reviews=4,
+                    ),
                 ],
             ),
         ]
@@ -310,24 +444,47 @@ class TestActivityTypeDashboard:
         assert "Incidents & Support" in data["activityTypeNames"]
         assert "Security & Compliance" in data["activityTypeNames"]
 
-    def test_activity_types_in_quarter_data(self, sample_config, sample_quarter, sample_quarter_prev):
-        from teamdash.models import EngineerQuarterMetrics
+    def test_activity_types_in_quarter_data(
+        self, sample_config, sample_quarter, sample_quarter_prev
+    ):
         summaries = [
             QuarterSummary(
                 quarter=sample_quarter_prev,
                 engineers=[
-                    EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6),
-                    EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+                    EngineerQuarterMetrics(
+                        name="Alice",
+                        quarter="2024-Q4",
+                        github_prs=8,
+                        gitlab_mrs=4,
+                        reviews=6,
+                    ),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2024-Q4",
+                        github_prs=2,
+                        gitlab_mrs=1,
+                        reviews=3,
+                    ),
                 ],
             ),
             QuarterSummary(
                 quarter=sample_quarter,
                 engineers=[
                     EngineerQuarterMetrics(
-                        name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8,
+                        name="Alice",
+                        quarter="2025-Q1",
+                        github_prs=10,
+                        gitlab_mrs=5,
+                        reviews=8,
                         activity_type_counts={"Incidents & Support": 3},
                     ),
-                    EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4),
+                    EngineerQuarterMetrics(
+                        name="Bob",
+                        quarter="2025-Q1",
+                        github_prs=3,
+                        gitlab_mrs=2,
+                        reviews=4,
+                    ),
                 ],
             ),
         ]
@@ -337,20 +494,36 @@ class TestActivityTypeDashboard:
 
 
 class TestCycleTimeDashboard:
-    def test_has_cycle_time_false_without_data(self, two_quarter_summaries, sample_config):
+    def test_has_cycle_time_false_without_data(
+        self, two_quarter_summaries, sample_config
+    ):
         data = build_dashboard_data(sample_config, two_quarter_summaries)
         assert data["hasCycleTime"] is False
 
     def test_has_cycle_time_true_with_data(self, two_quarter_summaries, sample_config):
-        ct_data = {"2025-Q1": {"CNV": {"Story": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}}}}
-        data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
+        ct_data = {
+            "2025-Q1": {
+                "CNV": {
+                    "Story": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}
+                }
+            }
+        }
+        data = build_dashboard_data(
+            sample_config, two_quarter_summaries, cycle_time_data=ct_data
+        )
         assert data["hasCycleTime"] is True
 
     def test_cycle_time_data_in_output(self, two_quarter_summaries, sample_config):
         ct_data = {
-            "2025-Q1": {"CNV": {"Story": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}}},
+            "2025-Q1": {
+                "CNV": {
+                    "Story": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}
+                }
+            },
         }
-        data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
+        data = build_dashboard_data(
+            sample_config, two_quarter_summaries, cycle_time_data=ct_data
+        )
         assert "Q1'25" in data["cycleTimeData"]
         assert "CNV" in data["cycleTimeData"]["Q1'25"]
         assert "Story" in data["cycleTimeData"]["Q1'25"]["CNV"]
@@ -359,11 +532,17 @@ class TestCycleTimeDashboard:
     def test_cycle_time_projects_sorted(self, two_quarter_summaries, sample_config):
         ct_data = {
             "2025-Q1": {
-                "MTV": {"Bug": {"dev": [1.0], "build": [1.0], "qe": [1.0], "total": [3.0]}},
-                "CNV": {"Story": {"dev": [2.0], "build": [1.0], "qe": [1.0], "total": [4.0]}},
+                "MTV": {
+                    "Bug": {"dev": [1.0], "build": [1.0], "qe": [1.0], "total": [3.0]}
+                },
+                "CNV": {
+                    "Story": {"dev": [2.0], "build": [1.0], "qe": [1.0], "total": [4.0]}
+                },
             },
         }
-        data = build_dashboard_data(sample_config, two_quarter_summaries, cycle_time_data=ct_data)
+        data = build_dashboard_data(
+            sample_config, two_quarter_summaries, cycle_time_data=ct_data
+        )
         assert data["cycleTimeProjects"] == ["CNV", "MTV"]
 
     def test_no_cycle_time_in_quarter_data(self, two_quarter_summaries, sample_config):

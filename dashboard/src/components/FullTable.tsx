@@ -53,15 +53,15 @@ export function FullTable({ tableRows, quarterLabels, hasScoring, hasJira }: Ful
     }
     offset += numQuarters;
 
-    // Story points columns (if scoring)
+    // Complexity points columns (if scoring)
     if (hasScoring && colIdx < offset + numQuarters) {
-      return row.quarters[colIdx - offset].story_points;
+      return row.quarters[colIdx - offset].complexity_points;
     }
     offset += numQuarters;
 
     // Review complexity columns (if scoring)
     if (hasScoring && colIdx < offset + numQuarters) {
-      return row.quarters[colIdx - offset].review_story_points;
+      return row.quarters[colIdx - offset].review_complexity_points;
     }
     if (hasScoring) offset += numQuarters;
 
@@ -117,8 +117,8 @@ export function FullTable({ tableRows, quarterLabels, hasScoring, hasJira }: Ful
     for (const qm of row.quarters) cells.push(qm.reviews);
     for (const qm of row.quarters) cells.push(qm.merge_time !== null ? qm.merge_time : '-');
     if (hasScoring) {
-      for (const qm of row.quarters) cells.push(qm.story_points);
-      for (const qm of row.quarters) cells.push(qm.review_story_points);
+      for (const qm of row.quarters) cells.push(qm.complexity_points);
+      for (const qm of row.quarters) cells.push(qm.review_complexity_points);
     }
     if (hasJira) {
       for (const qm of row.quarters) cells.push(qm.verified_bugs);

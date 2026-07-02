@@ -49,7 +49,7 @@ The app reads data from `window.__DASHBOARD_DATA__` and renders five tabs:
 
 | Tab | Component | Purpose |
 |-----|-----------|---------|
-| Team | `TeamView` | Aggregate bar charts (total PRs, reviews, merge time, story points, cycle time) |
+| Team | `TeamView` | Aggregate bar charts (total PRs, reviews, merge time, complexity points, cycle time) |
 | Detailed | `DetailView` | Per-engineer line charts with engineer filter |
 | Table | `FullTable` | Sortable metrics table per engineer per quarter |
 | Config | `ConfigView` | Display the team.yaml configuration used |

@@ -46,7 +46,10 @@ def load_config(path: str) -> TeamConfig:
         sys.exit(1)
 
     if not isinstance(raw, dict):
-        print(f"[ERROR] Config must be a JSON object, got {type(raw).__name__}", file=sys.stderr)
+        print(
+            f"[ERROR] Config must be a JSON object, got {type(raw).__name__}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     team_name = raw.get("team_name")
@@ -71,10 +74,15 @@ def load_config(path: str) -> TeamConfig:
         gh = eng.get("github")
         gl = eng.get("gitlab")
         if not gh and not gl:
-            print(f"[ERROR] Engineer '{name}' needs at least one of 'github' or 'gitlab'", file=sys.stderr)
+            print(
+                f"[ERROR] Engineer '{name}' needs at least one of 'github' or 'gitlab'",
+                file=sys.stderr,
+            )
             sys.exit(1)
         jira_id = eng.get("jira_account_id")
-        engineers.append(EngineerConfig(name=name, github=gh, gitlab=gl, jira_account_id=jira_id))
+        engineers.append(
+            EngineerConfig(name=name, github=gh, gitlab=gl, jira_account_id=jira_id)
+        )
 
     jira_raw = raw.get("jira")
     jira = None
@@ -93,7 +101,9 @@ def load_config(path: str) -> TeamConfig:
     if "file_thresholds" in scoring_raw:
         scoring_kwargs["file_thresholds"] = tuple(scoring_raw["file_thresholds"])
     if "merge_time_thresholds" in scoring_raw:
-        scoring_kwargs["merge_time_thresholds"] = tuple(scoring_raw["merge_time_thresholds"])
+        scoring_kwargs["merge_time_thresholds"] = tuple(
+            scoring_raw["merge_time_thresholds"]
+        )
     if "size_label_patterns" in scoring_raw:
         scoring_kwargs["size_label_patterns"] = scoring_raw["size_label_patterns"]
     scoring = ScoringConfig(**scoring_kwargs)

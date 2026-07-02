@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """Generate test dashboard HTML files for Playwright tests."""
+
 import sys
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
-from teamdash.config import EngineerConfig, JiraConfig, TeamConfig
-from teamdash.dashboard import build_dashboard_data, generate_dashboard, generate_dashboard_from_data
-from teamdash.models import (
+from teamdash.config import EngineerConfig, JiraConfig, TeamConfig  # noqa: E402
+from teamdash.dashboard import (  # noqa: E402
+    build_dashboard_data,
+    generate_dashboard,
+    generate_dashboard_from_data,
+)
+from teamdash.models import (  # noqa: E402
     EngineerQuarterMetrics,
     PRDetail,
     Quarter,
@@ -38,13 +43,19 @@ def make_summaries(with_scoring=False):
     if with_scoring:
         detail1 = PRDetail(
             url="https://github.com/org/repo/pull/1",
-            source="github", author="alice",
-            additions=100, deletions=20, changed_files=4,
+            source="github",
+            author="alice",
+            additions=100,
+            deletions=20,
+            changed_files=4,
         )
         detail2 = PRDetail(
             url="https://github.com/org/repo/pull/2",
-            source="github", author="alice",
-            additions=800, deletions=600, changed_files=35,
+            source="github",
+            author="alice",
+            additions=800,
+            deletions=600,
+            changed_files=35,
         )
         scored1 = ScoredPR(detail=detail1, size="S", points=5)
         scored2 = ScoredPR(detail=detail2, size="XL", points=21, flags=["should-split"])
@@ -53,16 +64,26 @@ def make_summaries(with_scoring=False):
             quarter=q_prev,
             engineers=[
                 EngineerQuarterMetrics(
-                    name="Alice", quarter="2024-Q4",
-                    github_prs=8, gitlab_mrs=4, reviews=6,
+                    name="Alice",
+                    quarter="2024-Q4",
+                    github_prs=8,
+                    gitlab_mrs=4,
+                    reviews=6,
                     merge_time_days=2.5,
-                    story_points=35, xl_count=0, review_story_points=18,
+                    complexity_points=35,
+                    xl_count=0,
+                    review_complexity_points=18,
                 ),
                 EngineerQuarterMetrics(
-                    name="Bob", quarter="2024-Q4",
-                    github_prs=2, gitlab_mrs=1, reviews=3,
+                    name="Bob",
+                    quarter="2024-Q4",
+                    github_prs=2,
+                    gitlab_mrs=1,
+                    reviews=3,
                     merge_time_days=3.1,
-                    story_points=10, xl_count=0, review_story_points=10,
+                    complexity_points=10,
+                    xl_count=0,
+                    review_complexity_points=10,
                 ),
             ],
         )
@@ -70,18 +91,27 @@ def make_summaries(with_scoring=False):
             quarter=q_cur,
             engineers=[
                 EngineerQuarterMetrics(
-                    name="Alice", quarter="2025-Q1",
-                    github_prs=10, gitlab_mrs=5, reviews=8,
+                    name="Alice",
+                    quarter="2025-Q1",
+                    github_prs=10,
+                    gitlab_mrs=5,
+                    reviews=8,
                     merge_time_days=1.8,
-                    story_points=34, xl_count=1,
+                    complexity_points=34,
+                    xl_count=1,
                     scored_prs=[scored1, scored2],
-                    review_story_points=21,
+                    review_complexity_points=21,
                 ),
                 EngineerQuarterMetrics(
-                    name="Bob", quarter="2025-Q1",
-                    github_prs=3, gitlab_mrs=2, reviews=4,
+                    name="Bob",
+                    quarter="2025-Q1",
+                    github_prs=3,
+                    gitlab_mrs=2,
+                    reviews=4,
                     merge_time_days=2.4,
-                    story_points=16, xl_count=0, review_story_points=13,
+                    complexity_points=16,
+                    xl_count=0,
+                    review_complexity_points=13,
                 ),
             ],
         )
@@ -90,13 +120,19 @@ def make_summaries(with_scoring=False):
             quarter=q_prev,
             engineers=[
                 EngineerQuarterMetrics(
-                    name="Alice", quarter="2024-Q4",
-                    github_prs=8, gitlab_mrs=4, reviews=6,
+                    name="Alice",
+                    quarter="2024-Q4",
+                    github_prs=8,
+                    gitlab_mrs=4,
+                    reviews=6,
                     merge_time_days=2.5,
                 ),
                 EngineerQuarterMetrics(
-                    name="Bob", quarter="2024-Q4",
-                    github_prs=2, gitlab_mrs=1, reviews=3,
+                    name="Bob",
+                    quarter="2024-Q4",
+                    github_prs=2,
+                    gitlab_mrs=1,
+                    reviews=3,
                     merge_time_days=3.1,
                 ),
             ],
@@ -105,13 +141,19 @@ def make_summaries(with_scoring=False):
             quarter=q_cur,
             engineers=[
                 EngineerQuarterMetrics(
-                    name="Alice", quarter="2025-Q1",
-                    github_prs=10, gitlab_mrs=5, reviews=8,
+                    name="Alice",
+                    quarter="2025-Q1",
+                    github_prs=10,
+                    gitlab_mrs=5,
+                    reviews=8,
                     merge_time_days=1.8,
                 ),
                 EngineerQuarterMetrics(
-                    name="Bob", quarter="2025-Q1",
-                    github_prs=3, gitlab_mrs=2, reviews=4,
+                    name="Bob",
+                    quarter="2025-Q1",
+                    github_prs=3,
+                    gitlab_mrs=2,
+                    reviews=4,
                     merge_time_days=2.4,
                 ),
             ],
@@ -140,8 +182,15 @@ def make_jira_config():
         gitlab_url="https://gitlab.example.com",
         github_orgs=["test-org"],
         engineers=[
-            EngineerConfig(name="Alice", github="alice", gitlab="alice_gl", jira_account_id="abc-123"),
-            EngineerConfig(name="Bob", github="bob", gitlab="bob_gl", jira_account_id="def-456"),
+            EngineerConfig(
+                name="Alice",
+                github="alice",
+                gitlab="alice_gl",
+                jira_account_id="abc-123",
+            ),
+            EngineerConfig(
+                name="Bob", github="bob", gitlab="bob_gl", jira_account_id="def-456"
+            ),
         ],
         jira=JiraConfig(cloud_id="test.atlassian.net", project_keys=["PROJ"]),
     )
@@ -154,14 +203,22 @@ def make_jira_summaries():
         quarter=q_prev,
         engineers=[
             EngineerQuarterMetrics(
-                name="Alice", quarter="2024-Q4",
-                github_prs=8, gitlab_mrs=4, reviews=6,
-                merge_time_days=2.5, verified_bugs=6,
+                name="Alice",
+                quarter="2024-Q4",
+                github_prs=8,
+                gitlab_mrs=4,
+                reviews=6,
+                merge_time_days=2.5,
+                verified_bugs=6,
             ),
             EngineerQuarterMetrics(
-                name="Bob", quarter="2024-Q4",
-                github_prs=2, gitlab_mrs=1, reviews=3,
-                merge_time_days=3.1, verified_bugs=2,
+                name="Bob",
+                quarter="2024-Q4",
+                github_prs=2,
+                gitlab_mrs=1,
+                reviews=3,
+                merge_time_days=3.1,
+                verified_bugs=2,
             ),
         ],
     )
@@ -169,14 +226,22 @@ def make_jira_summaries():
         quarter=q_cur,
         engineers=[
             EngineerQuarterMetrics(
-                name="Alice", quarter="2025-Q1",
-                github_prs=10, gitlab_mrs=5, reviews=8,
-                merge_time_days=1.8, verified_bugs=10,
+                name="Alice",
+                quarter="2025-Q1",
+                github_prs=10,
+                gitlab_mrs=5,
+                reviews=8,
+                merge_time_days=1.8,
+                verified_bugs=10,
             ),
             EngineerQuarterMetrics(
-                name="Bob", quarter="2025-Q1",
-                github_prs=3, gitlab_mrs=2, reviews=4,
-                merge_time_days=2.4, verified_bugs=4,
+                name="Bob",
+                quarter="2025-Q1",
+                github_prs=3,
+                gitlab_mrs=2,
+                reviews=4,
+                merge_time_days=2.4,
+                verified_bugs=4,
             ),
         ],
     )
@@ -197,9 +262,13 @@ def make_activity_type_summaries():
         quarter=q_prev,
         engineers=[
             EngineerQuarterMetrics(
-                name="Alice", quarter="2024-Q4",
-                github_prs=8, gitlab_mrs=4, reviews=6,
-                merge_time_days=2.5, verified_bugs=6,
+                name="Alice",
+                quarter="2024-Q4",
+                github_prs=8,
+                gitlab_mrs=4,
+                reviews=6,
+                merge_time_days=2.5,
+                verified_bugs=6,
                 activity_type_counts={
                     "Incidents & Support": 10,
                     "Product / Portfolio Work": 18,
@@ -207,9 +276,13 @@ def make_activity_type_summaries():
                 },
             ),
             EngineerQuarterMetrics(
-                name="Bob", quarter="2024-Q4",
-                github_prs=2, gitlab_mrs=1, reviews=3,
-                merge_time_days=3.1, verified_bugs=2,
+                name="Bob",
+                quarter="2024-Q4",
+                github_prs=2,
+                gitlab_mrs=1,
+                reviews=3,
+                merge_time_days=3.1,
+                verified_bugs=2,
                 activity_type_counts={
                     "Incidents & Support": 2,
                     "Security & Compliance": 3,
@@ -221,9 +294,13 @@ def make_activity_type_summaries():
         quarter=q_cur,
         engineers=[
             EngineerQuarterMetrics(
-                name="Alice", quarter="2025-Q1",
-                github_prs=10, gitlab_mrs=5, reviews=8,
-                merge_time_days=1.8, verified_bugs=10,
+                name="Alice",
+                quarter="2025-Q1",
+                github_prs=10,
+                gitlab_mrs=5,
+                reviews=8,
+                merge_time_days=1.8,
+                verified_bugs=10,
                 activity_type_counts={
                     "Incidents & Support": 14,
                     "Product / Portfolio Work": 22,
@@ -232,9 +309,13 @@ def make_activity_type_summaries():
                 },
             ),
             EngineerQuarterMetrics(
-                name="Bob", quarter="2025-Q1",
-                github_prs=3, gitlab_mrs=2, reviews=4,
-                merge_time_days=2.4, verified_bugs=4,
+                name="Bob",
+                quarter="2025-Q1",
+                github_prs=3,
+                gitlab_mrs=2,
+                reviews=4,
+                merge_time_days=2.4,
+                verified_bugs=4,
                 activity_type_counts={
                     "Product / Portfolio Work": 10,
                     "Future Sustainability": 5,
@@ -255,19 +336,39 @@ generate_dashboard(
 cycle_time_data = {
     "2024-Q4": {
         "PROJ-A": {
-            "Story": {"dev": [3.0, 5.0], "build": [1.0, 2.0], "qe": [2.0, 4.0], "total": [6.0, 11.0]},
+            "Story": {
+                "dev": [3.0, 5.0],
+                "build": [1.0, 2.0],
+                "qe": [2.0, 4.0],
+                "total": [6.0, 11.0],
+            },
             "Bug": {"dev": [8.0], "build": [1.5], "qe": [3.0], "total": [12.5]},
         },
         "PROJ-B": {
-            "Story": {"dev": [4.0, 6.0], "build": [1.0, 2.5], "qe": [3.0, 5.0], "total": [8.0, 13.5]},
+            "Story": {
+                "dev": [4.0, 6.0],
+                "build": [1.0, 2.5],
+                "qe": [3.0, 5.0],
+                "total": [8.0, 13.5],
+            },
         },
     },
     "2025-Q1": {
         "PROJ-A": {
-            "Story": {"dev": [2.0, 4.0, 6.0], "build": [1.0, 1.5, 2.0], "qe": [2.0, 3.0, 4.0], "total": [5.0, 8.5, 12.0]},
+            "Story": {
+                "dev": [2.0, 4.0, 6.0],
+                "build": [1.0, 1.5, 2.0],
+                "qe": [2.0, 3.0, 4.0],
+                "total": [5.0, 8.5, 12.0],
+            },
         },
         "PROJ-B": {
-            "Bug": {"dev": [5.0, 7.0], "build": [2.0, 3.0], "qe": [4.0, 6.0], "total": [11.0, 16.0]},
+            "Bug": {
+                "dev": [5.0, 7.0],
+                "build": [2.0, 3.0],
+                "qe": [4.0, 6.0],
+                "total": [11.0, 16.0],
+            },
         },
     },
 }
@@ -277,6 +378,8 @@ ct_data = build_dashboard_data(
     make_jira_summaries(),
     cycle_time_data=cycle_time_data,
 )
-generate_dashboard_from_data(ct_data, str(fixtures_dir / "test-dashboard-cycle-time.html"))
+generate_dashboard_from_data(
+    ct_data, str(fixtures_dir / "test-dashboard-cycle-time.html")
+)
 
 print("Generated test HTML fixtures.")

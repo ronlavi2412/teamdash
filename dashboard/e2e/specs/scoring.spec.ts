@@ -9,14 +9,14 @@ const scoringPath = path.resolve(__dirname, '../fixtures/test-dashboard-scoring.
 test.describe('Scoring Conditional Features', () => {
   test('without scoring: no complexity charts in team view', async ({ page }) => {
     await page.goto(`file://${dashboardPath}`);
-    await expect(page.locator('[data-testid="chart-team-sp"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="chart-team-review-sp"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="chart-team-cp"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="chart-team-review-cp"]')).not.toBeVisible();
   });
 
   test('with scoring: complexity charts visible in team view', async ({ page }) => {
     await page.goto(`file://${scoringPath}`);
-    await expect(page.locator('[data-testid="chart-team-sp"]')).toBeVisible();
-    await expect(page.locator('[data-testid="chart-team-review-sp"]')).toBeVisible();
+    await expect(page.locator('[data-testid="chart-team-cp"]')).toBeVisible();
+    await expect(page.locator('[data-testid="chart-team-review-cp"]')).toBeVisible();
   });
 
   test('without scoring: no complexity charts in detail view', async ({ page }) => {

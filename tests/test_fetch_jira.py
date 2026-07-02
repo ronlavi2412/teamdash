@@ -83,7 +83,14 @@ class TestLoadJiraData:
             "2025-Q1": {"Alice": 5},
             "cycle_times": {
                 "2025-Q1": {
-                    "CNV": {"Story": {"dev": [3.0], "build": [1.0], "qe": [2.0], "total": [6.0]}}
+                    "CNV": {
+                        "Story": {
+                            "dev": [3.0],
+                            "build": [1.0],
+                            "qe": [2.0],
+                            "total": [6.0],
+                        }
+                    }
                 }
             },
         }
@@ -96,7 +103,13 @@ class TestLoadJiraData:
         f = tmp_path / "jira.json"
         data = {
             "2025-Q1": {"Alice": 5},
-            "cycle_times": {"2025-Q1": {"CNV": {"Story": {"dev": [3.0], "build": [], "qe": [], "total": [3.0]}}}},
+            "cycle_times": {
+                "2025-Q1": {
+                    "CNV": {
+                        "Story": {"dev": [3.0], "build": [], "qe": [], "total": [3.0]}
+                    }
+                }
+            },
         }
         f.write_text(json.dumps(data))
         result = load_jira_data(str(f))

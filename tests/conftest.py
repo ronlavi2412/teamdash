@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 from teamdash.config import EngineerConfig, TeamConfig
-from teamdash.models import EngineerQuarterMetrics, PRDetail, Quarter, QuarterSummary, ScoredPR
+from teamdash.models import (
+    EngineerQuarterMetrics,
+    PRDetail,
+    Quarter,
+    QuarterSummary,
+    ScoredPR,
+)
 from teamdash.scoring import ScoringConfig
 
 
@@ -20,14 +26,22 @@ def sample_quarter_prev():
 @pytest.fixture
 def sample_metrics():
     return EngineerQuarterMetrics(
-        name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8,
+        name="Alice",
+        quarter="2025-Q1",
+        github_prs=10,
+        gitlab_mrs=5,
+        reviews=8,
     )
 
 
 @pytest.fixture
 def sample_summary(sample_quarter, sample_metrics):
     bob = EngineerQuarterMetrics(
-        name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4,
+        name="Bob",
+        quarter="2025-Q1",
+        github_prs=3,
+        gitlab_mrs=2,
+        reviews=4,
     )
     return QuarterSummary(quarter=sample_quarter, engineers=[sample_metrics, bob])
 
@@ -50,15 +64,23 @@ def two_quarter_summaries(sample_quarter, sample_quarter_prev):
     prev_summary = QuarterSummary(
         quarter=sample_quarter_prev,
         engineers=[
-            EngineerQuarterMetrics(name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6),
-            EngineerQuarterMetrics(name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3),
+            EngineerQuarterMetrics(
+                name="Alice", quarter="2024-Q4", github_prs=8, gitlab_mrs=4, reviews=6
+            ),
+            EngineerQuarterMetrics(
+                name="Bob", quarter="2024-Q4", github_prs=2, gitlab_mrs=1, reviews=3
+            ),
         ],
     )
     cur_summary = QuarterSummary(
         quarter=sample_quarter,
         engineers=[
-            EngineerQuarterMetrics(name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8),
-            EngineerQuarterMetrics(name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4),
+            EngineerQuarterMetrics(
+                name="Alice", quarter="2025-Q1", github_prs=10, gitlab_mrs=5, reviews=8
+            ),
+            EngineerQuarterMetrics(
+                name="Bob", quarter="2025-Q1", github_prs=3, gitlab_mrs=2, reviews=4
+            ),
         ],
     )
     return [prev_summary, cur_summary]
@@ -102,13 +124,19 @@ def sample_scoring_config():
 def two_quarter_summaries_with_scoring(sample_quarter, sample_quarter_prev):
     detail1 = PRDetail(
         url="https://github.com/org/repo/pull/1",
-        source="github", author="alice",
-        additions=100, deletions=20, changed_files=4,
+        source="github",
+        author="alice",
+        additions=100,
+        deletions=20,
+        changed_files=4,
     )
     detail2 = PRDetail(
         url="https://github.com/org/repo/pull/2",
-        source="github", author="alice",
-        additions=800, deletions=600, changed_files=35,
+        source="github",
+        author="alice",
+        additions=800,
+        deletions=600,
+        changed_files=35,
     )
     scored1 = ScoredPR(detail=detail1, size="S", points=5)
     scored2 = ScoredPR(detail=detail2, size="XL", points=21, flags=["should-split"])
@@ -117,16 +145,24 @@ def two_quarter_summaries_with_scoring(sample_quarter, sample_quarter_prev):
         quarter=sample_quarter_prev,
         engineers=[
             EngineerQuarterMetrics(
-                name="Alice", quarter="2024-Q4",
-                github_prs=8, gitlab_mrs=4, reviews=6,
-                story_points=35, xl_count=0,
-                review_story_points=18,
+                name="Alice",
+                quarter="2024-Q4",
+                github_prs=8,
+                gitlab_mrs=4,
+                reviews=6,
+                complexity_points=35,
+                xl_count=0,
+                review_complexity_points=18,
             ),
             EngineerQuarterMetrics(
-                name="Bob", quarter="2024-Q4",
-                github_prs=2, gitlab_mrs=1, reviews=3,
-                story_points=10, xl_count=0,
-                review_story_points=10,
+                name="Bob",
+                quarter="2024-Q4",
+                github_prs=2,
+                gitlab_mrs=1,
+                reviews=3,
+                complexity_points=10,
+                xl_count=0,
+                review_complexity_points=10,
             ),
         ],
     )
@@ -134,17 +170,25 @@ def two_quarter_summaries_with_scoring(sample_quarter, sample_quarter_prev):
         quarter=sample_quarter,
         engineers=[
             EngineerQuarterMetrics(
-                name="Alice", quarter="2025-Q1",
-                github_prs=10, gitlab_mrs=5, reviews=8,
-                story_points=34, xl_count=1,
+                name="Alice",
+                quarter="2025-Q1",
+                github_prs=10,
+                gitlab_mrs=5,
+                reviews=8,
+                complexity_points=34,
+                xl_count=1,
                 scored_prs=[scored1, scored2],
-                review_story_points=21,
+                review_complexity_points=21,
             ),
             EngineerQuarterMetrics(
-                name="Bob", quarter="2025-Q1",
-                github_prs=3, gitlab_mrs=2, reviews=4,
-                story_points=16, xl_count=0,
-                review_story_points=13,
+                name="Bob",
+                quarter="2025-Q1",
+                github_prs=3,
+                gitlab_mrs=2,
+                reviews=4,
+                complexity_points=16,
+                xl_count=0,
+                review_complexity_points=13,
             ),
         ],
     )
