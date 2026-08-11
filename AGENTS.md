@@ -5,7 +5,7 @@
 ```text
 teamdash/
   teamdash/              # Python package
-    cli.py               # CLI entry point (argparse, 4 subcommands)
+    cli.py               # CLI entry point (argparse, 3 subcommands + default combined mode)
     config.py            # JSON config loading and validation (TeamConfig, EngineerConfig, JiraConfig)
     quarters.py          # Quarter date range calculation
     models.py            # Dataclasses: Quarter, PRDetail, ScoredPR, EngineerQuarterMetrics, QuarterSummary

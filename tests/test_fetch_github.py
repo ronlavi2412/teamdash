@@ -143,16 +143,32 @@ class TestFetchPrs:
 
 class TestFetchReviews:
     def test_combined_query(self):
-        with patch("teamdash.fetch_github._gh_search_count", return_value=10) as mock:
+        fake_response = {
+            "data": {
+                "formal": {"issueCount": 7},
+                "lgtm": {"issueCount": 2},
+                "approve": {"issueCount": 1},
+            }
+        }
+        with patch("teamdash.fetch_github._gh_graphql", return_value=fake_response) as mock:
             result = fetch_reviews(
                 "alice", ["org1", "org2"], "2025-01-01", "2025-03-31"
             )
         assert result == 10
         assert mock.call_count == 1
-        query = mock.call_args[0][0]
-        assert "reviewed-by:alice" in query
-        assert "-author:alice" in query
-        assert "org:org1+org:org2" in query
+        variables = mock.call_args[0][1]
+        assert "reviewed-by:alice" in variables["q1"]
+        assert "-author:alice" in variables["q1"]
+        assert "org:org1 org:org2" in variables["q1"]
+        assert "lgtm" in variables["q2"]
+        assert "-reviewed-by:alice" in variables["q2"]
+        assert "approve" in variables["q3"]
+        assert "-reviewed-by:alice" in variables["q3"]
+
+    def test_returns_zero_on_graphql_failure(self):
+        with patch("teamdash.fetch_github._gh_graphql", return_value=None):
+            result = fetch_reviews("alice", ["org1"], "2025-01-01", "2025-03-31")
+        assert result == 0
 
 
 class TestGhSearchItems:

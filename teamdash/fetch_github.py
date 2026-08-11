@@ -163,8 +163,20 @@ def fetch_prs(username: str, orgs: list[str], start: str, end: str) -> int:
 
 def fetch_reviews(username: str, orgs: list[str], start: str, end: str) -> int:
     safe_user = quote(username, safe="")
-    query = f"type:pr+reviewed-by:{safe_user}+{_orgs_query(orgs)}+-author:{safe_user}+merged:{start}..{end}"
-    return _gh_search_count(query)
+    orgs_q = _orgs_query(orgs).replace("+", " ")
+    base = f"type:pr {orgs_q} -author:{safe_user} merged:{start}..{end}"
+    q1 = f"reviewed-by:{safe_user} {base}"
+    q2 = f"commenter:{safe_user} lgtm -reviewed-by:{safe_user} {base}"
+    q3 = f"commenter:{safe_user} approve -reviewed-by:{safe_user} {base}"
+    data = _gh_graphql(_REVIEW_COUNT_QUERY, {"q1": q1, "q2": q2, "q3": q3})
+    if not data:
+        return 0
+    d = data.get("data", {})
+    return (
+        d.get("formal", {}).get("issueCount", 0)
+        + d.get("lgtm", {}).get("issueCount", 0)
+        + d.get("approve", {}).get("issueCount", 0)
+    )
 
 
 _SEARCH_PR_DETAILS_QUERY = """
@@ -192,6 +204,78 @@ query($q: String!, $cursor: String) {
 }
 """
 
+_PR_FIELDS = """
+        title
+        url
+        additions
+        deletions
+        changedFiles
+        createdAt
+        closedAt
+        labels(first: 10) { nodes { name } }
+        comments { totalCount }
+        reviews(first: 100) {
+          totalCount
+          nodes { state }
+        }
+"""
+
+_REVIEW_COUNT_QUERY = """
+query($q1: String!, $q2: String!, $q3: String!) {
+  formal: search(query: $q1, type: ISSUE) { issueCount }
+  lgtm:   search(query: $q2, type: ISSUE) { issueCount }
+  approve: search(query: $q3, type: ISSUE) { issueCount }
+}
+"""
+
+_COMBINED_REVIEW_QUERY = f"""
+query($q1: String!, $q2: String!, $q3: String!, $c1: String, $c2: String, $c3: String) {{
+  s1: search(query: $q1, type: ISSUE, first: 100, after: $c1) {{
+    pageInfo {{ hasNextPage endCursor }}
+    nodes {{ ... on PullRequest {{ {_PR_FIELDS} }} }}
+  }}
+  s2: search(query: $q2, type: ISSUE, first: 100, after: $c2) {{
+    pageInfo {{ hasNextPage endCursor }}
+    nodes {{ ... on PullRequest {{ {_PR_FIELDS} }} }}
+  }}
+  s3: search(query: $q3, type: ISSUE, first: 100, after: $c3) {{
+    pageInfo {{ hasNextPage endCursor }}
+    nodes {{ ... on PullRequest {{ {_PR_FIELDS} }} }}
+  }}
+}}
+"""
+
+
+def _node_to_pr_detail(node: dict, author: str) -> PRDetail:
+    created = node.get("createdAt", "")
+    closed = node.get("closedAt")
+    merge_time = None
+    if created and closed:
+        dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
+        merge_time = round((dt_closed - dt_created).total_seconds() / 86400, 1)
+
+    reviews = node.get("reviews", {})
+    review_nodes = reviews.get("nodes", [])
+    return PRDetail(
+        url=node["url"],
+        source="github",
+        author=author,
+        additions=node.get("additions", 0),
+        title=node.get("title", ""),
+        deletions=node.get("deletions", 0),
+        changed_files=node.get("changedFiles", 0),
+        labels=[lbl.get("name", "") for lbl in node.get("labels", {}).get("nodes", [])],
+        review_count=reviews.get("totalCount", 0),
+        changes_requested_count=sum(
+            1 for r in review_nodes if r.get("state") == "CHANGES_REQUESTED"
+        ),
+        comments_count=node.get("comments", {}).get("totalCount", 0),
+        merge_time_days=merge_time,
+        created_at=created,
+        closed_at=closed,
+    )
+
 
 def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
     gql_query = query.replace("+", " ")
@@ -210,50 +294,52 @@ def _fetch_details_for_query(query: str, author: str) -> list[PRDetail]:
         for node in search.get("nodes", []):
             if not node or "url" not in node:
                 continue
-
-            created = node.get("createdAt", "")
-            closed = node.get("closedAt")
-            merge_time = None
-            if created and closed:
-                dt_created = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                dt_closed = datetime.fromisoformat(closed.replace("Z", "+00:00"))
-                merge_time = round((dt_closed - dt_created).total_seconds() / 86400, 1)
-
-            reviews = node.get("reviews", {})
-            review_nodes = reviews.get("nodes", [])
-            review_count = reviews.get("totalCount", 0)
-            changes_requested = sum(
-                1 for r in review_nodes if r.get("state") == "CHANGES_REQUESTED"
-            )
-
-            labels = [
-                lbl.get("name", "") for lbl in node.get("labels", {}).get("nodes", [])
-            ]
-
-            details.append(
-                PRDetail(
-                    url=node["url"],
-                    source="github",
-                    author=author,
-                    additions=node.get("additions", 0),
-                    title=node.get("title", ""),
-                    deletions=node.get("deletions", 0),
-                    changed_files=node.get("changedFiles", 0),
-                    labels=labels,
-                    review_count=review_count,
-                    changes_requested_count=changes_requested,
-                    comments_count=node.get("comments", {}).get("totalCount", 0),
-                    merge_time_days=merge_time,
-                    created_at=created,
-                    closed_at=closed,
-                )
-            )
+            details.append(_node_to_pr_detail(node, author))
 
         page_info = search.get("pageInfo", {})
         if page_info.get("hasNextPage"):
             cursor = page_info["endCursor"]
         else:
             break
+
+    return details
+
+
+def _fetch_combined_review_details(
+    safe_user: str, base_query: str, author: str
+) -> list[PRDetail]:
+    q1 = f"reviewed-by:{safe_user} {base_query}"
+    q2 = f"commenter:{safe_user} lgtm -reviewed-by:{safe_user} {base_query}"
+    q3 = f"commenter:{safe_user} approve -reviewed-by:{safe_user} {base_query}"
+
+    cursors: dict[str, str | None] = {"c1": None, "c2": None, "c3": None}
+    done = {"s1": False, "s2": False, "s3": False}
+    seen_urls: set[str] = set()
+    details: list[PRDetail] = []
+
+    while not all(done.values()):
+        variables: dict[str, str] = {"q1": q1, "q2": q2, "q3": q3}
+        for key, val in cursors.items():
+            if val is not None:
+                variables[key] = val
+        data = _gh_graphql(_COMBINED_REVIEW_QUERY, variables)
+        if not data:
+            break
+        d = data.get("data", {})
+        for section_key, cursor_key in [("s1", "c1"), ("s2", "c2"), ("s3", "c3")]:
+            if done[section_key]:
+                continue
+            section = d.get(section_key, {})
+            for node in section.get("nodes", []):
+                if not node or "url" not in node or node["url"] in seen_urls:
+                    continue
+                seen_urls.add(node["url"])
+                details.append(_node_to_pr_detail(node, author))
+            page_info = section.get("pageInfo", {})
+            if page_info.get("hasNextPage"):
+                cursors[cursor_key] = page_info["endCursor"]
+            else:
+                done[section_key] = True
 
     return details
 
@@ -276,8 +362,9 @@ def fetch_reviewed_pr_details(
     end: str,
 ) -> list[PRDetail]:
     safe_user = quote(username, safe="")
-    query = f"type:pr+reviewed-by:{safe_user}+-author:{safe_user}+{_orgs_query(orgs)}+merged:{start}..{end}"
-    return _fetch_details_for_query(query, author=username)
+    orgs_q = _orgs_query(orgs).replace("+", " ")
+    base = f"type:pr -author:{safe_user} {orgs_q} merged:{start}..{end}"
+    return _fetch_combined_review_details(safe_user, base, author=username)
 
 
 def check_auth() -> bool:
