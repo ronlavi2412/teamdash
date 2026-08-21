@@ -178,7 +178,7 @@ The generated HTML file includes:
 
 - **Summary cards** — Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
 - **Overall Team View** — Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter, complexity points, review complexity, cycle time trends
-- **Detailed View** — Per-engineer line charts: PRs+MRs trend, code reviews, complexity, merge time, verified bugs, cycle time by project
+- **Detailed View** — Per-engineer line charts: PRs+MRs trend, code reviews, complexity, merge time, activity types, cycle time by project
 - **Summaries** — AI-generated narrative summaries per engineer for the most recent quarter
 - **Full Table** — Sortable table with all metrics per engineer per quarter
 - **Configuration** — Shows the scoring config and thresholds used

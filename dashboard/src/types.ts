@@ -8,8 +8,9 @@ export interface QuarterData {
   xl_count: number[];
   review_cp: number[];
   size_dist: SizeDistribution[];
-  verified_bugs: number[];
+  verified_bugs: number;
   activity_types: Record<string, number>[];
+  sprint_activity_types: Record<string, number>[];
 }
 
 export interface SizeDistribution {
@@ -56,7 +57,6 @@ export interface QuarterMetrics {
   merge_time: number | null;
   complexity_points: number;
   review_complexity_points: number;
-  verified_bugs: number;
   activity_type_counts: Record<string, number>;
 }
 

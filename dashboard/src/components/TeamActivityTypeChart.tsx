@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { QuarterData } from '../types';
 import { getQuarterLabel } from '../utils';
@@ -30,19 +30,22 @@ interface TeamActivityTypeChartProps {
 export function TeamActivityTypeChart({
   quarters, activityTypeNames, currentQuarterIndex, isCurrentQuarter,
 }: TeamActivityTypeChartProps) {
+  const [sprintOnly, setSprintOnly] = useState(false);
+
   const chartData = useMemo(() => ({
     labels: quarters.map((q, idx) =>
       getQuarterLabel(q.label, idx, currentQuarterIndex, isCurrentQuarter)
     ),
     datasets: activityTypeNames.map((type, i) => ({
       label: type,
-      data: quarters.map(q =>
-        q.activity_types.reduce((sum, eng) => sum + (eng[type] ?? 0), 0)
-      ),
+      data: quarters.map(q => {
+        const source = sprintOnly ? q.sprint_activity_types : q.activity_types;
+        return source.reduce((sum, eng) => sum + (eng[type] ?? 0), 0);
+      }),
       backgroundColor: getColor(type, i),
       borderRadius: 2,
     })),
-  }), [quarters, activityTypeNames, currentQuarterIndex, isCurrentQuarter]);
+  }), [quarters, activityTypeNames, currentQuarterIndex, isCurrentQuarter, sprintOnly]);
 
   const chartOptions = useMemo(() => ({
     responsive: true,
@@ -60,6 +63,21 @@ export function TeamActivityTypeChart({
   }), []);
 
   return (
-    <Bar data={chartData} options={chartOptions} />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ marginBottom: 8, flexShrink: 0 }}>
+        <label style={{ fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+          <input
+            type="checkbox"
+            checked={sprintOnly}
+            onChange={e => setSprintOnly(e.target.checked)}
+            style={{ marginRight: 6 }}
+          />
+          Completed sprints only
+        </label>
+      </div>
+      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+        <Bar data={chartData} options={chartOptions} />
+      </div>
+    </div>
   );
 }

@@ -76,7 +76,7 @@ When regenerating the dashboard, generate comprehensive narrative summaries for 
 2. For the most recent quarter only, and for each engineer, write a comprehensive narrative (up to 3 paragraphs):
    - **What they worked on:** Group PRs by repo, identify themes from titles (bugs, features, refactoring, i18n, etc.), highlight notable PRs.
    - **Output and complexity:** Total PRs/MRs, complexity points, size distribution, merge time, quarter-over-quarter trends.
-   - **Reviews, bugs, Jira:** Code review volume, verified bugs, activity type breakdown.
+   - **Reviews and Jira activity:** Code review volume, activity type breakdown.
    - Skip engineers with no activity in that quarter.
 3. Inject the summaries dict into `data.json`: `{"summaries": {"Q2'26": {"Engineer Name": "summary text", ...}}}` (latest quarter only)
 4. Regenerate: `teamdash generate data.json -o dashboard.html`

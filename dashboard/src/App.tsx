@@ -61,6 +61,7 @@ export default function App({ data }: AppProps) {
             hasJira={data.hasJira}
             hasCycleTime={data.hasCycleTime}
             cycleTimeData={data.cycleTimeData}
+            cycleTimeProjects={data.cycleTimeProjects}
             quarterLabels={data.quarterLabels}
             hasActivityTypes={data.hasActivityTypes}
             activityTypeNames={data.activityTypeNames}
@@ -74,7 +75,6 @@ export default function App({ data }: AppProps) {
             currentQuarterIndex={data.currentQuarterIndex}
             isCurrentQuarter={data.isCurrentQuarter}
             hasScoring={data.hasScoring}
-            hasJira={data.hasJira}
             hasCycleTime={data.hasCycleTime}
             cycleTimeData={data.cycleTimeData}
             cycleTimeProjects={data.cycleTimeProjects}
@@ -88,7 +88,6 @@ export default function App({ data }: AppProps) {
             tableRows={data.tableRows}
             quarterLabels={data.quarterLabels}
             hasScoring={data.hasScoring}
-            hasJira={data.hasJira}
           />
         )}
         {activeTab === 'config' && (

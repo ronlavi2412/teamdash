@@ -201,6 +201,7 @@ def make_jira_summaries():
     q_cur = Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")
     prev = QuarterSummary(
         quarter=q_prev,
+        verified_bugs=8,
         engineers=[
             EngineerQuarterMetrics(
                 name="Alice",
@@ -209,7 +210,6 @@ def make_jira_summaries():
                 gitlab_mrs=4,
                 reviews=6,
                 merge_time_days=2.5,
-                verified_bugs=6,
             ),
             EngineerQuarterMetrics(
                 name="Bob",
@@ -218,12 +218,12 @@ def make_jira_summaries():
                 gitlab_mrs=1,
                 reviews=3,
                 merge_time_days=3.1,
-                verified_bugs=2,
             ),
         ],
     )
     cur = QuarterSummary(
         quarter=q_cur,
+        verified_bugs=14,
         engineers=[
             EngineerQuarterMetrics(
                 name="Alice",
@@ -232,7 +232,6 @@ def make_jira_summaries():
                 gitlab_mrs=5,
                 reviews=8,
                 merge_time_days=1.8,
-                verified_bugs=10,
             ),
             EngineerQuarterMetrics(
                 name="Bob",
@@ -241,7 +240,6 @@ def make_jira_summaries():
                 gitlab_mrs=2,
                 reviews=4,
                 merge_time_days=2.4,
-                verified_bugs=4,
             ),
         ],
     )
@@ -260,6 +258,7 @@ def make_activity_type_summaries():
     q_cur = Quarter(label="2025-Q1", start="2025-01-01", end="2025-03-31")
     prev = QuarterSummary(
         quarter=q_prev,
+        verified_bugs=8,
         engineers=[
             EngineerQuarterMetrics(
                 name="Alice",
@@ -268,10 +267,14 @@ def make_activity_type_summaries():
                 gitlab_mrs=4,
                 reviews=6,
                 merge_time_days=2.5,
-                verified_bugs=6,
                 activity_type_counts={
                     "Incidents & Support": 10,
                     "Product / Portfolio Work": 18,
+                    "Quality / Stability / Reliability": 5,
+                },
+                sprint_activity_type_counts={
+                    "Incidents & Support": 8,
+                    "Product / Portfolio Work": 15,
                     "Quality / Stability / Reliability": 5,
                 },
             ),
@@ -282,8 +285,11 @@ def make_activity_type_summaries():
                 gitlab_mrs=1,
                 reviews=3,
                 merge_time_days=3.1,
-                verified_bugs=2,
                 activity_type_counts={
+                    "Incidents & Support": 2,
+                    "Security & Compliance": 3,
+                },
+                sprint_activity_type_counts={
                     "Incidents & Support": 2,
                     "Security & Compliance": 3,
                 },
@@ -292,6 +298,7 @@ def make_activity_type_summaries():
     )
     cur = QuarterSummary(
         quarter=q_cur,
+        verified_bugs=14,
         engineers=[
             EngineerQuarterMetrics(
                 name="Alice",
@@ -300,11 +307,16 @@ def make_activity_type_summaries():
                 gitlab_mrs=5,
                 reviews=8,
                 merge_time_days=1.8,
-                verified_bugs=10,
                 activity_type_counts={
                     "Incidents & Support": 14,
                     "Product / Portfolio Work": 22,
                     "Quality / Stability / Reliability": 8,
+                    "Security & Compliance": 3,
+                },
+                sprint_activity_type_counts={
+                    "Incidents & Support": 10,
+                    "Product / Portfolio Work": 18,
+                    "Quality / Stability / Reliability": 6,
                     "Security & Compliance": 3,
                 },
             ),
@@ -315,9 +327,12 @@ def make_activity_type_summaries():
                 gitlab_mrs=2,
                 reviews=4,
                 merge_time_days=2.4,
-                verified_bugs=4,
                 activity_type_counts={
                     "Product / Portfolio Work": 10,
+                    "Future Sustainability": 5,
+                },
+                sprint_activity_type_counts={
+                    "Product / Portfolio Work": 8,
                     "Future Sustainability": 5,
                 },
             ),

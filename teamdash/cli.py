@@ -145,10 +145,12 @@ def _cmd_fetch_jira(args: argparse.Namespace) -> None:
 
     output = args.output or "jira-data.json"
     result: dict = {}
-    for q_label, eng_bugs in jira_data.bugs.items():
-        result[q_label] = eng_bugs
+    for q_label, bug_sp in jira_data.bugs.items():
+        result[q_label] = bug_sp
     if jira_data.activity_types:
         result["activity_types"] = jira_data.activity_types
+    if jira_data.sprint_activity_types:
+        result["sprint_activity_types"] = jira_data.sprint_activity_types
     if jira_data.cycle_times:
         result["cycle_times"] = jira_data.cycle_times
 

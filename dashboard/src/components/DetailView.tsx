@@ -13,7 +13,6 @@ interface DetailViewProps {
   currentQuarterIndex: number;
   isCurrentQuarter: boolean;
   hasScoring: boolean;
-  hasJira: boolean;
   hasCycleTime: boolean;
   cycleTimeData: Record<string, CycleTimeQuarterData>;
   cycleTimeProjects: string[];
@@ -22,7 +21,7 @@ interface DetailViewProps {
   quarterLabels: string[];
 }
 
-export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasCycleTime, cycleTimeData, cycleTimeProjects, hasActivityTypes, activityTypeNames, quarterLabels }: DetailViewProps) {
+export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasCycleTime, cycleTimeData, cycleTimeProjects, hasActivityTypes, activityTypeNames, quarterLabels }: DetailViewProps) {
   const { selected, toggle, selectAll, clearAll } = useEngineerFilter(names);
 
   const commonProps = {
@@ -95,18 +94,6 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
         )}
       </div>
       <div className="chart-row">
-        {hasJira && (
-          <ChartCard
-            title="Verified Bugs SP per Quarter"
-            tooltip="Story points of Jira bugs resolved as Done per engineer during the quarter."
-            testId="chart-verified-bugs-trend"
-          >
-            <DetailLineChart
-              {...commonProps}
-              getValues={q => q.verified_bugs}
-            />
-          </ChartCard>
-        )}
         {hasActivityTypes && (
           <ChartCard
             title="Story Points by Activity Type"

@@ -21,10 +21,14 @@ export const mockData: DashboardData = {
         { XS: 2, S: 4, M: 3, L: 2, XL: 0 },
         { XS: 1, S: 1, M: 1, L: 0, XL: 0 },
       ],
-      verified_bugs: [6, 2],
+      verified_bugs: 8,
       activity_types: [
         { "Incidents & Support": 10, "Product / Portfolio Work": 18, "Quality / Stability / Reliability": 5, "Security & Compliance": 0, "Future Sustainability": 3, "Associate Wellness & Development": 0 },
         { "Incidents & Support": 2, "Product / Portfolio Work": 5, "Quality / Stability / Reliability": 0, "Security & Compliance": 3, "Future Sustainability": 0, "Associate Wellness & Development": 0 },
+      ],
+      sprint_activity_types: [
+        { "Incidents & Support": 8, "Product / Portfolio Work": 15, "Quality / Stability / Reliability": 5, "Future Sustainability": 3 },
+        { "Incidents & Support": 2, "Product / Portfolio Work": 3, "Security & Compliance": 3 },
       ],
     },
     {
@@ -40,10 +44,14 @@ export const mockData: DashboardData = {
         { XS: 3, S: 3, M: 4, L: 2, XL: 1 },
         { XS: 1, S: 2, M: 1, L: 1, XL: 0 },
       ],
-      verified_bugs: [10, 4],
+      verified_bugs: 14,
       activity_types: [
         { "Incidents & Support": 14, "Product / Portfolio Work": 22, "Quality / Stability / Reliability": 8, "Security & Compliance": 3, "Future Sustainability": 0, "Associate Wellness & Development": 5 },
         { "Incidents & Support": 0, "Product / Portfolio Work": 10, "Quality / Stability / Reliability": 2, "Security & Compliance": 0, "Future Sustainability": 5, "Associate Wellness & Development": 0 },
+      ],
+      sprint_activity_types: [
+        { "Incidents & Support": 10, "Product / Portfolio Work": 18, "Quality / Stability / Reliability": 6, "Security & Compliance": 3, "Associate Wellness & Development": 5 },
+        { "Product / Portfolio Work": 8, "Quality / Stability / Reliability": 2, "Future Sustainability": 5 },
       ],
     },
   ],
@@ -104,16 +112,16 @@ export const mockData: DashboardData = {
     {
       name: "Alice",
       quarters: [
-        { total: 12, github_prs: 8, gitlab_mrs: 4, reviews: 6, merge_time: 2.5, complexity_points: 35, review_complexity_points: 18, verified_bugs: 6, activity_type_counts: { "Incidents & Support": 10, "Product / Portfolio Work": 18, "Quality / Stability / Reliability": 5 } },
-        { total: 15, github_prs: 10, gitlab_mrs: 5, reviews: 8, merge_time: 1.8, complexity_points: 34, review_complexity_points: 21, verified_bugs: 10, activity_type_counts: { "Incidents & Support": 14, "Product / Portfolio Work": 22, "Quality / Stability / Reliability": 8 } },
+        { total: 12, github_prs: 8, gitlab_mrs: 4, reviews: 6, merge_time: 2.5, complexity_points: 35, review_complexity_points: 18, activity_type_counts: { "Incidents & Support": 10, "Product / Portfolio Work": 18, "Quality / Stability / Reliability": 5 } },
+        { total: 15, github_prs: 10, gitlab_mrs: 5, reviews: 8, merge_time: 1.8, complexity_points: 34, review_complexity_points: 21, activity_type_counts: { "Incidents & Support": 14, "Product / Portfolio Work": 22, "Quality / Stability / Reliability": 8 } },
       ],
       growth: "+25%",
     },
     {
       name: "Bob",
       quarters: [
-        { total: 3, github_prs: 2, gitlab_mrs: 1, reviews: 3, merge_time: 3.1, complexity_points: 10, review_complexity_points: 10, verified_bugs: 2, activity_type_counts: { "Incidents & Support": 2, "Security & Compliance": 3 } },
-        { total: 5, github_prs: 3, gitlab_mrs: 2, reviews: 4, merge_time: 2.4, complexity_points: 16, review_complexity_points: 13, verified_bugs: 4, activity_type_counts: { "Product / Portfolio Work": 10, "Quality / Stability / Reliability": 2 } },
+        { total: 3, github_prs: 2, gitlab_mrs: 1, reviews: 3, merge_time: 3.1, complexity_points: 10, review_complexity_points: 10, activity_type_counts: { "Incidents & Support": 2, "Security & Compliance": 3 } },
+        { total: 5, github_prs: 3, gitlab_mrs: 2, reviews: 4, merge_time: 2.4, complexity_points: 16, review_complexity_points: 13, activity_type_counts: { "Product / Portfolio Work": 10, "Quality / Stability / Reliability": 2 } },
       ],
       growth: "+67%",
     },

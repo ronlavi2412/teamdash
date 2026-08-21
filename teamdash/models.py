@@ -61,8 +61,8 @@ class EngineerQuarterMetrics:
     scored_reviews: list[ScoredPR] = field(default_factory=list)
     github_merge_times: list[float] = field(default_factory=list)
     gitlab_merge_times: list[float] = field(default_factory=list)
-    verified_bugs: int = 0
     activity_type_counts: dict[str, int] = field(default_factory=dict)
+    sprint_activity_type_counts: dict[str, int] = field(default_factory=dict)
 
     @property
     def total(self) -> int:
@@ -113,9 +113,7 @@ class QuarterSummary:
     def total_xl_count(self) -> int:
         return sum(e.xl_count for e in self.engineers)
 
-    @property
-    def total_verified_bugs(self) -> int:
-        return sum(e.verified_bugs for e in self.engineers)
+    verified_bugs: int = 0
 
     @property
     def total_activity_type_counts(self) -> dict[str, int]:

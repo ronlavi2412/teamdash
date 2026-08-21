@@ -117,7 +117,6 @@ def _build_table_row_data(
                     "review_complexity_points": eng.review_complexity_points
                     if eng
                     else 0,
-                    "verified_bugs": eng.verified_bugs if eng else 0,
                     "activity_type_counts": eng.activity_type_counts if eng else {},
                 }
             )
@@ -179,7 +178,7 @@ def build_dashboard_data(
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     has_scoring = any(s.total_complexity_points > 0 for s in summaries)
-    has_jira = any(e.verified_bugs > 0 for s in summaries for e in s.engineers)
+    has_jira = any(s.verified_bugs > 0 for s in summaries)
     has_cycle_time = bool(cycle_time_data and any(cycle_time_data.values()))
     has_activity_types = any(
         e.activity_type_counts for s in summaries for e in s.engineers
@@ -225,12 +224,15 @@ def build_dashboard_data(
                 "size_dist": [
                     _size_dist(by_name.get(n, _zero(n, s.quarter.label))) for n in names
                 ],
-                "verified_bugs": [
-                    by_name.get(n, _zero(n, s.quarter.label)).verified_bugs
-                    for n in names
-                ],
+                "verified_bugs": s.verified_bugs,
                 "activity_types": [
                     by_name.get(n, _zero(n, s.quarter.label)).activity_type_counts
+                    for n in names
+                ],
+                "sprint_activity_types": [
+                    by_name.get(
+                        n, _zero(n, s.quarter.label)
+                    ).sprint_activity_type_counts
                     for n in names
                 ],
             }

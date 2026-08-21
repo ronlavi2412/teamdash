@@ -13,12 +13,13 @@ interface TeamViewProps {
   hasJira: boolean;
   hasCycleTime: boolean;
   cycleTimeData: Record<string, CycleTimeQuarterData>;
+  cycleTimeProjects: string[];
   quarterLabels: string[];
   hasActivityTypes: boolean;
   activityTypeNames: string[];
 }
 
-export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasCycleTime, cycleTimeData, quarterLabels, hasActivityTypes, activityTypeNames }: TeamViewProps) {
+export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasScoring, hasJira, hasCycleTime, cycleTimeData, cycleTimeProjects, quarterLabels, hasActivityTypes, activityTypeNames }: TeamViewProps) {
   return (
     <div data-testid="tab-team">
       <div className="chart-row">
@@ -98,7 +99,7 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
           >
             <TeamBarChart
               quarters={quarters}
-              getData={q => q.verified_bugs.reduce((a, b) => a + b, 0)}
+              getData={q => q.verified_bugs}
               color="#ef4444"
               borderColor="#dc2626"
               label="Verified Bugs SP"
@@ -129,6 +130,7 @@ export function TeamView({ quarters, currentQuarterIndex, isCurrentQuarter, hasS
           >
             <TeamCycleTimeChart
               cycleTimeData={cycleTimeData}
+              cycleTimeProjects={cycleTimeProjects}
               quarterLabels={quarterLabels}
               currentQuarterIndex={currentQuarterIndex}
               isCurrentQuarter={isCurrentQuarter}

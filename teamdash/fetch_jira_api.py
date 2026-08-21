@@ -27,7 +27,7 @@ ACTIVITY_TYPE_FIELD = "customfield_10464"
 QA_CONTACT_FIELD = "cf[10470]"
 MAX_RESULTS = 100
 
-DEV_START_STATUSES = ["assigned", "in progress"]
+DEV_START_STATUSES = ["assigned", "in progress", "post"]
 DEV_END_STATUSES = ["modified", "dev complete"]
 QE_START_STATUSES = ["on_qa", "testing"]
 
@@ -200,17 +200,14 @@ def _find_first_transition_to(
 def fetch_verified_bugs(
     cloud_id: str,
     project_keys: list[str],
-    jira_account_id: str,
     start_date: str,
     end_date: str,
     email: str,
     token: str,
 ) -> int:
-    safe_id = _jql_escape(jira_account_id)
     jql = (
         f'issuetype = Bug AND resolution in (Done, "Done-Errata")'
         f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
-        f' AND {QA_CONTACT_FIELD} = "{safe_id}"'
         f" AND {_project_clause(project_keys)}"
     )
     issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD], email, token)
@@ -249,6 +246,7 @@ def fetch_all_activity_type_sps(
     end_date: str,
     email: str,
     token: str,
+    sprint_only: bool = False,
 ) -> dict[str, int]:
     safe_id = _jql_escape(jira_account_id)
     jql = (
@@ -259,6 +257,8 @@ def fetch_all_activity_type_sps(
         f' AND "Activity Type" is not EMPTY'
         f" AND {_project_clause(project_keys)}"
     )
+    if sprint_only:
+        jql += " AND sprint in closedSprints()"
     issues = _jira_search(
         cloud_id, jql, ["summary", SP_FIELD, ACTIVITY_TYPE_FIELD], email, token
     )
@@ -381,14 +381,14 @@ def _fetch_quarter_jira(
     engineers_with_jira: list,
     email: str,
     token: str,
-) -> tuple[str, dict[str, int], dict[str, dict[str, int]], dict]:
+) -> tuple[str, int, dict[str, dict[str, int]], dict[str, dict[str, int]], dict]:
     print(f"  Fetching Jira data for {q.label}...", file=sys.stderr)
-    q_bugs: dict[str, int] = {}
     q_activities: dict[str, dict[str, int]] = {}
+    q_sprint_activities: dict[str, dict[str, int]] = {}
 
     with ThreadPoolExecutor(max_workers=8) as pool:
-        bug_futures = {}
         activity_futures = {}
+        sprint_activity_futures = {}
 
         account_ids = [
             e.jira_account_id for e in engineers_with_jira if e.jira_account_id
@@ -404,20 +404,17 @@ def _fetch_quarter_jira(
             account_ids=account_ids,
         )
 
-        for eng in engineers_with_jira:
-            bug_futures[
-                pool.submit(
-                    fetch_verified_bugs,
-                    cloud_id,
-                    project_keys,
-                    eng.jira_account_id,
-                    q.start,
-                    q.end,
-                    email,
-                    token,
-                )
-            ] = eng.name
+        bug_future = pool.submit(
+            fetch_verified_bugs,
+            cloud_id,
+            project_keys,
+            q.start,
+            q.end,
+            email,
+            token,
+        )
 
+        for eng in engineers_with_jira:
             activity_futures[
                 pool.submit(
                     fetch_all_activity_type_sps,
@@ -431,13 +428,25 @@ def _fetch_quarter_jira(
                 )
             ] = eng.name
 
-        for fut in as_completed(bug_futures):
-            name = bug_futures[fut]
-            try:
-                q_bugs[name] = fut.result()
-            except Exception as exc:
-                print(f"[WARN] Bug fetch failed for {name}: {exc}", file=sys.stderr)
-                q_bugs[name] = 0
+            sprint_activity_futures[
+                pool.submit(
+                    fetch_all_activity_type_sps,
+                    cloud_id,
+                    project_keys,
+                    eng.jira_account_id,
+                    q.start,
+                    q.end,
+                    email,
+                    token,
+                    sprint_only=True,
+                )
+            ] = eng.name
+
+        try:
+            q_bugs = bug_future.result()
+        except Exception as exc:
+            print(f"[WARN] Bug fetch failed: {exc}", file=sys.stderr)
+            q_bugs = 0
 
         for fut in as_completed(activity_futures):
             name = activity_futures[fut]
@@ -451,13 +460,26 @@ def _fetch_quarter_jira(
             if eng_activities:
                 q_activities[name] = eng_activities
 
+        for fut in as_completed(sprint_activity_futures):
+            name = sprint_activity_futures[fut]
+            try:
+                eng_activities = fut.result()
+            except Exception as exc:
+                print(
+                    f"[WARN] Sprint activity fetch failed for {name}: {exc}",
+                    file=sys.stderr,
+                )
+                eng_activities = {}
+            if eng_activities:
+                q_sprint_activities[name] = eng_activities
+
         try:
             q_cycle_times = cycle_time_future.result()
         except Exception as exc:
             print(f"[WARN] Cycle time fetch failed: {exc}", file=sys.stderr)
             q_cycle_times = {}
 
-    return q.label, q_bugs, q_activities, q_cycle_times
+    return q.label, q_bugs, q_activities, q_sprint_activities, q_cycle_times
 
 
 def fetch_all_jira_data(
@@ -471,8 +493,9 @@ def fetch_all_jira_data(
 
     cloud_id = config.jira.cloud_id
     project_keys = config.jira.project_keys
-    bugs: dict[str, dict[str, int]] = {}
+    bugs: dict[str, int] = {}
     activity_types: dict[str, dict[str, dict[str, int]]] = {}
+    sprint_activity_types: dict[str, dict[str, dict[str, int]]] = {}
     cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = {}
 
     engineers_with_jira = [e for e in config.engineers if e.jira_account_id]
@@ -491,11 +514,20 @@ def fetch_all_jira_data(
             for q in quarters
         ]
         for fut in as_completed(futures):
-            label, q_bugs, q_activities, q_cycle_times = fut.result()
+            label, q_bugs, q_activities, q_sprint_activities, q_cycle_times = (
+                fut.result()
+            )
             bugs[label] = q_bugs
             if q_activities:
                 activity_types[label] = q_activities
+            if q_sprint_activities:
+                sprint_activity_types[label] = q_sprint_activities
             if q_cycle_times:
                 cycle_times[label] = q_cycle_times
 
-    return JiraData(bugs=bugs, activity_types=activity_types, cycle_times=cycle_times)
+    return JiraData(
+        bugs=bugs,
+        activity_types=activity_types,
+        sprint_activity_types=sprint_activity_types,
+        cycle_times=cycle_times,
+    )

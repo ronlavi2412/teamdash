@@ -8,8 +8,11 @@ from pathlib import Path
 
 @dataclass
 class JiraData:
-    bugs: dict[str, dict[str, int]] = field(default_factory=dict)
+    bugs: dict[str, int] = field(default_factory=dict)
     activity_types: dict[str, dict[str, dict[str, int]]] = field(default_factory=dict)
+    sprint_activity_types: dict[str, dict[str, dict[str, int]]] = field(
+        default_factory=dict
+    )
     cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = field(
         default_factory=dict
     )
@@ -20,7 +23,7 @@ def load_jira_data(path: str) -> JiraData | None:
 
     Expected format:
         {
-            "2025-Q3": {"Engineer Name": 5, ...},
+            "2025-Q3": 55,
             "activity_types": {
                 "2025-Q3": {"Engineer Name": {"Type": 3, ...}, ...}
             }
@@ -47,8 +50,15 @@ def load_jira_data(path: str) -> JiraData | None:
     if "jiraData" in data:
         data = data["jiraData"]
 
-    bugs = {k: v for k, v in data.items() if k not in ("activity_types", "cycle_times")}
+    reserved = ("activity_types", "sprint_activity_types", "cycle_times")
+    bugs = {k: v for k, v in data.items() if k not in reserved}
     activity_types = data.get("activity_types", {})
+    sprint_activity_types = data.get("sprint_activity_types", {})
     cycle_times = data.get("cycle_times", {})
 
-    return JiraData(bugs=bugs, activity_types=activity_types, cycle_times=cycle_times)
+    return JiraData(
+        bugs=bugs,
+        activity_types=activity_types,
+        sprint_activity_types=sprint_activity_types,
+        cycle_times=cycle_times,
+    )

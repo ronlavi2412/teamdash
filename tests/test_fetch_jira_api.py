@@ -64,6 +64,20 @@ class TestFindFirstTransitionTo:
             == "2025-01-06T10:00:00.000+0000"
         )
 
+    def test_finds_dev_start_post(self):
+        changelog = {
+            "histories": [
+                {
+                    "created": "2025-01-06T10:00:00.000+0000",
+                    "items": [{"field": "status", "toString": "POST"}],
+                }
+            ]
+        }
+        assert (
+            _find_first_transition_to(changelog, DEV_START_STATUSES)
+            == "2025-01-06T10:00:00.000+0000"
+        )
+
     def test_finds_dev_end(self):
         changelog = {
             "histories": [

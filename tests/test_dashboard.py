@@ -214,6 +214,7 @@ class TestJiraDashboard:
             ),
             QuarterSummary(
                 quarter=sample_quarter,
+                verified_bugs=8,
                 engineers=[
                     EngineerQuarterMetrics(
                         name="Alice",
@@ -221,7 +222,6 @@ class TestJiraDashboard:
                         github_prs=10,
                         gitlab_mrs=5,
                         reviews=8,
-                        verified_bugs=5,
                     ),
                     EngineerQuarterMetrics(
                         name="Bob",
@@ -229,7 +229,6 @@ class TestJiraDashboard:
                         github_prs=3,
                         gitlab_mrs=2,
                         reviews=4,
-                        verified_bugs=3,
                     ),
                 ],
             ),
@@ -243,6 +242,7 @@ class TestJiraDashboard:
         summaries = [
             QuarterSummary(
                 quarter=sample_quarter_prev,
+                verified_bugs=3,
                 engineers=[
                     EngineerQuarterMetrics(
                         name="Alice",
@@ -250,7 +250,6 @@ class TestJiraDashboard:
                         github_prs=8,
                         gitlab_mrs=4,
                         reviews=6,
-                        verified_bugs=2,
                     ),
                     EngineerQuarterMetrics(
                         name="Bob",
@@ -258,12 +257,12 @@ class TestJiraDashboard:
                         github_prs=2,
                         gitlab_mrs=1,
                         reviews=3,
-                        verified_bugs=1,
                     ),
                 ],
             ),
             QuarterSummary(
                 quarter=sample_quarter,
+                verified_bugs=8,
                 engineers=[
                     EngineerQuarterMetrics(
                         name="Alice",
@@ -271,7 +270,6 @@ class TestJiraDashboard:
                         github_prs=10,
                         gitlab_mrs=5,
                         reviews=8,
-                        verified_bugs=5,
                     ),
                     EngineerQuarterMetrics(
                         name="Bob",
@@ -279,62 +277,12 @@ class TestJiraDashboard:
                         github_prs=3,
                         gitlab_mrs=2,
                         reviews=4,
-                        verified_bugs=3,
                     ),
                 ],
             ),
         ]
         data = build_dashboard_data(sample_config, summaries)
-        assert data["quarters"][1]["verified_bugs"] == [5, 3]
-
-    def test_verified_bugs_in_table_rows(
-        self, sample_config, sample_quarter, sample_quarter_prev
-    ):
-        summaries = [
-            QuarterSummary(
-                quarter=sample_quarter_prev,
-                engineers=[
-                    EngineerQuarterMetrics(
-                        name="Alice",
-                        quarter="2024-Q4",
-                        github_prs=8,
-                        gitlab_mrs=4,
-                        reviews=6,
-                        verified_bugs=2,
-                    ),
-                    EngineerQuarterMetrics(
-                        name="Bob",
-                        quarter="2024-Q4",
-                        github_prs=2,
-                        gitlab_mrs=1,
-                        reviews=3,
-                    ),
-                ],
-            ),
-            QuarterSummary(
-                quarter=sample_quarter,
-                engineers=[
-                    EngineerQuarterMetrics(
-                        name="Alice",
-                        quarter="2025-Q1",
-                        github_prs=10,
-                        gitlab_mrs=5,
-                        reviews=8,
-                        verified_bugs=5,
-                    ),
-                    EngineerQuarterMetrics(
-                        name="Bob",
-                        quarter="2025-Q1",
-                        github_prs=3,
-                        gitlab_mrs=2,
-                        reviews=4,
-                    ),
-                ],
-            ),
-        ]
-        rows = _build_table_row_data(summaries, ["Alice", "Bob"], has_scoring=False)
-        assert rows[0]["quarters"][1]["verified_bugs"] == 5
-        assert rows[1]["quarters"][1]["verified_bugs"] == 0
+        assert data["quarters"][1]["verified_bugs"] == 8
 
 
 class TestJiraConfigData:

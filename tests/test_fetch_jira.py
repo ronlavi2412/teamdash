@@ -8,7 +8,7 @@ from teamdash.fetch_jira import JiraData, load_jira_data
 class TestLoadJiraData:
     def test_valid_file(self, tmp_path):
         f = tmp_path / "jira.json"
-        data = {"2025-Q1": {"Alice": 5, "Bob": 3}}
+        data = {"2025-Q1": 8}
         f.write_text(json.dumps(data))
         result = load_jira_data(str(f))
         assert isinstance(result, JiraData)
@@ -39,20 +39,20 @@ class TestLoadJiraData:
         assert result.bugs == {}
         assert result.activity_types == {}
 
-    def test_nested_structure(self, tmp_path):
+    def test_multi_quarter(self, tmp_path):
         f = tmp_path / "jira.json"
         data = {
-            "2025-Q1": {"Alice": 5},
-            "2025-Q2": {"Alice": 7, "Bob": 2},
+            "2025-Q1": 5,
+            "2025-Q2": 9,
         }
         f.write_text(json.dumps(data))
         result = load_jira_data(str(f))
-        assert result.bugs["2025-Q2"]["Bob"] == 2
+        assert result.bugs["2025-Q2"] == 9
 
     def test_with_activity_types(self, tmp_path):
         f = tmp_path / "jira.json"
         data = {
-            "2025-Q1": {"Alice": 5},
+            "2025-Q1": 5,
             "activity_types": {
                 "2025-Q1": {
                     "Alice": {
@@ -64,13 +64,13 @@ class TestLoadJiraData:
         }
         f.write_text(json.dumps(data))
         result = load_jira_data(str(f))
-        assert result.bugs == {"2025-Q1": {"Alice": 5}}
+        assert result.bugs == {"2025-Q1": 5}
         assert result.activity_types["2025-Q1"]["Alice"]["Incidents & Support"] == 3
 
     def test_activity_types_excluded_from_bugs(self, tmp_path):
         f = tmp_path / "jira.json"
         data = {
-            "2025-Q1": {"Alice": 5},
+            "2025-Q1": 5,
             "activity_types": {"2025-Q1": {"Alice": {"Bug": 1}}},
         }
         f.write_text(json.dumps(data))
@@ -80,7 +80,7 @@ class TestLoadJiraData:
     def test_with_cycle_times(self, tmp_path):
         f = tmp_path / "jira.json"
         data = {
-            "2025-Q1": {"Alice": 5},
+            "2025-Q1": 5,
             "cycle_times": {
                 "2025-Q1": {
                     "CNV": {
@@ -102,7 +102,7 @@ class TestLoadJiraData:
     def test_cycle_times_excluded_from_bugs(self, tmp_path):
         f = tmp_path / "jira.json"
         data = {
-            "2025-Q1": {"Alice": 5},
+            "2025-Q1": 5,
             "cycle_times": {
                 "2025-Q1": {
                     "CNV": {

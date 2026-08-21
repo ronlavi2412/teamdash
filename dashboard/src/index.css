@@ -70,6 +70,21 @@ body {
 .chart-card.full { grid-column: 1 / -1; }
 .chart-wrap { position: relative; height: 350px; }
 
+.chart-filter {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.chart-filter select {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .data-table thead { background: #f1f5f9; }
 .data-table th {
