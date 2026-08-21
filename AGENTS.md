@@ -72,7 +72,7 @@ The `/generate` command (`.claude/commands/generate.md`) automates this entire p
 
 When regenerating the dashboard, generate comprehensive narrative summaries for each engineer for the most recent quarter only. Summaries are injected into `data.json` under the `"summaries"` key (nested by quarter) before regenerating the HTML. The `data.json` file includes a `pr_details` field with per-engineer per-quarter PR lists (title, repo, size, source) to enable content-aware summaries.
 
-1. Read `data.json` to get all engineer metrics and PR details across quarters.
+1. Extract the latest two quarters' metrics and latest quarter's PR details from `data.json` into a subset file (see generate.md Step 4 for the extraction script). Read the subset file, not the full `data.json`, to minimize LLM token usage.
 2. For the most recent quarter only, and for each engineer, write a comprehensive narrative (up to 3 paragraphs):
    - **What they worked on:** Group PRs by repo, identify themes from titles (bugs, features, refactoring, i18n, etc.), highlight notable PRs.
    - **Output and complexity:** Total PRs/MRs, complexity points, size distribution, merge time, quarter-over-quarter trends.
