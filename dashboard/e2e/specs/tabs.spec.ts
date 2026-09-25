@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dashboardPath = path.resolve(__dirname, '../fixtures/test-dashboard.html');
+const summaryDashboardPath = path.resolve(__dirname, '../fixtures/test-dashboard-with-summaries.html');
 
 test.describe('Tab Navigation', () => {
   test.beforeEach(async ({ page }) => {
@@ -15,6 +16,16 @@ test.describe('Tab Navigation', () => {
     await expect(teamTabBtn).toHaveClass(/active/);
     // The team view content div is rendered
     await expect(page.locator('div[data-testid="tab-team"]')).toBeVisible();
+  });
+
+  test('hides Summaries when none are available', async ({ page }) => {
+    await expect(page.getByTestId('tab-summaries')).toHaveCount(0);
+  });
+
+  test('shows Summaries when narrative text is available', async ({ page }) => {
+    await page.goto(`file://${summaryDashboardPath}`);
+    await page.getByTestId('tab-summaries').click();
+    await expect(page.getByText('Alice delivered work this quarter.')).toBeVisible();
   });
 
   test('clicking Detailed View tab switches content', async ({ page }) => {

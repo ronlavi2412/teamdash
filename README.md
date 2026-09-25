@@ -6,7 +6,7 @@ Teamdash is a Python CLI that fetches engineering metrics from GitHub, GitLab, a
 
 ## Getting Started
 
-The fastest way to get started is with an AI coding assistant. The `/setup` command checks prerequisites, verifies authentication, installs dependencies, and interactively creates your `config.json` (including Jira account ID lookups). The `/generate` command fetches all data, validates usernames, generates per-engineer narrative summaries, and produces the dashboard.
+The fastest way to get started is with an AI coding assistant. The `/setup` command checks prerequisites, verifies authentication, installs dependencies, and interactively creates your `config.json` (including Jira account ID lookups). The `/generate` command fetches data, validates usernames, and produces the dashboard. It offers optional per-engineer narrative summaries, skipped by default to save tokens.
 
 ### Using Claude Code
 
@@ -21,7 +21,7 @@ claude
 | Command | What it does |
 |---------|-------------|
 | `/setup` | Checks Python/Node/CLI versions, verifies GitHub/GitLab/Jira auth, installs dependencies, walks you through creating `config.json` with Jira account ID lookups |
-| `/generate` | Fetches Jira/GitHub/GitLab data, validates engineer usernames (catches typos), generates per-engineer narrative summaries, produces `dashboard.html` |
+| `/generate` | Fetches Jira/GitHub/GitLab data, validates engineer usernames (catches typos), optionally generates per-engineer summaries, produces `dashboard.html` |
 
 ### Using Cursor
 
@@ -30,7 +30,7 @@ This repo includes [Cursor](https://cursor.com/) rules (in `.cursor/rules/`) for
 | Rule | What it does |
 |------|-------------|
 | `@setup` | Interactive setup wizard — checks prerequisites, verifies auth, installs dependencies, helps create `config.json` |
-| `@generate` | Full pipeline — fetches data, validates usernames, generates summaries, produces `dashboard.html` |
+| `@generate` | Full pipeline — fetches data, validates usernames, optionally generates summaries, produces `dashboard.html` |
 
 ### Manual setup
 
@@ -181,7 +181,7 @@ The generated HTML file includes:
 - **Summary cards** — Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
 - **Overall Team View** — Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter, complexity points, review complexity, cycle time trends
 - **Detailed View** — Per-engineer line charts: PRs+MRs trend, code reviews, complexity, merge time, activity types, cycle time by project
-- **Summaries** — AI-generated narrative summaries per engineer for the most recent quarter
+- **Summaries** — Optional AI-generated narrative summaries per engineer for the most recent quarter
 - **Full Table** — Sortable table with all metrics per engineer per quarter
 - **Configuration** — Shows the scoring config and thresholds used
 

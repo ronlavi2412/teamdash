@@ -71,16 +71,14 @@ External CLIs: `gh` (GitHub CLI), `glab` (GitLab CLI).
 
 The `/generate` command (`.claude/commands/generate.md`) automates this entire process. The steps below are for reference when modifying the summary generation logic.
 
-When regenerating the dashboard, generate comprehensive narrative summaries for each engineer for the most recent quarter only. Summaries are injected into `data.json` under the `"summaries"` key (nested by quarter) before regenerating the HTML. The `data.json` file includes a `pr_details` field with per-engineer per-quarter PR lists (title, repo, size, source) to enable content-aware summaries.
+Ask whether to generate summaries; the default is No. When skipped, run `python3 -m teamdash.summary_input clear data.json` before generating the dashboard so old narratives do not appear.
 
-1. Extract the latest two quarters' metrics and latest quarter's PR details from `data.json` into a subset file (see generate.md Step 4 for the extraction script). Read the subset file, not the full `data.json`, to minimize LLM token usage.
-2. For the most recent quarter only, and for each engineer, write a comprehensive narrative (up to 3 paragraphs):
-   - **What they worked on:** Group PRs by repo, identify themes from titles (bugs, features, refactoring, i18n, etc.), highlight notable PRs.
-   - **Output and complexity:** Total PRs/MRs, complexity points, size distribution, merge time, quarter-over-quarter trends.
-   - **Reviews and Jira activity:** Code review volume, activity type breakdown.
-   - Skip engineers with no activity in that quarter.
-3. Inject the summaries dict into `data.json`: `{"summaries": {"Q2'26": {"Engineer Name": "summary text", ...}}}` (latest quarter only)
-4. Regenerate: `teamdash generate data.json -o dashboard.html`
+When enabled, generate a short narrative for each engineer with activity in the most recent quarter only. Summaries are injected into `data.json` under the `"summaries"` key, nested by quarter. The `pr_details` field supplies titles for content-aware summaries.
+
+1. Run `python3 -m teamdash.summary_input extract data.json -o /tmp/summary-input.json`. Read only this compact file, not the full `data.json` or full PR list. It contains the latest metrics, previous-quarter comparison metrics, repo counts, and at most six representative PR titles per active engineer.
+2. Write one paragraph of roughly 80–120 words per listed engineer. Cover work supported by the selected titles, PR/MR output and complexity, reviews, Jira activity when present, and meaningful quarter-over-quarter changes. Merge time is in days. Do not attribute team-wide verified bugs to individuals.
+3. Inject `{"summaries": {"Q2'26": {"Engineer Name": "summary text", ...}}}` for the latest quarter only. If there are no active engineers, clear summaries instead.
+4. Regenerate: `python3 -m teamdash generate data.json -o dashboard.html`.
 
 ### Review Guidelines
 

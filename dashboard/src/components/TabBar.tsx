@@ -1,6 +1,7 @@
 interface TabBarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  hasSummaries: boolean;
 }
 
 const TABS = [
@@ -11,8 +12,8 @@ const TABS = [
   { id: 'config', label: 'Configuration' },
 ];
 
-export function TabBar({ activeTab, onTabChange }: TabBarProps) {
-  const tabs = TABS;
+export function TabBar({ activeTab, onTabChange, hasSummaries }: TabBarProps) {
+  const tabs = hasSummaries ? TABS : TABS.filter(tab => tab.id !== 'summaries');
 
   return (
     <div className="tabs" data-testid="tab-bar">

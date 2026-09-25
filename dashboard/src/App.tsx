@@ -41,6 +41,9 @@ export default function App({ data }: AppProps) {
     }
     return raw;
   }, [data.summaries, data.quarterLabels]);
+  const hasSummaries = data.quarterLabels.some(q =>
+    Object.values(normalizedSummaries[q] ?? {}).some(Boolean)
+  );
 
   return (
     <>
@@ -51,7 +54,7 @@ export default function App({ data }: AppProps) {
         isCurrentQuarter={data.isCurrentQuarter}
       />
       <div className="container">
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} hasSummaries={hasSummaries} />
         {activeTab === 'team' && (
           <TeamView
             quarters={data.quarters}

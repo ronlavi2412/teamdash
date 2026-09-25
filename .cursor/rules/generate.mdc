@@ -12,10 +12,11 @@ IMPORTANT: Always run commands from the project root directory. Use `python3 -m 
 
 ## Step 1: Ask the user
 
-Before starting, ask the user two questions:
+Before starting, ask the user three questions:
 
 1. "Include the current (in-progress) quarter?" — default No
 2. "Force refetch all data from scratch?" — default No
+3. "Generate engineer summaries?" — default No
 
 ## Step 2: Check config
 
@@ -59,7 +60,7 @@ python3 -m teamdash fetch config.json -q 4 --include-current -o data.json
 
 ### If both No (default):
 
-If `data.json` already exists, skip fetching entirely — just regenerate summaries and dashboard.
+If `data.json` already exists, skip fetching entirely — use it to build the dashboard.
 
 If `data.json` does not exist, fetch completed quarters only:
 
@@ -74,17 +75,21 @@ Without Jira:
 python3 -m teamdash fetch config.json -q 4 -o data.json
 ```
 
-## Step 4: Generate summaries
+## Step 4: Handle summaries
 
-Follow the instructions in AGENTS.md under "Generating Summaries":
-1. Read `data.json` to get all engineer metrics across quarters
-2. For each engineer, write a concise narrative summary (2-3 paragraphs) for the last quarter covering PR/MR output, complexity trends, code review activity, merge time, verified bugs (if applicable), and activity type breakdown (if available). Skip engineers with no activity across all quarters.
-3. Inject the summaries dict into `data.json` under the `"summaries"` key
-4. Save the updated `data.json`
+If summaries=No, run `python3 -m teamdash.summary_input clear data.json` and continue to Step 5. Do not generate or read summary text.
+
+If summaries=Yes:
+1. Run `python3 -m teamdash.summary_input extract data.json -o /tmp/summary-input.json` and read only `/tmp/summary-input.json` into the assistant context.
+2. Follow AGENTS.md under "Generating Summaries": write one 80–120 word paragraph for each listed engineer, supported by the compact data. If no engineers are listed, clear summaries instead.
+3. Save `{"<latest quarter>": {"<engineer>": "<summary>", ...}}` as `/tmp/summaries.json` and inject it into `data.json` using a Python JSON script. Replace the previous `summaries` key; do not append stale quarters.
 
 ## Step 5: Generate dashboard
 
+Rebuild the frontend so the HTML uses the current Summaries tab behavior:
+
 ```
+npm run build --prefix dashboard
 python3 -m teamdash generate data.json -o dashboard.html
 ```
 

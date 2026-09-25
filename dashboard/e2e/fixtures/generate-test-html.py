@@ -169,6 +169,12 @@ generate_dashboard(
     str(fixtures_dir / "test-dashboard.html"),
 )
 
+with_summaries = build_dashboard_data(config, make_summaries(with_scoring=False))
+with_summaries["summaries"] = {"Q1'25": {"Alice": "Alice delivered work this quarter."}}
+generate_dashboard_from_data(
+    with_summaries, str(fixtures_dir / "test-dashboard-with-summaries.html")
+)
+
 generate_dashboard(
     config,
     make_summaries(with_scoring=True),

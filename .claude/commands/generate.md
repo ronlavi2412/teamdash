@@ -4,10 +4,11 @@ IMPORTANT: Always run commands from the project root directory. Use `python3 -m 
 
 ## Step 1: Ask the user
 
-Use AskUserQuestion with two questions:
+Use AskUserQuestion with three questions:
 
 1. "Include the current (in-progress) quarter?" — options: Yes / No (default No)
 2. "Force refetch all data from scratch?" — options: Yes / No (default No)
+3. "Generate engineer summaries?" — options: Yes / No (default No)
 
 ## Step 2: Check config
 
@@ -55,7 +56,7 @@ python3 -m teamdash fetch config.json -q 4 --include-current -o data.json
 
 ### If both No (default):
 
-If `data.json` already exists, skip fetching entirely — just regenerate summaries and dashboard. If a PTO file was found, inject PTO data into the existing data.json:
+If `data.json` already exists, skip fetching entirely — use it to build the dashboard. If a PTO file was found, inject PTO data into the existing data.json:
 
 ```
 python3 -c "
@@ -136,37 +137,22 @@ Then use AskUserQuestion to show the findings:
 If "Fix config and re-fetch": update the username(s) in `config.json`, then go back to Step 3 to re-fetch data for the affected engineers.
 If "Continue anyway": proceed to Step 4.
 
-## Step 4: Generate summaries
+## Step 4: Handle summaries
 
-Follow the instructions in AGENTS.md under "Generating Summaries":
-
-First, extract only the data needed for summaries (saves ~80% of tokens vs reading the full file):
+If summaries=No, clear any previously stored summaries and continue to Step 5. Do not read summary input or generate narrative text:
 
 ```
-python3 -c "
-import json
-with open('data.json') as f:
-    d = json.load(f)
-labels = d['quarterLabels']
-subset = {
-    'names': d['names'],
-    'quarterLabels': labels[-2:],
-    'quarters': d['quarters'][-2:],
-    'pr_details': {labels[-1]: d.get('pr_details', {}).get(labels[-1], {})},
-}
-with open('/tmp/summary-input.json', 'w') as f:
-    json.dump(subset, f, indent=1)
-print(f'Extracted {len(json.dumps(subset))//1024}KB for summary generation')
-"
+python3 -m teamdash.summary_input clear data.json
 ```
 
-1. Read `/tmp/summary-input.json` to get engineer metrics for the latest two quarters and PR details for the latest quarter.
-   The quarter object fields are: `gh_prs`, `gl_mrs`, `reviews`, `merge_time` (hours), `cp` (complexity points), `xl_count`, `review_cp`, `size_dist` (object with XS/S/M/L/XL counts), `verified_bugs` (team-wide total, single number), `activity_types` (per-engineer array of objects mapping category to count), `pr_details` (list of objects with title/repo/size/source).
-2. For the most recent quarter only, and for each engineer, write a comprehensive narrative summary (up to 3 paragraphs) that goes beyond raw numbers:
-   - **Paragraph 1 — What they worked on:** Group PRs by repo to describe which projects the engineer contributed to. Mention dominant themes from PR titles (bug fixes, new features, refactoring, i18n, CI/CD, testing, etc.). Highlight 1-2 notable or impactful PRs by name (especially XL-sized ones).
-   - **Paragraph 2 — Output and complexity:** Summarize quantitative metrics — total PRs/MRs, complexity points, size distribution, merge time. Compare against the previous quarter where available.
-   - **Paragraph 3 — Reviews and Jira activity:** Cover code review volume and review complexity points. Include activity type breakdown (if available from Jira). Note any quarter-over-quarter trends.
-   - Skip engineers with no activity in that quarter.
+If summaries=Yes, extract the small summary input and read **only** that file. Do not read the full `data.json` or the full PR list into the assistant context:
+
+```
+python3 -m teamdash.summary_input extract data.json -o /tmp/summary-input.json
+```
+
+1. Read `/tmp/summary-input.json`. It has the latest quarter, optional previous-quarter metrics, repo counts, and at most six representative PR titles per active engineer. `merge_time` is in days. `verified_bugs` is team-wide, so do not attribute it to an engineer.
+2. Write one paragraph of roughly 80–120 words for each listed engineer. Cover their main repos and work supported by the selected titles, PR/MR volume and complexity, reviews, Jira activity when present, and meaningful changes from the previous quarter. Avoid claims about themes or impact that the selected titles do not support. If there are no listed engineers, skip writing summaries and run the clear command above.
 3. Write the summaries dict as JSON to `/tmp/summaries.json`, structured as `{"Q2'26": {"Engineer Name": "summary text", ...}}` (latest quarter only).
 4. Inject into data.json using a script (avoids triggering PostToolUse hooks on a data file):
 
@@ -186,7 +172,10 @@ print('Summaries injected into data.json')
 
 ## Step 5: Generate dashboard
 
+Rebuild the frontend so the HTML uses the current Summaries tab behavior, then generate the dashboard:
+
 ```
+npm run build --prefix dashboard
 python3 -m teamdash generate data.json -o dashboard.html
 ```
 
