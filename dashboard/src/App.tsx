@@ -79,6 +79,7 @@ export default function App({ data }: AppProps) {
             cycleTimeData={data.cycleTimeData}
             cycleTimeProjects={data.cycleTimeProjects}
             hasActivityTypes={data.hasActivityTypes}
+            hasPto={data.hasPto}
             activityTypeNames={data.activityTypeNames}
             quarterLabels={data.quarterLabels}
           />

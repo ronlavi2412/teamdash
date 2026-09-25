@@ -160,10 +160,12 @@ teamdash team.json --include-current   # include the current (in-progress) quart
 teamdash team.json --no-scoring        # skip complexity point estimation (faster)
 teamdash team.json --refresh-gitlab    # re-fetch only GitLab data, keep cached GitHub data
 teamdash team.json --jira-data jira-data.json  # include Jira data
+teamdash team.json --pto-data pto.xlsx         # include PTO data from Workday XLSX or CSV
 
 # Fetch only (write data.json, no dashboard generation)
 teamdash fetch team.json -o data.json
 teamdash fetch team.json --jira-data jira-data.json -o data.json
+teamdash fetch team.json --pto-data pto.xlsx -o data.json
 
 # Fetch Jira only (requires JIRA_EMAIL and JIRA_API_TOKEN)
 teamdash fetch-jira team.json -o jira-data.json
@@ -249,6 +251,7 @@ teamdash/
     fetch_gitlab.py     # GitLab data fetching via glab CLI
     fetch_jira.py       # Jira data loader (from pre-fetched JSON)
     fetch_jira_api.py   # Jira REST API client
+    pto.py              # PTO/time-off data loading (Workday XLSX or CSV)
     aggregate.py        # Orchestration, caching, parallelization
     dashboard.py        # HTML dashboard generation
   dashboard/            # React/TypeScript frontend (Chart.js)

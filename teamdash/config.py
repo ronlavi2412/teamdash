@@ -15,6 +15,7 @@ class EngineerConfig:
     github: str | None = None
     gitlab: str | None = None
     jira_account_id: str | None = None
+    pto_name: str | None = None
 
 
 @dataclass
@@ -80,8 +81,12 @@ def load_config(path: str) -> TeamConfig:
             )
             sys.exit(1)
         jira_id = eng.get("jira_account_id")
+        pto_name = eng.get("pto_name")
         engineers.append(
-            EngineerConfig(name=name, github=gh, gitlab=gl, jira_account_id=jira_id)
+            EngineerConfig(
+                name=name, github=gh, gitlab=gl, jira_account_id=jira_id,
+                pto_name=pto_name,
+            )
         )
 
     jira_raw = raw.get("jira")

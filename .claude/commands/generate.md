@@ -15,6 +15,10 @@ Verify `config.json` exists. If not, tell the user to run `/setup` first and sto
 
 Read `config.json` to check if it has a `jira` section.
 
+## PTO data
+
+Check if a PTO data file exists (XLSX or CSV). Look for files matching `pto*.xlsx`, `pto*.csv`, or `*Time_Off*.xlsx` in the project root and `~/Downloads/`. If found, add `--pto-data <path>` to the fetch commands below. If multiple files are found, ask the user which one to use.
+
 ## Step 3: Fetch data (based on answers)
 
 ### If force=Yes:
@@ -51,7 +55,26 @@ python3 -m teamdash fetch config.json -q 4 --include-current -o data.json
 
 ### If both No (default):
 
-If `data.json` already exists, skip fetching entirely — just regenerate summaries and dashboard.
+If `data.json` already exists, skip fetching entirely — just regenerate summaries and dashboard. If a PTO file was found, inject PTO data into the existing data.json:
+
+```
+python3 -c "
+from teamdash.pto import load_pto_data
+from teamdash.config import load_config
+import json
+config = load_config('config.json')
+pto = load_pto_data('<pto_file_path>', target_names=[e.name for e in config.engineers])
+with open('data.json') as f:
+    data = json.load(f)
+names = data['names']
+for q in data['quarters']:
+    q['pto_days'] = [pto.get(q['label'], {}).get(n, 0) for n in names]
+data['hasPto'] = True
+with open('data.json', 'w') as f:
+    json.dump(data, f, indent=2)
+print('PTO data injected into data.json')
+"
+```
 
 If `data.json` does not exist, fetch completed quarters only:
 

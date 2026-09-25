@@ -7,7 +7,7 @@ import webbrowser
 from pathlib import Path
 
 from teamdash.aggregate import collect_all_data
-from teamdash.config import load_config
+from teamdash.config import TeamConfig, load_config
 from teamdash.dashboard import (
     build_dashboard_data,
     generate_dashboard,
@@ -58,6 +58,11 @@ def _add_fetch_args(parser: argparse.ArgumentParser) -> None:
         default=None,
         help="Path to pre-fetched Jira verified bugs JSON file",
     )
+    parser.add_argument(
+        "--pto-data",
+        default=None,
+        help="Path to PTO data file (XLSX from Workday or CSV with name,quarter,days)",
+    )
 
 
 def _do_fetch(args: argparse.Namespace) -> tuple:
@@ -105,12 +110,29 @@ def _load_jira_raw(path: str) -> dict | None:
     return None
 
 
+def _load_pto(path: str, config: TeamConfig) -> dict[str, dict[str, float]]:
+    from teamdash.pto import load_pto_data
+
+    pto_name_map = {
+        e.pto_name: e.name for e in config.engineers if e.pto_name
+    }
+    return load_pto_data(
+        path,
+        target_names=[e.name for e in config.engineers],
+        pto_name_map=pto_name_map,
+    )
+
+
 def _cmd_fetch(args: argparse.Namespace) -> None:
     config, summaries = _do_fetch(args)
     jira_raw = _load_jira_raw(args.jira_data) if args.jira_data else None
     cycle_time_data = jira_raw.get("cycle_times") if jira_raw else None
+    pto_data = None
+    if args.pto_data:
+        pto_data = _load_pto(args.pto_data, config)
     data = build_dashboard_data(
-        config, summaries, jira_raw=jira_raw, cycle_time_data=cycle_time_data
+        config, summaries, jira_raw=jira_raw, cycle_time_data=cycle_time_data,
+        pto_data=pto_data,
     )
     output = args.output or "data.json"
     with open(output, "w") as f:
@@ -242,8 +264,12 @@ def main() -> None:
         config, summaries = _do_fetch(parsed)
         jira_raw = _load_jira_raw(parsed.jira_data) if parsed.jira_data else None
         cycle_time_data = jira_raw.get("cycle_times") if jira_raw else None
+        pto_data = None
+        if parsed.pto_data:
+            pto_data = _load_pto(parsed.pto_data, config)
         generate_dashboard(
-            config, summaries, parsed.output, cycle_time_data=cycle_time_data
+            config, summaries, parsed.output, cycle_time_data=cycle_time_data,
+            pto_data=pto_data,
         )
         print(f"Dashboard written to {parsed.output}", file=sys.stderr)
         _open_in_browser(parsed.output)

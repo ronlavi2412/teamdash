@@ -5,6 +5,7 @@ import { ChartCard } from './ChartCard';
 import { DetailLineChart } from './DetailLineChart';
 import { EngineerFilter } from './EngineerFilter';
 import { ProjectCycleTimeChart } from './ProjectCycleTimeChart';
+import { PtoChart } from './PtoChart';
 
 interface DetailViewProps {
   quarters: QuarterData[];
@@ -17,11 +18,12 @@ interface DetailViewProps {
   cycleTimeData: Record<string, CycleTimeQuarterData>;
   cycleTimeProjects: string[];
   hasActivityTypes: boolean;
+  hasPto: boolean;
   activityTypeNames: string[];
   quarterLabels: string[];
 }
 
-export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasCycleTime, cycleTimeData, cycleTimeProjects, hasActivityTypes, activityTypeNames, quarterLabels }: DetailViewProps) {
+export function DetailView({ quarters, names, colors, currentQuarterIndex, isCurrentQuarter, hasScoring, hasCycleTime, cycleTimeData, cycleTimeProjects, hasActivityTypes, hasPto, activityTypeNames, quarterLabels }: DetailViewProps) {
   const { selected, toggle, selectAll, clearAll } = useEngineerFilter(names);
 
   const commonProps = {
@@ -106,6 +108,21 @@ export function DetailView({ quarters, names, colors, currentQuarterIndex, isCur
               colors={colors}
               selectedEngineers={selected}
               activityTypeNames={activityTypeNames}
+              quarterLabels={quarterLabels}
+            />
+          </ChartCard>
+        )}
+        {hasPto && (
+          <ChartCard
+            title="PTO Days per Quarter"
+            tooltip="Paid time off days per engineer for the selected quarter, sourced from Workday."
+            testId="chart-pto-days"
+          >
+            <PtoChart
+              quarters={quarters}
+              names={names}
+              colors={colors}
+              selectedEngineers={selected}
               quarterLabels={quarterLabels}
             />
           </ChartCard>

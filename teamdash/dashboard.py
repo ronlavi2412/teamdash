@@ -166,6 +166,7 @@ def build_dashboard_data(
     jira_raw: dict | None = None,
     engineer_summaries: dict[str, dict[str, str]] | None = None,
     cycle_time_data: dict | None = None,
+    pto_data: dict[str, dict[str, float]] | None = None,
 ) -> dict:
     names = [e.name for e in summaries[0].engineers]
     colors = [COLORS[i % len(COLORS)] for i in range(len(names))]
@@ -183,6 +184,7 @@ def build_dashboard_data(
     has_activity_types = any(
         e.activity_type_counts for s in summaries for e in s.engineers
     )
+    has_pto = bool(pto_data)
     activity_type_names = sorted(
         {at for s in summaries for e in s.engineers for at in e.activity_type_counts}
     )
@@ -235,6 +237,10 @@ def build_dashboard_data(
                     ).sprint_activity_type_counts
                     for n in names
                 ],
+                "pto_days": [
+                    pto_data.get(s.quarter.short_label, {}).get(n, 0)
+                    for n in names
+                ] if pto_data else [0] * len(names),
             }
         )
 
@@ -266,6 +272,7 @@ def build_dashboard_data(
         "hasJira": has_jira,
         "hasCycleTime": has_cycle_time,
         "hasActivityTypes": has_activity_types,
+        "hasPto": has_pto,
         "activityTypeNames": activity_type_names,
         "cycleTimeData": ct_by_quarter,
         "cycleTimeProjects": sorted(ct_projects),
@@ -304,8 +311,11 @@ def generate_dashboard(
     summaries: list[QuarterSummary],
     output_path: str,
     cycle_time_data: dict | None = None,
+    pto_data: dict[str, dict[str, float]] | None = None,
 ) -> None:
-    data = build_dashboard_data(config, summaries, cycle_time_data=cycle_time_data)
+    data = build_dashboard_data(
+        config, summaries, cycle_time_data=cycle_time_data, pto_data=pto_data,
+    )
     generate_dashboard_from_data(data, output_path)
 
 

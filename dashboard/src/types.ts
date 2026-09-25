@@ -11,6 +11,7 @@ export interface QuarterData {
   verified_bugs: number;
   activity_types: Record<string, number>[];
   sprint_activity_types: Record<string, number>[];
+  pto_days: number[];
 }
 
 export interface SizeDistribution {
@@ -84,6 +85,7 @@ export interface DashboardData {
   hasJira: boolean;
   hasCycleTime: boolean;
   hasActivityTypes: boolean;
+  hasPto: boolean;
   activityTypeNames: string[];
   cycleTimeData: Record<string, CycleTimeQuarterData>;
   cycleTimeProjects: string[];

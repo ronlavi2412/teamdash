@@ -15,6 +15,7 @@ teamdash/
     fetch_gitlab.py      # GitLab data fetching via `glab api` subprocess
     fetch_jira.py        # Loads pre-fetched Jira JSON (JiraData dataclass)
     fetch_jira_api.py    # Jira REST API client (requests library, Basic auth)
+    pto.py               # PTO/time-off data loading from Workday XLSX or CSV
     dashboard.py         # HTML generation (embeds React bundle from dashboard/dist/)
   dashboard/             # React/TypeScript frontend
     src/

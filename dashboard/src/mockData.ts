@@ -30,6 +30,7 @@ export const mockData: DashboardData = {
         { "Incidents & Support": 8, "Product / Portfolio Work": 15, "Quality / Stability / Reliability": 5, "Future Sustainability": 3 },
         { "Incidents & Support": 2, "Product / Portfolio Work": 3, "Security & Compliance": 3 },
       ],
+      pto_days: [5, 3],
     },
     {
       label: "Q1'25",
@@ -53,6 +54,7 @@ export const mockData: DashboardData = {
         { "Incidents & Support": 10, "Product / Portfolio Work": 18, "Quality / Stability / Reliability": 6, "Security & Compliance": 3, "Associate Wellness & Development": 5 },
         { "Product / Portfolio Work": 8, "Quality / Stability / Reliability": 2, "Future Sustainability": 5 },
       ],
+      pto_days: [8, 2],
     },
   ],
   currentQuarterIndex: -1,
@@ -61,6 +63,7 @@ export const mockData: DashboardData = {
   hasJira: true,
   hasCycleTime: true,
   hasActivityTypes: true,
+  hasPto: true,
   activityTypeNames: [
     "Associate Wellness & Development",
     "Future Sustainability",

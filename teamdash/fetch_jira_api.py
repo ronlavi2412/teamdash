@@ -197,6 +197,21 @@ def _find_first_transition_to(
     return None
 
 
+DONE_STATUSES = ("Verified", "Closed", "Release Pending")
+
+
+def _done_clause(start_date: str, end_date: str) -> str:
+    statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
+    return (
+        f'(resolution in (Done, "Done-Errata") OR status in ({statuses}))'
+        f" AND ("
+        f'(resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}")'
+        f" OR "
+        f'(resolutiondate is EMPTY AND updated >= "{start_date}" AND updated <= "{end_date}")'
+        f")"
+    )
+
+
 def fetch_verified_bugs(
     cloud_id: str,
     project_keys: list[str],
@@ -206,8 +221,7 @@ def fetch_verified_bugs(
     token: str,
 ) -> int:
     jql = (
-        f'issuetype = Bug AND resolution in (Done, "Done-Errata")'
-        f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
+        f"issuetype = Bug AND {_done_clause(start_date, end_date)}"
         f" AND {_project_clause(project_keys)}"
     )
     issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD], email, token)
@@ -227,9 +241,8 @@ def fetch_activity_type_sps(
     safe_id = _jql_escape(jira_account_id)
     safe_at = _jql_escape(activity_type)
     jql = (
-        f'resolution in (Done, "Done-Errata")'
+        f"{_done_clause(start_date, end_date)}"
         f" AND issuetype in (Bug, Task, Story, Vulnerability)"
-        f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
         f' AND (assignee = "{safe_id}" OR {QA_CONTACT_FIELD} = "{safe_id}")'
         f' AND "Activity Type" = "{safe_at}"'
         f" AND {_project_clause(project_keys)}"
@@ -250,9 +263,8 @@ def fetch_all_activity_type_sps(
 ) -> dict[str, int]:
     safe_id = _jql_escape(jira_account_id)
     jql = (
-        f'resolution in (Done, "Done-Errata")'
+        f"{_done_clause(start_date, end_date)}"
         f" AND issuetype in (Bug, Task, Story, Vulnerability)"
-        f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
         f' AND (assignee = "{safe_id}" OR {QA_CONTACT_FIELD} = "{safe_id}")'
         f' AND "Activity Type" is not EMPTY'
         f" AND {_project_clause(project_keys)}"
@@ -291,8 +303,7 @@ def fetch_cycle_times(
     account_ids: list[str] | None = None,
 ) -> dict[str, dict[str, dict[str, list[float]]]]:
     jql = (
-        f'issuetype in (Story, Bug, Vulnerability) AND resolution in (Done, "Done-Errata")'
-        f' AND resolutiondate >= "{start_date}" AND resolutiondate <= "{end_date}"'
+        f"issuetype in (Story, Bug, Vulnerability) AND {_done_clause(start_date, end_date)}"
         f" AND {_project_clause(project_keys)}"
     )
     if account_ids:
