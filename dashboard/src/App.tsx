@@ -103,8 +103,7 @@ export default function App({ data }: AppProps) {
         {activeTab === 'summaries' && (
           <SummariesView
             summaries={normalizedSummaries}
-            names={data.names}
-            quarterLabels={data.quarterLabels}
+            data={data}
           />
         )}
       </div>

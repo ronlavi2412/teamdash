@@ -151,8 +151,16 @@ If summaries=Yes, extract the small summary input and read **only** that file. D
 python3 -m teamdash.summary_input extract data.json -o /tmp/summary-input.json
 ```
 
-1. Read `/tmp/summary-input.json`. It has the latest quarter, optional previous-quarter metrics, repo counts, and at most six representative PR titles per active engineer. `merge_time` is in days. `verified_bugs` is team-wide, so do not attribute it to an engineer.
-2. Write one paragraph of roughly 80–120 words for each listed engineer. Cover their main repos and work supported by the selected titles, PR/MR volume and complexity, reviews, Jira activity when present, and meaningful changes from the previous quarter. Avoid claims about themes or impact that the selected titles do not support. If there are no listed engineers, skip writing summaries and run the clear command above.
+1. Read `/tmp/summary-input.json`. It has the latest quarter, optional previous-quarter metrics, repo counts, up to 12 representative PR titles, and up to 15 representative Jira issues per active engineer. `merge_time` is in days. `verified_bugs` is team-wide, so do not attribute it to an engineer. `pto_days` is per engineer. Each `jira_issues` entry includes `key`, `summary`, `sp`, `type`, `activity_type`, and optionally `customer_cases` with `case_id` and `customer_name`.
+2. Write a manager-friendly, sectioned summary per engineer, typically 350–500 words. Prioritize concrete detail and readability over a fixed word count. If there are no listed engineers, skip writing summaries and run the clear command above.
+   - Use standalone `## Heading` blocks and `- Label: detail` bullet lists, with a blank line between headings, paragraphs, and lists. Keep each bullet on one line in the stored string. The dashboard renders these as headings and lists, not raw Markdown; do not use HTML or other Markdown formatting.
+   - **Quarter at a glance**: Explain the main work themes and meaningful changes in 2–3 sentences. Distinguish observed metrics from inferred impact; do not assign a performance rating from counts alone.
+   - **Delivery and technical highlights**: Separate output, repository breakdown, size mix, and merge time from 2–3 specific technical contributions. Reference PR titles or Jira keys and explain what changed. PR complexity points are distinct from Jira activity SP.
+   - **Jira activity by category**: Give each recorded category its own labeled bullet with its SP total and 1–2 representative issue keys and plain-language descriptions. Use consistent order: Product / Portfolio Work; Quality / Stability / Reliability; Security & Compliance; Future Sustainability; Incidents & Support; Associate Wellness & Development. Omit categories absent from the data. State when a category has no representative issue; never invent one or relabel training/documentation as shipped features or security fixes.
+   - **Customer-facing work**: Use one bullet per customer-linked issue, with its key, problem, and customer names. If none are listed, say that the extract contains no customer cases, not that the engineer had no customer-facing work. Shared Jira entries do not establish sole ownership, and issue titles alone do not prove completion.
+   - **Reviews and availability**: Report review count and review complexity points, compare with the previous quarter, and give recorded PTO as availability context. Do not imply PTO caused a change or normalize productivity without evidence.
+   - **Compared with {previous quarter}**: Give absolute before/after PR/MR, complexity, review, and merge-time figures, followed by a concise interpretation of the changed work mix. Avoid percentage changes from zero and unsupported explanations for slower merges.
+   - Preserve the latest-quarter-only scope. Do not attribute team-wide verified bugs to individuals. State that Jira SP and PR/review complexity points are different estimates, not measures of quality.
 3. Write the summaries dict as JSON to `/tmp/summaries.json`, structured as `{"Q2'26": {"Engineer Name": "summary text", ...}}` (latest quarter only).
 4. Inject into data.json using a script (avoids triggering PostToolUse hooks on a data file):
 
@@ -178,5 +186,7 @@ Rebuild the frontend so the HTML uses the current Summaries tab behavior, then g
 npm run build --prefix dashboard
 python3 -m teamdash generate data.json -o dashboard.html
 ```
+
+When engineer summaries are included, the Summaries view opens on **Team Summary**, followed by the engineer tabs. The team comparison is derived automatically from the selected quarter and its predecessor in `data.json`; do not add a fake engineer or copy historical report figures into the summaries dictionary. It includes Cycle Time, Velocity, Resolution Time, work-mix changes, and metric-scope caveats. Verify that improvements and regressions are both visible, cycle time is labeled in business days, merge time is labeled in calendar days, and verified-bug SP is not presented as a bug count.
 
 Tell the user their dashboard is ready at `dashboard.html`. Ask if they'd like to open it in the browser before running `xdg-open`.

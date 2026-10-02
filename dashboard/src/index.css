@@ -305,14 +305,26 @@ body {
   border-color: var(--accent);
   font-weight: 600;
 }
+.summary-content { max-width: 1000px; margin-inline: auto; }
 .summary-content h3 { margin-bottom: 20px; }
-.summary-paragraph {
+.summary-heading {
+  font-size: 1rem;
+  margin: 24px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.summary-content h3 + .summary-heading { margin-top: 0; padding-top: 0; border-top: 0; }
+.summary-paragraph, .summary-list {
   font-size: 0.95rem;
   line-height: 1.7;
   color: var(--text);
   margin-bottom: 16px;
 }
-.summary-paragraph:last-child { margin-bottom: 0; }
+.summary-paragraph { white-space: pre-line; }
+.summary-list { padding-left: 24px; }
+.summary-list li { margin-bottom: 10px; overflow-wrap: anywhere; }
+.summary-list li:last-child { margin-bottom: 0; }
+.summary-content > :last-child { margin-bottom: 0; }
 
 @media (max-width: 768px) {
   .chart-row { grid-template-columns: 1fr; }

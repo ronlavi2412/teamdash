@@ -22,10 +22,41 @@ test.describe('Tab Navigation', () => {
     await expect(page.getByTestId('tab-summaries')).toHaveCount(0);
   });
 
-  test('shows Summaries when narrative text is available', async ({ page }) => {
+  test('Team Summary compares quarters and preserves engineer navigation', async ({ page }) => {
     await page.goto(`file://${summaryDashboardPath}`);
     await page.getByTestId('tab-summaries').click();
-    await expect(page.getByText('Alice delivered work this quarter.')).toBeVisible();
+    const teamButton = page.getByRole('button', { name: 'Team Summary', exact: true });
+    const output = page.locator('.summary-list li').filter({ hasText: 'PRs/MRs:' });
+    await expect(teamButton).toHaveAttribute('aria-pressed', 'true');
+    await expect(output).toContainText('15 → 20 (33.3% increase)');
+    await page.getByRole('button', { name: 'Alice', exact: true }).click();
+    await expect(page.locator('.summary-content h3')).toContainText('Alice');
+    await expect(teamButton).toHaveAttribute('aria-pressed', 'false');
+    await teamButton.click();
+    await expect(output).toContainText('15 → 20 (33.3% increase)');
+  });
+
+  test('Team Summary distinguishes a zero baseline from missing cycle-time data', async ({ page }) => {
+    await page.goto(`file://${summaryDashboardPath}`);
+    await page.evaluate(() => {
+      if (!('__DASHBOARD_DATA__' in window)) throw new Error('Missing fixture data');
+      const data = window.__DASHBOARD_DATA__;
+      if (!data || typeof data !== 'object' || !('quarters' in data) || !Array.isArray(data.quarters)) {
+        throw new Error('Missing fixture quarters');
+      }
+      const previous = data.quarters[0];
+      if (!previous || !Array.isArray(previous.gh_prs) || !Array.isArray(previous.gl_mrs)) {
+        throw new Error('Missing fixture contributions');
+      }
+      previous.gh_prs.fill(0);
+      previous.gl_mrs.fill(0);
+    });
+    await page.getByTestId('tab-summaries').click();
+    await expect(page.locator('.summary-list li').filter({ hasText: 'PRs/MRs:' }))
+      .toContainText('0 → 20 (no percentage comparison from a zero baseline)');
+    await expect(page.locator('.summary-list li').filter({ hasText: 'Story median, all projects:' }))
+      .toContainText('not available → not available (insufficient data for comparison)');
+    await expect(page.locator('.summary-content')).not.toContainText('Infinity');
   });
 
   test('clicking Detailed View tab switches content', async ({ page }) => {

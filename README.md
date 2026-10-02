@@ -181,9 +181,11 @@ The generated HTML file includes:
 - **Summary cards** — Total PRs+MRs, GitHub PRs, GitLab MRs, Code Reviews (with % change vs previous quarter)
 - **Overall Team View** — Aggregate bar charts: total PRs+MRs, total reviews, avg merge time per quarter, complexity points, review complexity, cycle time trends
 - **Detailed View** — Per-engineer line charts: PRs+MRs trend, code reviews, complexity, merge time, activity types, cycle time by project
-- **Summaries** — Optional AI-generated narrative summaries per engineer for the most recent quarter
+- **Summaries** — Opens on a **Team Summary** comparing the selected quarter with its predecessor, using Cycle Time, Velocity, Resolution Time, and work-mix categories. Engineer tabs retain the detailed manager-focused narratives. Standalone `## Heading` blocks and `- Label: detail` lists in narrative strings render as headings and labeled bullets; plain paragraphs remain supported.
 - **Full Table** — Sortable table with all metrics per engineer per quarter
 - **Configuration** — Shows the scoring config and thresholds used
+
+The Team Summary is calculated from the same stored data as the charts; it does not need a separate AI narrative or API fetch. Cycle-time medians pool completed issue durations and include sample counts. Merge time is the median of per-engineer medians in calendar days. Jira activity SP is a per-engineer rollup (shared issues may be counted for multiple engineers), while verified-bug throughput is project-wide **story points**, not a bug count. Changes are compared using the current dataset, which may differ from previously saved reports; missing data and zero baselines do not produce percentage claims. The Summaries view remains optional and is shown when engineer narratives are available.
 
 ## Scoring
 
