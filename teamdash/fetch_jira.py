@@ -16,6 +16,7 @@ class JiraData:
     cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = field(
         default_factory=dict
     )
+    activity_issues: dict[str, dict[str, list[dict]]] = field(default_factory=dict)
 
 
 def load_jira_data(path: str) -> JiraData | None:
@@ -50,15 +51,17 @@ def load_jira_data(path: str) -> JiraData | None:
     if "jiraData" in data:
         data = data["jiraData"]
 
-    reserved = ("activity_types", "sprint_activity_types", "cycle_times")
+    reserved = ("activity_types", "sprint_activity_types", "cycle_times", "activity_issues")
     bugs = {k: v for k, v in data.items() if k not in reserved}
     activity_types = data.get("activity_types", {})
     sprint_activity_types = data.get("sprint_activity_types", {})
     cycle_times = data.get("cycle_times", {})
+    activity_issues = data.get("activity_issues", {})
 
     return JiraData(
         bugs=bugs,
         activity_types=activity_types,
         sprint_activity_types=sprint_activity_types,
         cycle_times=cycle_times,
+        activity_issues=activity_issues,
     )

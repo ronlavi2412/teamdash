@@ -175,6 +175,8 @@ def _cmd_fetch_jira(args: argparse.Namespace) -> None:
         result["sprint_activity_types"] = jira_data.sprint_activity_types
     if jira_data.cycle_times:
         result["cycle_times"] = jira_data.cycle_times
+    if jira_data.activity_issues:
+        result["activity_issues"] = jira_data.activity_issues
 
     with open(output, "w") as f:
         json.dump(result, f, indent=2)

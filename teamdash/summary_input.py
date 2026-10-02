@@ -11,11 +11,14 @@ import sys
 
 CURRENT_FIELDS = (
     "gh_prs", "gl_mrs", "reviews", "cp", "review_cp", "merge_time", "size_dist",
+    "xl_count", "pto_days",
 )
 PREVIOUS_FIELDS = ("gh_prs", "gl_mrs", "reviews", "cp", "review_cp", "merge_time")
 SIZE_ORDER = {"XL": 0, "L": 1, "M": 2, "S": 3, "XS": 4}
-MAX_TITLES = 6
+MAX_TITLES = 12
 MAX_TITLE_LENGTH = 120
+MAX_JIRA_ISSUES = 15
+MAX_JIRA_PER_TYPE = 3
 
 
 def _metrics(quarter: dict, index: int, fields: tuple[str, ...]) -> dict:
@@ -65,6 +68,48 @@ def _notable_prs(prs: list[dict]) -> tuple[dict[str, int], list[dict]]:
     return {repo: counts[repo] for repo in repos}, titles
 
 
+def _short_to_full_label(short: str) -> str:
+    parts = short.split("'")
+    if len(parts) == 2:
+        return f"20{parts[1]}-{parts[0]}"
+    return short
+
+
+def _notable_jira_issues(issues: list[dict]) -> list[dict]:
+    if not issues:
+        return []
+    customer_issues = [i for i in issues if i.get("customer_cases")]
+    other_issues = [i for i in issues if not i.get("customer_cases")]
+
+    by_type: dict[str, list[dict]] = {}
+    for issue in other_issues:
+        at = issue.get("activity_type", "")
+        by_type.setdefault(at, []).append(issue)
+
+    selected_keys: set[str] = set()
+    selected: list[dict] = []
+    for ci in customer_issues:
+        if len(selected) >= MAX_JIRA_ISSUES:
+            break
+        selected.append(ci)
+        selected_keys.add(ci["key"])
+
+    for at_name in sorted(by_type, key=lambda t: -sum(i["sp"] for i in by_type[t])):
+        type_issues = sorted(by_type[at_name], key=lambda i: -i["sp"])
+        added = 0
+        for issue in type_issues:
+            if len(selected) >= MAX_JIRA_ISSUES:
+                break
+            if issue["key"] not in selected_keys:
+                selected.append(issue)
+                selected_keys.add(issue["key"])
+                added += 1
+                if added >= MAX_JIRA_PER_TYPE:
+                    break
+
+    return selected
+
+
 def extract_summary_input(data: dict) -> dict:
     """Keep only the latest quarter and the comparison data needed for summaries."""
     labels = data["quarterLabels"]
@@ -77,6 +122,9 @@ def extract_summary_input(data: dict) -> dict:
     label = labels[-1]
     previous_label = labels[-2] if previous is not None else None
     details = data.get("pr_details", {}).get(label, {})
+    jira_raw = data.get("jiraData", {})
+    full_label = _short_to_full_label(label)
+    jira_issues_by_eng = jira_raw.get("activity_issues", {}).get(full_label, {})
     engineers = []
 
     for index, name in enumerate(data["names"]):
@@ -85,6 +133,7 @@ def extract_summary_input(data: dict) -> dict:
         activity = activity_list[index] if index < len(activity_list) else {}
         activity = {key: value for key, value in activity.items() if value}
         prs = details.get(name, [])
+        eng_jira = jira_issues_by_eng.get(name, [])
         if not (any(metrics.get(field, 0) for field in PREVIOUS_FIELDS) or activity or prs):
             continue
 
@@ -98,11 +147,17 @@ def extract_summary_input(data: dict) -> dict:
             engineer["repo_counts"] = repo_counts
         if notable:
             engineer["notable_prs"] = notable
+        jira_notable = _notable_jira_issues(eng_jira)
+        if jira_notable:
+            engineer["jira_issues"] = jira_notable
         engineers.append(engineer)
 
-    result = {"quarter": label, "engineers": engineers}
+    result: dict = {"quarter": label, "engineers": engineers}
     if previous_label is not None:
         result["previous_quarter"] = previous_label
+    verified_bugs = current.get("verified_bugs", 0)
+    if verified_bugs:
+        result["verified_bugs"] = verified_bugs
     return result
 
 

@@ -197,10 +197,99 @@ def _find_first_transition_to(
     return None
 
 
+def _get_first_done_date(issue: dict) -> str | None:
+    """Get the date when an issue first became 'done' (VERIFIED, Closed, or Release Pending).
+
+    Uses changelog to find the first transition to any done status. Falls back to
+    resolutiondate or updated date if changelog unavailable.
+
+    Args:
+        issue: Jira issue dict with fields and optional changelog
+
+    Returns:
+        ISO timestamp string when issue first became done, or None if not done
+    """
+    # Priority 1: Use changelog to find first transition to any DONE_STATUSES
+    changelog = issue.get("changelog", {})
+    if changelog and changelog.get("histories"):
+        done_statuses_lower = [s.lower() for s in ("Verified", "Closed", "Release Pending")]
+        first_done = _find_first_transition_to(changelog, done_statuses_lower)
+        if first_done:
+            return first_done
+
+    # Priority 2: Fall back to resolutiondate if changelog unavailable
+    fields = issue.get("fields", {})
+    resolution_date = fields.get("resolutiondate")
+    if resolution_date:
+        return resolution_date
+
+    # Priority 3: For issues in done status but no resolutiondate, use updated date
+    # (This handles issues that were manually moved without proper resolution)
+    current_status = fields.get("status", {}).get("name", "")
+    done_statuses = ("Verified", "Closed", "Release Pending")
+    if any(s.lower() in current_status.lower() for s in done_statuses):
+        return fields.get("updated")
+
+    return None
+
+
+def _is_date_in_range(date_str: str | None, start_date: str, end_date: str) -> bool:
+    """Check if a date string falls within the given range.
+
+    Args:
+        date_str: ISO timestamp (e.g., "2025-01-15T10:00:00.000+0000")
+        start_date: Start date in "YYYY-MM-DD" format
+        end_date: End date in "YYYY-MM-DD" format
+
+    Returns:
+        True if date falls in range (inclusive), False otherwise
+    """
+    if not date_str:
+        return False
+
+    try:
+        # Parse the ISO timestamp and extract just the date part
+        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        issue_date = dt.date().isoformat()
+
+        # Compare as strings (YYYY-MM-DD format)
+        return start_date <= issue_date <= end_date
+    except (ValueError, AttributeError):
+        return False
+
+
 DONE_STATUSES = ("Verified", "Closed", "Release Pending")
+CUSTOMER_CASE_LINK_TYPE = "Account"
+CUSTOMER_CASE_KEY_PREFIX = "CIPOE-"
+
+
+def _extract_customer_cases(issue: dict) -> list[dict]:
+    cases = []
+    for link in issue.get("fields", {}).get("issuelinks", []):
+        if (link.get("type", {}).get("name") or "") != CUSTOMER_CASE_LINK_TYPE:
+            continue
+        outward = link.get("outwardIssue")
+        if not outward:
+            continue
+        key = outward.get("key", "")
+        if not key.startswith(CUSTOMER_CASE_KEY_PREFIX):
+            continue
+        cases.append({
+            "case_id": key,
+            "customer_name": (outward.get("fields") or {}).get("summary", ""),
+        })
+    return cases
 
 
 def _done_clause(start_date: str, end_date: str) -> str:
+    """Fast JQL clause for issues resolved in quarter (Pass 1 - no changelog needed).
+
+    Fetches issues that:
+    1. Have resolution in (Done, Done-Errata) OR status in (Verified, Closed, Release Pending)
+    2. AND resolutiondate in quarter OR (no resolutiondate AND updated in quarter)
+
+    This catches ~95% of cases without needing changelog data.
+    """
     statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
     return (
         f'(resolution in (Done, "Done-Errata") OR status in ({statuses}))'
@@ -220,12 +309,61 @@ def fetch_verified_bugs(
     email: str,
     token: str,
 ) -> int:
-    jql = (
+    """Fetch verified bug story points for a quarter.
+
+    Uses dual-pass approach:
+    - Pass 1 (fast): Issues resolved in quarter via resolutiondate/updated
+    - Pass 2 (targeted): Issues verified in quarter but resolved later (uses changelog)
+
+    Args:
+        cloud_id: Jira cloud ID
+        project_keys: List of project keys to search
+        start_date: Quarter start date (YYYY-MM-DD)
+        end_date: Quarter end date (YYYY-MM-DD)
+        email: Jira email for auth
+        token: Jira API token
+
+    Returns:
+        Total story points for bugs that first became done in this quarter
+    """
+    # Pass 1: Fast query - most issues (no changelog needed)
+    jql1 = (
         f"issuetype = Bug AND {_done_clause(start_date, end_date)}"
         f" AND {_project_clause(project_keys)}"
     )
-    issues = _jira_search(cloud_id, jql, ["summary", SP_FIELD], email, token)
-    return _sum_story_points(issues)
+    issues_pass1 = _jira_search(cloud_id, jql1, ["summary", SP_FIELD], email, token)
+    pass1_keys = {issue["key"] for issue in issues_pass1}
+    sp_pass1 = _sum_story_points(issues_pass1)
+
+    # Pass 2: Edge cases - issues verified in quarter but resolved later
+    # Use 30-day buffer to catch issues verified near end of quarter
+    buffer_end = (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
+    jql2 = (
+        f"issuetype = Bug"
+        f" AND (status in ({statuses}) OR resolution in (Done, \"Done-Errata\"))"
+        f" AND resolutiondate > \"{end_date}\""  # Resolved AFTER quarter
+        f" AND updated >= \"{start_date}\" AND updated <= \"{buffer_end}\""
+        f" AND {_project_clause(project_keys)}"
+    )
+    issues_pass2 = _jira_search_with_changelog(
+        cloud_id,
+        jql2,
+        ["summary", SP_FIELD, "resolutiondate", "status", "updated"],
+        email,
+        token,
+    )
+
+    # Filter: verified in quarter AND not already in pass1
+    filtered_pass2 = [
+        issue
+        for issue in issues_pass2
+        if issue["key"] not in pass1_keys
+        and _is_date_in_range(_get_first_done_date(issue), start_date, end_date)
+    ]
+    sp_pass2 = _sum_story_points(filtered_pass2)
+
+    return sp_pass1 + sp_pass2
 
 
 def fetch_activity_type_sps(
@@ -238,6 +376,24 @@ def fetch_activity_type_sps(
     email: str,
     token: str,
 ) -> int:
+    """Fetch activity type story points for an engineer in a quarter.
+
+    Uses fast query based on resolutiondate/updated fields. This is rarely used
+    (mainly for testing individual activity types).
+
+    Args:
+        cloud_id: Jira cloud ID
+        project_keys: List of project keys to search
+        jira_account_id: Engineer's Jira account ID
+        start_date: Quarter start date (YYYY-MM-DD)
+        end_date: Quarter end date (YYYY-MM-DD)
+        activity_type: Activity type to filter by
+        email: Jira email for auth
+        token: Jira API token
+
+    Returns:
+        Total story points for this activity type in this quarter
+    """
     safe_id = _jql_escape(jira_account_id)
     safe_at = _jql_escape(activity_type)
     jql = (
@@ -260,9 +416,35 @@ def fetch_all_activity_type_sps(
     email: str,
     token: str,
     sprint_only: bool = False,
-) -> dict[str, int]:
+) -> tuple[dict[str, int], list[dict]]:
+    """Fetch all activity type story points for an engineer in a quarter.
+
+    Uses dual-pass approach:
+    - Pass 1 (fast): Issues resolved in quarter via resolutiondate/updated
+    - Pass 2 (targeted): Issues done in quarter but resolved later (uses changelog)
+
+    Args:
+        cloud_id: Jira cloud ID
+        project_keys: List of project keys to search
+        jira_account_id: Engineer's Jira account ID
+        start_date: Quarter start date (YYYY-MM-DD)
+        end_date: Quarter end date (YYYY-MM-DD)
+        email: Jira email for auth
+        token: Jira API token
+        sprint_only: If True, only include issues in closed sprints
+
+    Returns:
+        Tuple of (dict mapping activity type name to story points,
+                  list of issue detail dicts with keys: key, summary, sp, type,
+                  activity_type, customer_cases)
+    """
     safe_id = _jql_escape(jira_account_id)
-    jql = (
+    detail_fields = [
+        "summary", SP_FIELD, ACTIVITY_TYPE_FIELD, "issuetype", "issuelinks",
+    ]
+
+    # Pass 1: Fast query (no changelog)
+    jql1 = (
         f"{_done_clause(start_date, end_date)}"
         f" AND issuetype in (Bug, Task, Story, Vulnerability)"
         f' AND (assignee = "{safe_id}" OR {QA_CONTACT_FIELD} = "{safe_id}")'
@@ -270,23 +452,71 @@ def fetch_all_activity_type_sps(
         f" AND {_project_clause(project_keys)}"
     )
     if sprint_only:
-        jql += " AND sprint in closedSprints()"
-    issues = _jira_search(
-        cloud_id, jql, ["summary", SP_FIELD, ACTIVITY_TYPE_FIELD], email, token
-    )
+        jql1 += " AND sprint in closedSprints()"
+
+    issues_pass1 = _jira_search(cloud_id, jql1, detail_fields, email, token)
+    pass1_keys = {issue["key"] for issue in issues_pass1}
+
     by_type: dict[str, int] = {}
-    for issue in issues:
+    issue_details: list[dict] = []
+
+    def _process_issue(issue: dict) -> None:
         fields = issue.get("fields", {})
         at_field = fields.get(ACTIVITY_TYPE_FIELD)
         if not at_field or not isinstance(at_field, dict):
-            continue
+            return
         at_name = at_field.get("value", "")
         if not at_name:
-            continue
+            return
         sp = fields.get(SP_FIELD)
         points = int(sp) if sp and sp > 0 else DEFAULT_SP
         by_type[at_name] = by_type.get(at_name, 0) + points
-    return by_type
+        detail = {
+            "key": issue["key"],
+            "summary": fields.get("summary", ""),
+            "sp": points,
+            "type": (fields.get("issuetype") or {}).get("name", ""),
+            "activity_type": at_name,
+        }
+        cases = _extract_customer_cases(issue)
+        if cases:
+            detail["customer_cases"] = cases
+        issue_details.append(detail)
+
+    for issue in issues_pass1:
+        _process_issue(issue)
+
+    # Pass 2: Edge cases (issues done in quarter but resolved later)
+    buffer_end = (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
+    jql2 = (
+        f"issuetype in (Bug, Task, Story, Vulnerability)"
+        f" AND (status in ({statuses}) OR resolution in (Done, \"Done-Errata\"))"
+        f" AND resolutiondate > \"{end_date}\""
+        f" AND updated >= \"{start_date}\" AND updated <= \"{buffer_end}\""
+        f' AND (assignee = "{safe_id}" OR {QA_CONTACT_FIELD} = "{safe_id}")'
+        f' AND "Activity Type" is not EMPTY'
+        f" AND {_project_clause(project_keys)}"
+    )
+    if sprint_only:
+        jql2 += " AND sprint in closedSprints()"
+
+    issues_pass2 = _jira_search_with_changelog(
+        cloud_id,
+        jql2,
+        detail_fields + ["resolutiondate", "status", "updated"],
+        email,
+        token,
+    )
+
+    for issue in issues_pass2:
+        if issue["key"] in pass1_keys:
+            continue
+        if not _is_date_in_range(_get_first_done_date(issue), start_date, end_date):
+            continue
+        _process_issue(issue)
+
+    return by_type, issue_details
 
 
 def _empty_phases() -> dict[str, list[float]]:
@@ -302,25 +532,75 @@ def fetch_cycle_times(
     token: str,
     account_ids: list[str] | None = None,
 ) -> dict[str, dict[str, dict[str, list[float]]]]:
-    jql = (
+    """Fetch cycle time metrics for issues completed in a quarter.
+
+    Uses dual-pass approach since changelog is always needed for cycle time phases.
+    - Pass 1: Issues resolved in quarter (fast query, then fetch changelog)
+    - Pass 2: Issues done in quarter but resolved later (changelog with filtering)
+
+    Args:
+        cloud_id: Jira cloud ID
+        project_keys: List of project keys to search
+        start_date: Quarter start date (YYYY-MM-DD)
+        end_date: Quarter end date (YYYY-MM-DD)
+        email: Jira email for auth
+        token: Jira API token
+        account_ids: Optional list of account IDs to filter by
+
+    Returns:
+        Nested dict: {project_key: {issue_type: {phase: [durations]}}}
+    """
+    # Pass 1: Fast query for issues resolved in quarter
+    jql1 = (
         f"issuetype in (Story, Bug, Vulnerability) AND {_done_clause(start_date, end_date)}"
         f" AND {_project_clause(project_keys)}"
     )
     if account_ids:
         ids_clause = ", ".join(f'"{_jql_escape(aid)}"' for aid in account_ids)
-        jql += (
-            f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
-        )
-    issues = _jira_search_with_changelog(
+        jql1 += f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+
+    issues_pass1 = _jira_search_with_changelog(
         cloud_id,
-        jql,
-        ["summary", "project", "issuetype", "resolutiondate"],
+        jql1,
+        ["summary", "project", "issuetype", "resolutiondate", "status", "updated"],
+        email,
+        token,
+    )
+    pass1_keys = {issue["key"] for issue in issues_pass1}
+
+    # Pass 2: Edge cases (issues done in quarter but resolved later)
+    buffer_end = (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
+    jql2 = (
+        f"issuetype in (Story, Bug, Vulnerability)"
+        f" AND (status in ({statuses}) OR resolution in (Done, \"Done-Errata\"))"
+        f" AND resolutiondate > \"{end_date}\""
+        f" AND updated >= \"{start_date}\" AND updated <= \"{buffer_end}\""
+        f" AND {_project_clause(project_keys)}"
+    )
+    if account_ids:
+        ids_clause = ", ".join(f'"{_jql_escape(aid)}"' for aid in account_ids)
+        jql2 += f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+
+    issues_pass2 = _jira_search_with_changelog(
+        cloud_id,
+        jql2,
+        ["summary", "project", "issuetype", "resolutiondate", "status", "updated"],
         email,
         token,
     )
 
+    # Combine both passes
+    all_issues = list(issues_pass1)
+    for issue in issues_pass2:
+        if issue["key"] not in pass1_keys:
+            all_issues.append(issue)
+
     result: dict[str, dict[str, dict[str, list[float]]]] = {}
-    for issue in issues:
+    for issue in all_issues:
+        # Filter to quarter based on first done date
+        if not _is_date_in_range(_get_first_done_date(issue), start_date, end_date):
+            continue
         fields = issue.get("fields", {})
         project = fields.get("project", {})
         project_key = project.get("key")
@@ -392,10 +672,11 @@ def _fetch_quarter_jira(
     engineers_with_jira: list,
     email: str,
     token: str,
-) -> tuple[str, int, dict[str, dict[str, int]], dict[str, dict[str, int]], dict]:
+) -> tuple[str, int, dict[str, dict[str, int]], dict[str, dict[str, int]], dict, dict[str, list[dict]]]:
     print(f"  Fetching Jira data for {q.label}...", file=sys.stderr)
     q_activities: dict[str, dict[str, int]] = {}
     q_sprint_activities: dict[str, dict[str, int]] = {}
+    q_activity_issues: dict[str, list[dict]] = {}
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         activity_futures = {}
@@ -462,19 +743,22 @@ def _fetch_quarter_jira(
         for fut in as_completed(activity_futures):
             name = activity_futures[fut]
             try:
-                eng_activities = fut.result()
+                eng_activities, eng_issues = fut.result()
             except Exception as exc:
                 print(
                     f"[WARN] Activity fetch failed for {name}: {exc}", file=sys.stderr
                 )
                 eng_activities = {}
+                eng_issues = []
             if eng_activities:
                 q_activities[name] = eng_activities
+            if eng_issues:
+                q_activity_issues[name] = eng_issues
 
         for fut in as_completed(sprint_activity_futures):
             name = sprint_activity_futures[fut]
             try:
-                eng_activities = fut.result()
+                eng_activities, _ = fut.result()
             except Exception as exc:
                 print(
                     f"[WARN] Sprint activity fetch failed for {name}: {exc}",
@@ -490,7 +774,7 @@ def _fetch_quarter_jira(
             print(f"[WARN] Cycle time fetch failed: {exc}", file=sys.stderr)
             q_cycle_times = {}
 
-    return q.label, q_bugs, q_activities, q_sprint_activities, q_cycle_times
+    return q.label, q_bugs, q_activities, q_sprint_activities, q_cycle_times, q_activity_issues
 
 
 def fetch_all_jira_data(
@@ -508,6 +792,7 @@ def fetch_all_jira_data(
     activity_types: dict[str, dict[str, dict[str, int]]] = {}
     sprint_activity_types: dict[str, dict[str, dict[str, int]]] = {}
     cycle_times: dict[str, dict[str, dict[str, dict[str, list[float]]]]] = {}
+    activity_issues: dict[str, dict[str, list[dict]]] = {}
 
     engineers_with_jira = [e for e in config.engineers if e.jira_account_id]
 
@@ -525,7 +810,7 @@ def fetch_all_jira_data(
             for q in quarters
         ]
         for fut in as_completed(futures):
-            label, q_bugs, q_activities, q_sprint_activities, q_cycle_times = (
+            label, q_bugs, q_activities, q_sprint_activities, q_cycle_times, q_issues = (
                 fut.result()
             )
             bugs[label] = q_bugs
@@ -535,10 +820,13 @@ def fetch_all_jira_data(
                 sprint_activity_types[label] = q_sprint_activities
             if q_cycle_times:
                 cycle_times[label] = q_cycle_times
+            if q_issues:
+                activity_issues[label] = q_issues
 
     return JiraData(
         bugs=bugs,
         activity_types=activity_types,
         sprint_activity_types=sprint_activity_types,
         cycle_times=cycle_times,
+        activity_issues=activity_issues,
     )
