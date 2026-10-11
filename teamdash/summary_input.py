@@ -10,8 +10,15 @@ import sys
 
 
 CURRENT_FIELDS = (
-    "gh_prs", "gl_mrs", "reviews", "cp", "review_cp", "merge_time", "size_dist",
-    "xl_count", "pto_days",
+    "gh_prs",
+    "gl_mrs",
+    "reviews",
+    "cp",
+    "review_cp",
+    "merge_time",
+    "size_dist",
+    "xl_count",
+    "pto_days",
 )
 PREVIOUS_FIELDS = ("gh_prs", "gl_mrs", "reviews", "cp", "review_cp", "merge_time")
 SIZE_ORDER = {"XL": 0, "L": 1, "M": 2, "S": 3, "XS": 4}
@@ -134,7 +141,9 @@ def extract_summary_input(data: dict) -> dict:
         activity = {key: value for key, value in activity.items() if value}
         prs = details.get(name, [])
         eng_jira = jira_issues_by_eng.get(name, [])
-        if not (any(metrics.get(field, 0) for field in PREVIOUS_FIELDS) or activity or prs):
+        if not (
+            any(metrics.get(field, 0) for field in PREVIOUS_FIELDS) or activity or prs
+        ):
             continue
 
         repo_counts, notable = _notable_prs(prs)
@@ -186,14 +195,22 @@ def main() -> None:
 
     if args.command == "clear":
         changed = clear_summaries(args.data)
-        print("Stored summaries removed" if changed else "No stored summaries", file=sys.stderr)
+        print(
+            "Stored summaries removed" if changed else "No stored summaries",
+            file=sys.stderr,
+        )
         return
 
     with args.data.open() as source:
         data = json.load(source)
-    compact = json.dumps(extract_summary_input(data), ensure_ascii=False, separators=(",", ":"))
+    compact = json.dumps(
+        extract_summary_input(data), ensure_ascii=False, separators=(",", ":")
+    )
     args.output.write_text(compact + "\n")
-    print(f"Summary input written to {args.output} ({len(compact)} characters)", file=sys.stderr)
+    print(
+        f"Summary input written to {args.output} ({len(compact)} characters)",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":

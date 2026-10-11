@@ -150,7 +150,9 @@ class TestFetchReviews:
                 "approve": {"issueCount": 1},
             }
         }
-        with patch("teamdash.fetch_github._gh_graphql", return_value=fake_response) as mock:
+        with patch(
+            "teamdash.fetch_github._gh_graphql", return_value=fake_response
+        ) as mock:
             result = fetch_reviews(
                 "alice", ["org1", "org2"], "2025-01-01", "2025-03-31"
             )

@@ -238,9 +238,10 @@ def build_dashboard_data(
                     for n in names
                 ],
                 "pto_days": [
-                    pto_data.get(s.quarter.short_label, {}).get(n, 0)
-                    for n in names
-                ] if pto_data else [0] * len(names),
+                    pto_data.get(s.quarter.short_label, {}).get(n, 0) for n in names
+                ]
+                if pto_data
+                else [0] * len(names),
             }
         )
 
@@ -314,7 +315,10 @@ def generate_dashboard(
     pto_data: dict[str, dict[str, float]] | None = None,
 ) -> None:
     data = build_dashboard_data(
-        config, summaries, cycle_time_data=cycle_time_data, pto_data=pto_data,
+        config,
+        summaries,
+        cycle_time_data=cycle_time_data,
+        pto_data=pto_data,
     )
     generate_dashboard_from_data(data, output_path)
 

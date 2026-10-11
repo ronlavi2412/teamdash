@@ -106,7 +106,10 @@ class TestCollectAllData:
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_prs", return_value=10),
-            patch("teamdash.aggregate.fetch_reviewed_pr_details", return_value=_make_gh_reviewed(5)),
+            patch(
+                "teamdash.aggregate.fetch_reviewed_pr_details",
+                return_value=_make_gh_reviewed(5),
+            ),
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
             patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0, 2.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[3.0]),
@@ -174,7 +177,10 @@ class TestCollectAllData:
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=False),
             patch("teamdash.aggregate.fetch_prs", return_value=10),
-            patch("teamdash.aggregate.fetch_reviewed_pr_details", return_value=_make_gh_reviewed(5)),
+            patch(
+                "teamdash.aggregate.fetch_reviewed_pr_details",
+                return_value=_make_gh_reviewed(5),
+            ),
             patch("teamdash.aggregate.fetch_mrs") as mock_mrs,
             patch("teamdash.aggregate.fetch_merge_times", return_value=[2.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times") as mock_gl_mt,
@@ -222,7 +228,10 @@ class TestCollectAllData:
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_pr_details", return_value=gh_details),
             patch("teamdash.aggregate.fetch_mr_details", return_value=gl_details),
-            patch("teamdash.aggregate.fetch_reviewed_pr_details", return_value=_make_gh_reviewed(3)),
+            patch(
+                "teamdash.aggregate.fetch_reviewed_pr_details",
+                return_value=_make_gh_reviewed(3),
+            ),
             patch("teamdash.aggregate.fetch_gitlab_reviews", return_value=4),
             patch("teamdash.aggregate._load_cache", return_value={}),
             patch("teamdash.aggregate._save_cache"),
@@ -242,7 +251,10 @@ class TestCollectAllData:
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_prs", return_value=5),
-            patch("teamdash.aggregate.fetch_reviewed_pr_details", return_value=_make_gh_reviewed(2)),
+            patch(
+                "teamdash.aggregate.fetch_reviewed_pr_details",
+                return_value=_make_gh_reviewed(2),
+            ),
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
             patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[2.0]),
@@ -264,7 +276,10 @@ class TestCollectAllData:
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_prs", return_value=10),
-            patch("teamdash.aggregate.fetch_reviewed_pr_details", return_value=_make_gh_reviewed(5)),
+            patch(
+                "teamdash.aggregate.fetch_reviewed_pr_details",
+                return_value=_make_gh_reviewed(5),
+            ),
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
             patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[2.0]),
@@ -287,7 +302,10 @@ class TestCollectAllData:
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_prs", return_value=10),
-            patch("teamdash.aggregate.fetch_reviewed_pr_details", return_value=_make_gh_reviewed(5)),
+            patch(
+                "teamdash.aggregate.fetch_reviewed_pr_details",
+                return_value=_make_gh_reviewed(5),
+            ),
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
             patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[2.0]),
@@ -317,7 +335,10 @@ class TestCollectAllData:
         with (
             patch("teamdash.aggregate.check_gitlab_auth", return_value=True),
             patch("teamdash.aggregate.fetch_prs", return_value=10),
-            patch("teamdash.aggregate.fetch_reviewed_pr_details", return_value=_make_gh_reviewed(5)),
+            patch(
+                "teamdash.aggregate.fetch_reviewed_pr_details",
+                return_value=_make_gh_reviewed(5),
+            ),
             patch("teamdash.aggregate.fetch_mrs", return_value=3),
             patch("teamdash.aggregate.fetch_merge_times", return_value=[1.0]),
             patch("teamdash.aggregate.fetch_mr_merge_times", return_value=[2.0]),

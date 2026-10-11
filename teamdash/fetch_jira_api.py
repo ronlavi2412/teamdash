@@ -212,7 +212,9 @@ def _get_first_done_date(issue: dict) -> str | None:
     # Priority 1: Use changelog to find first transition to any DONE_STATUSES
     changelog = issue.get("changelog", {})
     if changelog and changelog.get("histories"):
-        done_statuses_lower = [s.lower() for s in ("Verified", "Closed", "Release Pending")]
+        done_statuses_lower = [
+            s.lower() for s in ("Verified", "Closed", "Release Pending")
+        ]
         first_done = _find_first_transition_to(changelog, done_statuses_lower)
         if first_done:
             return first_done
@@ -274,10 +276,12 @@ def _extract_customer_cases(issue: dict) -> list[dict]:
         key = outward.get("key", "")
         if not key.startswith(CUSTOMER_CASE_KEY_PREFIX):
             continue
-        cases.append({
-            "case_id": key,
-            "customer_name": (outward.get("fields") or {}).get("summary", ""),
-        })
+        cases.append(
+            {
+                "case_id": key,
+                "customer_name": (outward.get("fields") or {}).get("summary", ""),
+            }
+        )
     return cases
 
 
@@ -337,13 +341,15 @@ def fetch_verified_bugs(
 
     # Pass 2: Edge cases - issues verified in quarter but resolved later
     # Use 30-day buffer to catch issues verified near end of quarter
-    buffer_end = (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    buffer_end = (
+        (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    )
     statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
     jql2 = (
         f"issuetype = Bug"
-        f" AND (status in ({statuses}) OR resolution in (Done, \"Done-Errata\"))"
-        f" AND resolutiondate > \"{end_date}\""  # Resolved AFTER quarter
-        f" AND updated >= \"{start_date}\" AND updated <= \"{buffer_end}\""
+        f' AND (status in ({statuses}) OR resolution in (Done, "Done-Errata"))'
+        f' AND resolutiondate > "{end_date}"'  # Resolved AFTER quarter
+        f' AND updated >= "{start_date}" AND updated <= "{buffer_end}"'
         f" AND {_project_clause(project_keys)}"
     )
     issues_pass2 = _jira_search_with_changelog(
@@ -440,7 +446,11 @@ def fetch_all_activity_type_sps(
     """
     safe_id = _jql_escape(jira_account_id)
     detail_fields = [
-        "summary", SP_FIELD, ACTIVITY_TYPE_FIELD, "issuetype", "issuelinks",
+        "summary",
+        SP_FIELD,
+        ACTIVITY_TYPE_FIELD,
+        "issuetype",
+        "issuelinks",
     ]
 
     # Pass 1: Fast query (no changelog)
@@ -487,13 +497,15 @@ def fetch_all_activity_type_sps(
         _process_issue(issue)
 
     # Pass 2: Edge cases (issues done in quarter but resolved later)
-    buffer_end = (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    buffer_end = (
+        (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    )
     statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
     jql2 = (
         f"issuetype in (Bug, Task, Story, Vulnerability)"
-        f" AND (status in ({statuses}) OR resolution in (Done, \"Done-Errata\"))"
-        f" AND resolutiondate > \"{end_date}\""
-        f" AND updated >= \"{start_date}\" AND updated <= \"{buffer_end}\""
+        f' AND (status in ({statuses}) OR resolution in (Done, "Done-Errata"))'
+        f' AND resolutiondate > "{end_date}"'
+        f' AND updated >= "{start_date}" AND updated <= "{buffer_end}"'
         f' AND (assignee = "{safe_id}" OR {QA_CONTACT_FIELD} = "{safe_id}")'
         f' AND "Activity Type" is not EMPTY'
         f" AND {_project_clause(project_keys)}"
@@ -557,7 +569,9 @@ def fetch_cycle_times(
     )
     if account_ids:
         ids_clause = ", ".join(f'"{_jql_escape(aid)}"' for aid in account_ids)
-        jql1 += f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+        jql1 += (
+            f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+        )
 
     issues_pass1 = _jira_search_with_changelog(
         cloud_id,
@@ -569,18 +583,22 @@ def fetch_cycle_times(
     pass1_keys = {issue["key"] for issue in issues_pass1}
 
     # Pass 2: Edge cases (issues done in quarter but resolved later)
-    buffer_end = (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    buffer_end = (
+        (datetime.fromisoformat(end_date) + timedelta(days=30)).date().isoformat()
+    )
     statuses = ", ".join(f'"{s}"' for s in DONE_STATUSES)
     jql2 = (
         f"issuetype in (Story, Bug, Vulnerability)"
-        f" AND (status in ({statuses}) OR resolution in (Done, \"Done-Errata\"))"
-        f" AND resolutiondate > \"{end_date}\""
-        f" AND updated >= \"{start_date}\" AND updated <= \"{buffer_end}\""
+        f' AND (status in ({statuses}) OR resolution in (Done, "Done-Errata"))'
+        f' AND resolutiondate > "{end_date}"'
+        f' AND updated >= "{start_date}" AND updated <= "{buffer_end}"'
         f" AND {_project_clause(project_keys)}"
     )
     if account_ids:
         ids_clause = ", ".join(f'"{_jql_escape(aid)}"' for aid in account_ids)
-        jql2 += f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+        jql2 += (
+            f" AND (assignee IN ({ids_clause}) OR {QA_CONTACT_FIELD} IN ({ids_clause}))"
+        )
 
     issues_pass2 = _jira_search_with_changelog(
         cloud_id,
@@ -672,7 +690,14 @@ def _fetch_quarter_jira(
     engineers_with_jira: list,
     email: str,
     token: str,
-) -> tuple[str, int, dict[str, dict[str, int]], dict[str, dict[str, int]], dict, dict[str, list[dict]]]:
+) -> tuple[
+    str,
+    int,
+    dict[str, dict[str, int]],
+    dict[str, dict[str, int]],
+    dict,
+    dict[str, list[dict]],
+]:
     print(f"  Fetching Jira data for {q.label}...", file=sys.stderr)
     q_activities: dict[str, dict[str, int]] = {}
     q_sprint_activities: dict[str, dict[str, int]] = {}
@@ -774,7 +799,14 @@ def _fetch_quarter_jira(
             print(f"[WARN] Cycle time fetch failed: {exc}", file=sys.stderr)
             q_cycle_times = {}
 
-    return q.label, q_bugs, q_activities, q_sprint_activities, q_cycle_times, q_activity_issues
+    return (
+        q.label,
+        q_bugs,
+        q_activities,
+        q_sprint_activities,
+        q_cycle_times,
+        q_activity_issues,
+    )
 
 
 def fetch_all_jira_data(
@@ -810,9 +842,14 @@ def fetch_all_jira_data(
             for q in quarters
         ]
         for fut in as_completed(futures):
-            label, q_bugs, q_activities, q_sprint_activities, q_cycle_times, q_issues = (
-                fut.result()
-            )
+            (
+                label,
+                q_bugs,
+                q_activities,
+                q_sprint_activities,
+                q_cycle_times,
+                q_issues,
+            ) = fut.result()
             bugs[label] = q_bugs
             if q_activities:
                 activity_types[label] = q_activities

@@ -13,7 +13,8 @@ def _date_to_short_quarter(d: date) -> str:
 
 
 def load_pto_data(
-    path: str, target_names: list[str] | None = None,
+    path: str,
+    target_names: list[str] | None = None,
     pto_name_map: dict[str, str] | None = None,
 ) -> dict[str, dict[str, float]]:
     """Load PTO data from CSV or XLSX. Returns {quarter_label: {name: days}}.
@@ -96,7 +97,8 @@ def _load_xlsx(path: Path) -> dict[str, dict[str, float]]:
 
 
 def _remap_names(
-    data: dict[str, dict[str, float]], target_names: list[str],
+    data: dict[str, dict[str, float]],
+    target_names: list[str],
     pto_name_map: dict[str, str],
 ) -> dict[str, dict[str, float]]:
     all_pto_names = {n for q in data.values() for n in q}

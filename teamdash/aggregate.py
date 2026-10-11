@@ -122,7 +122,11 @@ def _fetch_engineer_data(
                 fetch_prs, eng.github, config.github_orgs, q.start, q.end
             )
             futures["gh_reviewed"] = pool.submit(
-                fetch_reviewed_pr_details, eng.github, config.github_orgs, q.start, q.end
+                fetch_reviewed_pr_details,
+                eng.github,
+                config.github_orgs,
+                q.start,
+                q.end,
             )
             futures["gh_mt"] = pool.submit(
                 fetch_merge_times, eng.github, config.github_orgs, q.start, q.end

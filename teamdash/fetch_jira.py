@@ -51,7 +51,12 @@ def load_jira_data(path: str) -> JiraData | None:
     if "jiraData" in data:
         data = data["jiraData"]
 
-    reserved = ("activity_types", "sprint_activity_types", "cycle_times", "activity_issues")
+    reserved = (
+        "activity_types",
+        "sprint_activity_types",
+        "cycle_times",
+        "activity_issues",
+    )
     bugs = {k: v for k, v in data.items() if k not in reserved}
     activity_types = data.get("activity_types", {})
     sprint_activity_types = data.get("sprint_activity_types", {})

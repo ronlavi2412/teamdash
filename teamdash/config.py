@@ -84,7 +84,10 @@ def load_config(path: str) -> TeamConfig:
         pto_name = eng.get("pto_name")
         engineers.append(
             EngineerConfig(
-                name=name, github=gh, gitlab=gl, jira_account_id=jira_id,
+                name=name,
+                github=gh,
+                gitlab=gl,
+                jira_account_id=jira_id,
                 pto_name=pto_name,
             )
         )

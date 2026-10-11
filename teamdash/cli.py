@@ -113,9 +113,7 @@ def _load_jira_raw(path: str) -> dict | None:
 def _load_pto(path: str, config: TeamConfig) -> dict[str, dict[str, float]]:
     from teamdash.pto import load_pto_data
 
-    pto_name_map = {
-        e.pto_name: e.name for e in config.engineers if e.pto_name
-    }
+    pto_name_map = {e.pto_name: e.name for e in config.engineers if e.pto_name}
     return load_pto_data(
         path,
         target_names=[e.name for e in config.engineers],
@@ -131,7 +129,10 @@ def _cmd_fetch(args: argparse.Namespace) -> None:
     if args.pto_data:
         pto_data = _load_pto(args.pto_data, config)
     data = build_dashboard_data(
-        config, summaries, jira_raw=jira_raw, cycle_time_data=cycle_time_data,
+        config,
+        summaries,
+        jira_raw=jira_raw,
+        cycle_time_data=cycle_time_data,
         pto_data=pto_data,
     )
     output = args.output or "data.json"
@@ -270,7 +271,10 @@ def main() -> None:
         if parsed.pto_data:
             pto_data = _load_pto(parsed.pto_data, config)
         generate_dashboard(
-            config, summaries, parsed.output, cycle_time_data=cycle_time_data,
+            config,
+            summaries,
+            parsed.output,
+            cycle_time_data=cycle_time_data,
             pto_data=pto_data,
         )
         print(f"Dashboard written to {parsed.output}", file=sys.stderr)

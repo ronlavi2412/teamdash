@@ -195,6 +195,7 @@ def _make_issue(
     # Auto-generate key if not provided
     if key is None:
         import random
+
         key = f"{project_key}-{random.randint(1, 9999)}"
 
     return {
@@ -562,43 +563,48 @@ class TestGetFirstDoneDate:
 class TestIsDateInRange:
     def test_date_within_range(self):
         """Date in the middle of range should return True."""
-        assert _is_date_in_range(
-            "2025-03-15T10:00:00.000+0000",
-            "2025-01-01",
-            "2025-03-31"
-        ) is True
+        assert (
+            _is_date_in_range(
+                "2025-03-15T10:00:00.000+0000", "2025-01-01", "2025-03-31"
+            )
+            is True
+        )
 
     def test_date_at_start_boundary(self):
         """Date at start of range should return True."""
-        assert _is_date_in_range(
-            "2025-01-01T00:00:00.000+0000",
-            "2025-01-01",
-            "2025-03-31"
-        ) is True
+        assert (
+            _is_date_in_range(
+                "2025-01-01T00:00:00.000+0000", "2025-01-01", "2025-03-31"
+            )
+            is True
+        )
 
     def test_date_at_end_boundary(self):
         """Date at end of range should return True."""
-        assert _is_date_in_range(
-            "2025-03-31T23:59:59.000+0000",
-            "2025-01-01",
-            "2025-03-31"
-        ) is True
+        assert (
+            _is_date_in_range(
+                "2025-03-31T23:59:59.000+0000", "2025-01-01", "2025-03-31"
+            )
+            is True
+        )
 
     def test_date_before_range(self):
         """Date before range should return False."""
-        assert _is_date_in_range(
-            "2024-12-31T10:00:00.000+0000",
-            "2025-01-01",
-            "2025-03-31"
-        ) is False
+        assert (
+            _is_date_in_range(
+                "2024-12-31T10:00:00.000+0000", "2025-01-01", "2025-03-31"
+            )
+            is False
+        )
 
     def test_date_after_range(self):
         """Date after range should return False."""
-        assert _is_date_in_range(
-            "2025-04-01T00:00:00.000+0000",
-            "2025-01-01",
-            "2025-03-31"
-        ) is False
+        assert (
+            _is_date_in_range(
+                "2025-04-01T00:00:00.000+0000", "2025-01-01", "2025-03-31"
+            )
+            is False
+        )
 
     def test_none_date_returns_false(self):
         """None date should return False."""
@@ -610,11 +616,10 @@ class TestIsDateInRange:
 
     def test_z_timezone_format(self):
         """Date with Z timezone should work."""
-        assert _is_date_in_range(
-            "2025-03-15T10:00:00.000Z",
-            "2025-01-01",
-            "2025-03-31"
-        ) is True
+        assert (
+            _is_date_in_range("2025-03-15T10:00:00.000Z", "2025-01-01", "2025-03-31")
+            is True
+        )
 
 
 class TestDoneClause:
@@ -660,7 +665,9 @@ class TestFetchVerifiedBugsQuarterAttribution:
                             "histories": [
                                 {
                                     "created": "2025-03-20T10:00:00.000+0000",  # Q1
-                                    "items": [{"field": "status", "toString": "Verified"}],
+                                    "items": [
+                                        {"field": "status", "toString": "Verified"}
+                                    ],
                                 }
                             ]
                         },
@@ -674,7 +681,7 @@ class TestFetchVerifiedBugsQuarterAttribution:
                     "2025-01-01",
                     "2025-03-31",
                     "email",
-                    "token"
+                    "token",
                 )
 
                 # Should count the bug (3 SP) - caught by pass2
@@ -701,7 +708,9 @@ class TestFetchVerifiedBugsQuarterAttribution:
                             "histories": [
                                 {
                                     "created": "2025-04-10T10:00:00.000+0000",  # Q2
-                                    "items": [{"field": "status", "toString": "Verified"}],
+                                    "items": [
+                                        {"field": "status", "toString": "Verified"}
+                                    ],
                                 }
                             ]
                         },
@@ -715,7 +724,7 @@ class TestFetchVerifiedBugsQuarterAttribution:
                     "2025-01-01",
                     "2025-03-31",
                     "email",
-                    "token"
+                    "token",
                 )
 
                 # Should NOT count the bug since it was verified in Q2
@@ -748,7 +757,10 @@ class TestExtractCustomerCases:
                 "issuelinks": [
                     {
                         "type": {"name": "Blocks"},
-                        "outwardIssue": {"key": "CIPOE-99999", "fields": {"summary": "X"}},
+                        "outwardIssue": {
+                            "key": "CIPOE-99999",
+                            "fields": {"summary": "X"},
+                        },
                     }
                 ]
             }
@@ -847,8 +859,13 @@ class TestFetchAllActivityTypeSps:
                 return_value=[],
             ):
                 by_type, details = fetch_all_activity_type_sps(
-                    "test.atlassian.net", ["PROJ"], "acc-123",
-                    "2025-01-01", "2025-03-31", "email", "token",
+                    "test.atlassian.net",
+                    ["PROJ"],
+                    "acc-123",
+                    "2025-01-01",
+                    "2025-03-31",
+                    "email",
+                    "token",
                 )
 
         assert by_type == {
@@ -891,8 +908,13 @@ class TestFetchAllActivityTypeSps:
                 return_value=[],
             ):
                 _, details = fetch_all_activity_type_sps(
-                    "test.atlassian.net", ["PROJ"], "acc-123",
-                    "2025-01-01", "2025-03-31", "email", "token",
+                    "test.atlassian.net",
+                    ["PROJ"],
+                    "acc-123",
+                    "2025-01-01",
+                    "2025-03-31",
+                    "email",
+                    "token",
                 )
 
         assert len(details) == 1
